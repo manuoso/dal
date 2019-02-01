@@ -33,7 +33,7 @@ namespace dal{
             bd = new BackendDJI();
             break;
         case Backend::Config::eType::APM:
-            //bd = new BackendAPM();
+            bd = new BackendAPM();
             break;
         case Backend::Config::eType::PX4:
             bd = new BackendPX4();

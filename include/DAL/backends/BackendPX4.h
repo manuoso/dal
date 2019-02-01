@@ -45,9 +45,9 @@ namespace dal{
             virtual bool land();
 
             /// This method is the implementation of move to position.
-            /// \param _x: desired x in NEU coordinates.
-            /// \param _y: desired y in NEU coordinates.
-            /// \param _z: desired z in NEU coordinates.
+            /// \param _x: desired x.
+            /// \param _y: desired y.
+            /// \param _z: desired z.
             /// \param _yaw: desired yaw.
             /// \param _posThreshold: position threshold in the desired position in Meters.
             /// \param _yawThreshold: yaw threshold in the desired position in Deg.

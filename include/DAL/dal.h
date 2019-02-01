@@ -35,6 +35,9 @@ namespace dal{
         /// Construct with given configuration for backend
         DAL(const Backend::Config &_config);
 
+        /// Method for take off
+        bool takeOff(const float _height);
+
         Backend * backend(){return mBackend;};
     private:
         Backend *mBackend;

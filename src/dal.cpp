@@ -33,5 +33,9 @@ namespace dal{
         mBackend = Backend::create(_config);
     }
 
+    bool  DAL::takeOff(const float _height){
+        mBackend->takeOff(_height);
+    }
+
 }
 
