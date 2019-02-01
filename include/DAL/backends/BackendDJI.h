@@ -23,6 +23,8 @@
 #ifndef DAL_BACKENDS_BACKENDDJI_H_
 #define DAL_BACKENDS_BACKENDDJI_H_
 
+#include <DAL/backends/Backend.h>  
+
 // System Includes
 #include <cmath>
 #include <signal.h>
@@ -31,6 +33,7 @@
 #include <chrono>
 #include <mutex>
 #include <vector>
+#include <iostream>
 
 // DJI OSDK includes
 #include <djiosdk/dji_status.hpp>
@@ -38,14 +41,14 @@
 #include <djiosdk/dji_telemetry.hpp>
 
 // Logs
-#include <dal/LogStatus.h>
-#include <dal/LogTelemetry.h>
+#include <DAL/LogStatus.h>
+#include <DAL/LogTelemetry.h>
 
 #define C_EARTH (double)6378137.0
 #define DEG2RAD 0.01745329252
 
 namespace dal{
-    class BackendDJI{
+    class BackendDJI: public Backend{
         public:
             /// Default constructor
             BackendDJI():Backend(){}

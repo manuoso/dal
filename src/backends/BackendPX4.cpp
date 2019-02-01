@@ -20,7 +20,7 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#include <DAL/backends/BackendAPM.h>
+#include <DAL/backends/BackendPX4.h>
 
 namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
@@ -28,21 +28,21 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendAPM::takeOff(float _height){
+    bool BackendPX4::takeOff(float _height){
 
         
         return true;        
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendAPM::land(){
+    bool BackendPX4::land(){
 
         
         return true;        
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendAPM::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
+    bool BackendPX4::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
 
                 
         return true;
@@ -50,7 +50,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendAPM::receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){
+    bool BackendPX4::receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){
 
          
         return true;
@@ -61,10 +61,10 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendAPM::init(const Config &_config){
+    bool BackendPX4::init(const Config &_config){
 
-        LogStatus::init("APMStatus_" + std::to_string(time(NULL)));
-        LogTelemetry::init("APMTelemetry_" + std::to_string(time(NULL)));
+        LogStatus::init("PX4Status_" + std::to_string(time(NULL)));
+        LogTelemetry::init("PX4Telemetry_" + std::to_string(time(NULL)));
 
         return true;
     } 

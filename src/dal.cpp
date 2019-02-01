@@ -25,7 +25,7 @@
 #include <chrono>
 #include <cassert>
 
-#include <dal/dal.h>
+#include <DAL/dal.h>
 
 namespace dal{
     //---------------------------------------------------------------------------------------------------------------------

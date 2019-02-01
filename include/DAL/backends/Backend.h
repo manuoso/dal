@@ -31,7 +31,7 @@ namespace dal{
         public:
             struct Config{
                 /// Type of backend
-                enum class eType {DJI, APM, Dummy};
+                enum class eType {DJI, APM, PX4, Dummy};
                 eType type;
 
                 /// ID of DJI APP
@@ -54,12 +54,12 @@ namespace dal{
             /// Structs that we use to receive Telemetry
             struct dataTelemetry{
                 int flightStatus;
-                Eigen::Vector2f LatLon; 
+                Eigen::Vector2f latLon; 
                 double altitude;
                 Eigen::Vector4f rc;
-                Eigen::Vector3f v;
-                Eigen::Vector4f q;
-                Eigen::Vector9f rtk;
+                Eigen::Vector3f velocity;
+                Eigen::Vector4f quaternion;
+                Eigen::VectorXf rtk = Eigen::VectorXf(9);
             };
 
             static Backend* create(const Config &_config);
@@ -84,7 +84,7 @@ namespace dal{
     };
 
     class BackendDummy: public Backend{
-        virtual bool takeoff(const int _height){return true;}
+        virtual bool takeOff(const float _height){return true;}
         virtual bool land(){return true;}
         virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;}
         virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){return true;}

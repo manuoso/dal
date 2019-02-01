@@ -20,9 +20,10 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#include <dal/backends/Backend.h>
-#include <dal/backends/BackendDJI.h>
-#include <dal/backends/BackendAPM.h>
+#include <DAL/backends/Backend.h>
+#include <DAL/backends/BackendDJI.h>
+#include <DAL/backends/BackendAPM.h>
+#include <DAL/backends/BackendPX4.h>
 
 namespace dal{
     Backend * Backend::create(const Backend::Config &_config){
@@ -33,6 +34,9 @@ namespace dal{
             break;
         case Backend::Config::eType::APM:
             //bd = new BackendAPM();
+            break;
+        case Backend::Config::eType::PX4:
+            bd = new BackendPX4();
             break;
         case Backend::Config::eType::Dummy:
             bd = new BackendDummy();

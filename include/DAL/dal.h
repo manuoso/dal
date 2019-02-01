@@ -20,8 +20,10 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#ifndef DRONE_ABSTRACTION_LAYER_H_
-#define DRONE_ABSTRACTION_LAYER_H_
+#ifndef DAL_H_
+#define DAL_H_
+
+#include <DAL/backends/Backend.h>
 
 #include <string>
 #include <Eigen/Eigen>

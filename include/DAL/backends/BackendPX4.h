@@ -20,8 +20,8 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#ifndef DAL_BACKENDS_BACKENDAPM_H_
-#define DAL_BACKENDS_BACKENDAPM_H_
+#ifndef DAL_BACKENDS_BACKENDPX4_H_
+#define DAL_BACKENDS_BACKENDPX4_H_
 
 #include <DAL/backends/Backend.h>  
 
@@ -30,10 +30,10 @@
 #include <DAL/LogTelemetry.h>
 
 namespace dal{
-    class BackendAPM: public Backend{
+    class BackendPX4: public Backend{
         public:
             /// Default constructor
-            BackendAPM():Backend(){}
+            BackendPX4():Backend(){}
 
             /// This method is the implementation of takeoff.
             /// \param _height: desired height to takeoff.
