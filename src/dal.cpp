@@ -33,8 +33,24 @@ namespace dal{
         mBackend = Backend::create(_config);
     }
 
-    bool  DAL::takeOff(const float _height){
-        mBackend->takeOff(_height);
+    //---------------------------------------------------------------------------------------------------------------------
+    bool DAL::takeOff(const float _height){
+        return mBackend->takeOff(_height);
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool DAL::land(){
+        return mBackend->land();
+    }   
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool DAL::movePos(float _x, float _y, float _z, float _yaw){
+        return mBackend->movePosition(_x, _y, _z, _yaw, 0.2, 1.0);
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool DAL::telemetry(Backend::dataTelemetry& _data, bool _printData, bool _saveToFile){
+        return mBackend->receiveTelemetry(_data, _printData, _saveToFile);
     }
 
 }

@@ -38,6 +38,15 @@ namespace dal{
         /// Method for take off
         bool takeOff(const float _height);
 
+        /// Method for land
+        bool land();
+
+        /// Method for move to desire position
+        bool movePos(float _x, float _y, float _z, float _yaw);
+
+        /// Method for get telemetry
+        bool telemetry(Backend::dataTelemetry& _data, bool _printData, bool _saveToFile);
+
         Backend * backend(){return mBackend;};
     private:
         Backend *mBackend;
