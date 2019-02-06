@@ -20,10 +20,10 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#include <DAL/backends/Backend.h>
-#include <DAL/backends/BackendDJI.h>
-#include <DAL/backends/BackendAPM.h>
-#include <DAL/backends/BackendPX4.h>
+#include <dal/backends/Backend.h>
+#include <dal/backends/BackendDJI.h>
+#include <dal/backends/BackendAPM.h>
+#include <dal/backends/BackendPX4.h>
 
 namespace dal{
     Backend * Backend::create(const Backend::Config &_config){

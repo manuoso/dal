@@ -23,7 +23,7 @@
 #ifndef DAL_H_
 #define DAL_H_
 
-#include <DAL/backends/Backend.h>
+#include <dal/backends/Backend.h>
 
 #include <string>
 #include <Eigen/Eigen>

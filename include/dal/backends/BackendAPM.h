@@ -23,11 +23,11 @@
 #ifndef DAL_BACKENDS_BACKENDAPM_H_
 #define DAL_BACKENDS_BACKENDAPM_H_
 
-#include <DAL/backends/Backend.h>  
+#include <dal/backends/Backend.h>  
 
 // Logs
-#include <DAL/LogStatus.h>
-#include <DAL/LogTelemetry.h>
+#include <dal/LogStatus.h>
+#include <dal/LogTelemetry.h>
 
 namespace dal{
     class BackendAPM: public Backend{

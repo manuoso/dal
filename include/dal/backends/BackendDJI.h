@@ -23,7 +23,7 @@
 #ifndef DAL_BACKENDS_BACKENDDJI_H_
 #define DAL_BACKENDS_BACKENDDJI_H_
 
-#include <DAL/backends/Backend.h>  
+#include <dal/backends/Backend.h>  
 
 // System Includes
 #include <cmath>
@@ -41,8 +41,8 @@
 #include <djiosdk/dji_telemetry.hpp>
 
 // Logs
-#include <DAL/LogStatus.h>
-#include <DAL/LogTelemetry.h>
+#include <dal/LogStatus.h>
+#include <dal/LogTelemetry.h>
 
 #define C_EARTH (double)6378137.0
 #define DEG2RAD 0.01745329252
