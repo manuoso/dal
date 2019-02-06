@@ -69,9 +69,15 @@ namespace dal{
 
             /// \brief abstract method for land
             virtual bool land() = 0;
-
-            /// \brief abstract method for move to position desired
+	
+            /// \brief abstract method for position control and yaw using DJI SDK.
             virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0) = 0;
+
+            /// \brief abstract method for position control and yaw
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw) = 0;
+	    
+            /// \brief abstract method for velocity control and yaw
+            virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate) = 0;
             
             /// \brief abstract method for receive telemetry of the uav
             virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile) = 0;
@@ -87,6 +93,8 @@ namespace dal{
         virtual bool takeOff(const float _height){return true;}
         virtual bool land(){return true;}
         virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;}
+        virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw){return true;}
+        virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){return true;}
         virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){return true;}
 
     private:

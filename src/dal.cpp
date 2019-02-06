@@ -49,6 +49,16 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
+    bool DAL::position(float _x, float _y, float _z, float _yaw){
+        return mBackend->positionCtrlYaw(_x, _y, _z, _yaw);
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool DAL::velocity(float _vx, float _vy, float _vz, float _yawRate){
+        return mBackend->velocityCtrlYaw(_vx, _vy, _vz, _yawRate);
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
     bool DAL::telemetry(Backend::dataTelemetry& _data, bool _printData, bool _saveToFile){
         return mBackend->receiveTelemetry(_data, _printData, _saveToFile);
     }

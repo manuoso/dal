@@ -43,16 +43,25 @@ namespace dal{
             /// This method is the implementation of land.
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool land();
+	
+            /// This method is the implementation of move to position using DJI SDK not for use in APM
+            virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;};
 
-            /// This method is the implementation of move to position.
+            /// This method is the implementation of position control and yaw.
             /// \param _x: desired x.
             /// \param _y: desired y.
             /// \param _z: desired z.
             /// \param _yaw: desired yaw.
-            /// \param _posThreshold: position threshold in the desired position in Meters.
-            /// \param _yawThreshold: yaw threshold in the desired position in Deg.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0);
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw);
+	    
+            /// This method is the implementation of velocity control and yaw.
+            /// \param _x: desired Vx.
+            /// \param _y: desired Vy.
+            /// \param _z: desired Vz.
+            /// \param _yaw: desired yaw rate.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate);
 
             /// This method is the implementation of get Telemetry data.
             /// \param _data: struct with the desired received data.

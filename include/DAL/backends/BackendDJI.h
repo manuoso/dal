@@ -72,6 +72,22 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0);
 
+            /// This method is the implementation of position control and yaw using DJI SDK.
+            /// \param _x: desired x in NEU coordinates.
+            /// \param _y: desired y in NEU coordinates.
+            /// \param _z: desired z in NEU coordinates.
+            /// \param _yaw: desired yaw.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw);
+	    
+            /// This method is the implementation of velocity control and yaw using DJI SDK.
+            /// \param _x: desired Vx in NEU coordinates.
+            /// \param _y: desired Vy in NEU coordinates.
+            /// \param _z: desired Vz in NEU coordinates.
+            /// \param _yaw: desired yaw rate.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate);
+
             /// This method is the implementation of get Telemetry data.
             /// \param _data: struct with the desired received data.
             /// \param _printData: if true print data received.

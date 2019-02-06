@@ -323,6 +323,20 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
+
+        
+       return true;
+    }
+    
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){
+
+        
+       return true;
+    }    
+
+    //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){
 
         // Get all the data once before the loop to initialize vars

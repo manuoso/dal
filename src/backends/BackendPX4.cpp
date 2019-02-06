@@ -42,11 +42,17 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendPX4::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
+    bool BackendPX4::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
 
-                
-        return true;
-       
+        
+       return true;
+    }
+    
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendPX4::velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){
+
+        
+       return true;
     }
 
     //-----------------------------------------------------------------------------------------------------------------
