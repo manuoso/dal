@@ -1,6 +1,7 @@
 # Select library type
 set(_PN ${PROJECT_NAME})
-option(BUILD_SHARED_LIBS "Build ${_PN} as a shared library." ON)
+# option(BUILD_SHARED_LIBS "Build ${_PN} as a shared library." ON)
+
 if(BUILD_SHARED_LIBS)
   set(LIBRARY_TYPE SHARED)
 else()

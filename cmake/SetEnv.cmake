@@ -22,9 +22,9 @@ set(INSTALL_INCLUDE_DIR include
 
 # INSTALL_CMAKE_DIR
 if(WIN32 AND NOT CYGWIN)
-  set(DEF_INSTALL_CMAKE_DIR CMake)
+  set(DEF_INSTALL_CMAKE_DIR cmake)
 else()
-  set(DEF_INSTALL_CMAKE_DIR lib/CMake/${PROJECT_NAME})
+  set(DEF_INSTALL_CMAKE_DIR lib/cmake/${PROJECT_NAME})
 endif()
 set(INSTALL_CMAKE_DIR ${DEF_INSTALL_CMAKE_DIR}
     CACHE PATH "Relative instalation path for CMake files")
