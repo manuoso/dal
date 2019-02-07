@@ -50,7 +50,8 @@ endif()
 file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 # Set HEADERS variable
-file(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h ${CMAKE_CURRENT_SOURCE_DIR}/include/*.inl ${CMAKE_CURRENT_SOURCE_DIR}/include/*.hpp)
+file(GLOB_RECURSE HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/include/dal/dal.h ${CMAKE_CURRENT_SOURCE_DIR}/include/dal/LogStatus.h ${CMAKE_CURRENT_SOURCE_DIR}/include/dal/LogTelemetry.h)
+file(GLOB_RECURSE HEADERS_BC ${CMAKE_CURRENT_SOURCE_DIR}/include/dal/backends/*.h )
 
 # Includes directories
 GroupSources(src)
