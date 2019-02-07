@@ -341,12 +341,23 @@ namespace dal{
             double zOffset = _z - (-localOffset.z);
                     
             mSecureGuard.lock();
-            mVehicle->control->positionAndYawCtrl(xOffset, yOffset, zOffset, _yaw);
+            DJI::OSDK::ACK::ErrorCode positionStatus = mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
             mSecureGuard.unlock();
+            if(DJI::OSDK::ACK::getError(positionStatus) != DJI::OSDK::ACK::SUCCESS){
+                DJI::OSDK::ACK::getErrorCodeMessage(positionStatus, __func__);
+                LogStatus::get()->error("Error at move position, exiting", true);
+                return false;
+            }
         }else{
             mSecureGuard.lock();
-            mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
+            DJI::OSDK::ACK::ErrorCode positionStatus = mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
             mSecureGuard.unlock();
+            if(DJI::OSDK::ACK::getError(positionStatus) != DJI::OSDK::ACK::SUCCESS){
+                DJI::OSDK::ACK::getErrorCodeMessage(positionStatus, __func__);
+                LogStatus::get()->error("Error at move position, exiting", true);
+                return false;
+            }
+
         }
         
 
@@ -362,8 +373,13 @@ namespace dal{
         // _yawRate: yawRate set-point (deg/s) 
 
         mSecureGuard.lock();
-        mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+        DJI::OSDK::ACK::ErrorCode velocityStatus = mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
         mSecureGuard.unlock();
+        if(DJI::OSDK::ACK::getError(velocityStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(velocityStatus, __func__);
+            LogStatus::get()->error("Error at moving in velocity, exiting", true);
+            return false;
+        }
         
         return true;
     }    
