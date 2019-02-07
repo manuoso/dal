@@ -42,7 +42,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendAPM::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
+    bool BackendAPM::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
 
         
        return true;

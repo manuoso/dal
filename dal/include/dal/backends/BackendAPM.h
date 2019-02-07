@@ -52,8 +52,9 @@ namespace dal{
             /// \param _y: desired y.
             /// \param _z: desired z.
             /// \param _yaw: desired yaw.
+            /// \param _offset: calculate the position with offset or without a offset, that is local position in frame(local) or global.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw);
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset);
 	    
             /// This method is the implementation of velocity control and yaw.
             /// \param _x: desired Vx.

@@ -55,7 +55,7 @@ namespace dal{
         if(motorsNotStarted == timeoutCycles){
             LogStatus::get()->error("Takeoff failed. Motors are not spinning, exiting", true);
             // Cleanup
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false; 
         }else{
             LogStatus::get()->status("Motors spinning...", true);     
@@ -77,7 +77,7 @@ namespace dal{
         if(stillOnGround == timeoutCycles){
             LogStatus::get()->error("Takeoff failed. Aircraft is still on the ground, but the motors are spinning, exiting", true);
             // Cleanup
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }else{
             LogStatus::get()->status("Ascending...", true);
@@ -96,7 +96,7 @@ namespace dal{
                 LogStatus::get()->status("Successful takeoff!", true);
         }else{
             LogStatus::get()->error("Takeoff finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting", true);
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }
 
@@ -131,7 +131,7 @@ namespace dal{
         if(landingNotStarted == timeoutCycles){
             LogStatus::get()->error("Landing failed. Aircraft is still in the air, exiting", true);
             // Cleanup before return
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }else{
             LogStatus::get()->status("Landing...", true);
@@ -150,7 +150,7 @@ namespace dal{
                 LogStatus::get()->status("Successful landing!", true);
         }else{
             LogStatus::get()->error("Landing finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting", true);
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }
         
@@ -166,17 +166,8 @@ namespace dal{
         int outOfControlBoundsTimeLimit = 10 * cycleTimeInMs; // 10 cycles
         int withinControlBoundsTimeReqmt = 50 * cycleTimeInMs; // 50 cycles
 
-        // Also, since we don't have a source for relative height through subscription,
-        // start using broadcast height
-        if (!startGlobalPositionBroadcast()){
-            // Cleanup before return
-            unsubscribeToData();
-            LogStatus::get()->error("Error at startGlobalPositionBroadcast, exiting", true);
-            return false;
-        }
-
         // Convert position offset from first position to local coordinates
-        Telemetry::Vector3f localOffset;
+         DJI::OSDK::Telemetry::Vector3f localOffset;
 
         mSecureGuard.lock();
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
@@ -240,8 +231,15 @@ namespace dal{
         
         zCmd = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast.
         
+        LogStatus::get()->status("(Before while) xCmd: " + std::to_string(xCmd) + " yCmd: " + std::to_string(yCmd) + " zCmd: " + std::to_string(zCmd), true);
+        LogStatus::get()->status("(Before while) xOffsetRemaining: " + std::to_string(xOffsetRemaining) + " yOffsetRemaining: " + std::to_string(yOffsetRemaining) + " zOffsetRemaining: " + std::to_string(zOffsetRemaining), true);
+
         //! Main closed-loop receding setpoint position control
         while (elapsedTimeInMs < timeoutInMilSec){
+
+            LogStatus::get()->status("(While) xCmd: " + std::to_string(xCmd) + " yCmd: " + std::to_string(yCmd) + " zCmd: " + std::to_string(zCmd), true);
+            LogStatus::get()->status("(While) xOffsetRemaining: " + std::to_string(xOffsetRemaining) + " yOffsetRemaining: " + std::to_string(yOffsetRemaining) + " zOffsetRemaining: " + std::to_string(zOffsetRemaining), true);
+
             mSecureGuard.lock();
             mVehicle->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yawRad / DEG2RAD);
             mSecureGuard.unlock();
@@ -312,32 +310,69 @@ namespace dal{
             brakeCounter += cycleTimeInMs;
         }
 
-        // if (elapsedTimeInMs >= timeoutInMilSec){
-        //     std::cout << "Task timeout!\n";
-        //     unsubscribeToData();
-        //     return false;
-        // }
+        if (elapsedTimeInMs >= timeoutInMilSec){
+            std::cout << "Task timeout!\n";
+            unsubscribeToData();     // 666 TODO: Make this better  
+            return false;
+        }
                 
         return true;
        
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
-
+    bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
         
-       return true;
+        if(_offset){
+            // Convert position offset from first position to local coordinates
+            DJI::OSDK::Telemetry::Vector3f localOffset;
+
+            mSecureGuard.lock();
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+            mSecureGuard.unlock();
+
+            // 666 TODO: CHANGE ORIGIN SUBSCRIPTION GPS WITH THE POSITION THAT WE WILL START
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originSubscriptionGPS  = currentSubscriptionGPS;
+            localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
+
+            // Get offset to go
+            double xOffset = _x - localOffset.x;
+            double yOffset = _y - localOffset.y;
+            double zOffset = _z - (-localOffset.z);
+                    
+            mSecureGuard.lock();
+            mVehicle->control->positionAndYawCtrl(xOffset, yOffset, zOffset, _yaw);
+            mSecureGuard.unlock();
+        }else{
+            mSecureGuard.lock();
+            mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
+            mSecureGuard.unlock();
+        }
+        
+
+        return true;
     }
     
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){
 
+        // _vx: velocity in x axis (m/s) 
+        // _vy: velocity in y axis (m/s) 
+        // _vz: velocity in z axis (m/s) 
+        // _yawRate: yawRate set-point (deg/s) 
+
+        mSecureGuard.lock();
+        mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+        mSecureGuard.unlock();
         
-       return true;
+        return true;
     }    
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){
+        
+        // 666 TODO: PARA LOCAL POSITION GLOBAL COGER GPS CUANDO SE INICIE EL NODO DE COGER TELEMETRÍA
+        // Y USAR EL METODO LOCAL POSITION FROM OFFSET PARA OBTENER ESA POSICIÓN LOCAL GLOBAL
 
         // Get all the data once before the loop to initialize vars
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type     flightStatus;
@@ -352,7 +387,6 @@ namespace dal{
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW>::type           rtk_yaw;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW_INFO>::type      rtk_yaw_info;
 
-        // 666 TODO: PONER MUTEX!!!!
         mSecureGuard.lock();
         flightStatus = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>();
         mSecureGuard.unlock();
@@ -485,7 +519,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(initAck)){
             DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
             LogStatus::get()->error("Error at init mission manager, exiting", true);
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }
 
@@ -509,7 +543,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(startAck)){
             DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
             LogStatus::get()->error("Error at start mission, exiting", true);
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }else{
             LogStatus::get()->status("Starting Waypoint Mission...", true);
@@ -548,7 +582,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(startAck)){
             DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
             LogStatus::get()->error("Error at start mission, exiting", true);
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }
 
@@ -562,7 +596,7 @@ namespace dal{
         // if (DJI::OSDK::ACK::getError(pauseAck)){
         //     DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
         //     LogStatus::get()->error("Error at pause mission, exiting", true);
-        //     unsubscribeToData();
+        //     unsubscribeToData();     // 666 TODO: Make this better  
         //     return false;
         // }
         // sleep(5);
@@ -575,7 +609,7 @@ namespace dal{
         // if (DJI::OSDK::ACK::getError(resumeAck)){
         //     DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
         //     LogStatus::get()->error("Error at resume mission, exiting", true);
-        //     unsubscribeToData();
+        //     unsubscribeToData();     // 666 TODO: Make this better  
         //     return false;
         // }
         // sleep(5);
@@ -605,7 +639,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(stopAck)){
             DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
             LogStatus::get()->error("Error at stop mission, exiting", true);
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }
 
@@ -673,7 +707,7 @@ namespace dal{
         }
         LogStatus::get()->status("Obtained Control Authority of the Vehicle", true);
 
-        if(subscribeToData()){
+        if(subscribeToData()){     // 666 TODO: MAKE THIS BETTER, UNA ESPECIE DE SINGLETON?
             LogStatus::get()->status("subscribe To Data success", true);
             return true;
         }else{
@@ -683,7 +717,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::subscribeToData(){
+    bool BackendDJI::subscribeToData(){     // 666 TODO: MAKE THIS BETTER, UNA ESPECIE DE SINGLETON?
 
         // We will subscribe to six kinds of data:
         // 1. Flight Status at 10 Hz
@@ -730,7 +764,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             LogStatus::get()->error("Start package 0 error, exiting", true);
             return false;
         }
@@ -756,7 +790,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             LogStatus::get()->error("Start package 1 error, exiting", true);
             return false;
         }
@@ -782,7 +816,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData();
+            unsubscribeToData();     // 666 TODO: Make this better  
             LogStatus::get()->error("Start package 2 error, exiting", true);
             return false;
         }
@@ -813,7 +847,7 @@ namespace dal{
                 if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS) {
                     DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
                     // Cleanup before return
-                    unsubscribeToData();
+                    unsubscribeToData();     // 666 TODO: Make this better  
                     LogStatus::get()->error("Start package 3 error, exiting", true);
                     return false;
                 }
@@ -989,54 +1023,5 @@ namespace dal{
         return result;
     
     }
-    
-    //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::startGlobalPositionBroadcast(){
-
-        uint8_t freq[16];
-
-        /* Channels definition for A3/N3/M600
-        * 0 - Timestamp
-        * 1 - Attitude Quaternions
-        * 2 - Acceleration
-        * 3 - Velocity (Ground Frame)
-        * 4 - Angular Velocity (Body Frame)
-        * 5 - Position
-        * 6 - GPS Detailed Information
-        * 7 - RTK Detailed Information
-        * 8 - Magnetometer
-        * 9 - RC Channels Data
-        * 10 - Gimbal Data
-        * 11 - Flight Status
-        * 12 - Battery Level
-        * 13 - Control Information
-        */
-        freq[0]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[1]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[2]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[3]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[4]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[5]  = DJI::OSDK::DataBroadcast::FREQ_50HZ; // This is the only one we want to change
-        freq[6]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[7]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[8]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[9]  = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[10] = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[11] = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[12] = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[13] = DJI::OSDK::DataBroadcast::FREQ_HOLD;
-
-        mSecureGuard.lock();
-        DJI::OSDK::ACK::ErrorCode ack = mVehicle->broadcast->setBroadcastFreq(freq, 1);
-        mSecureGuard.unlock();
-        if (DJI::OSDK::ACK::getError(ack)){
-            DJI::OSDK::ACK::getErrorCodeMessage(ack, __func__);
-            return false;
-        }else{
-            return true;
-        }
-        
-    }
-
 
 }

@@ -77,8 +77,9 @@ namespace dal{
             /// \param _y: desired y in NEU coordinates.
             /// \param _z: desired z in NEU coordinates.
             /// \param _yaw: desired yaw.
+            /// \param _offset: calculate the position with offset or without a offset, that is local position in frame(local) or global.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw);
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset);
 	    
             /// This method is the implementation of velocity control and yaw using DJI SDK.
             /// \param _x: desired Vx in NEU coordinates.
@@ -146,7 +147,6 @@ namespace dal{
             void uploadWaypoints(std::vector<DJI::OSDK::WayPointSettings>& _wpList);
 
             DJI::OSDK::Telemetry::Vector3f toEulerAngle(void* _quaternionData);
-            bool startGlobalPositionBroadcast();
 
         private:
             DJI::OSDK::Vehicle* mVehicle;

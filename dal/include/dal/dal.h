@@ -44,10 +44,10 @@ namespace dal{
         /// Method for move to desire position using function of DJI SDK Example
         bool movePos(float _x, float _y, float _z, float _yaw);
 
-	/// Method for go to desire position using own function
-        bool position(float _x, float _y, float _z, float _yaw);
+	    /// Method for go to desire position using own function
+        bool position(float _x, float _y, float _z, float _yaw, bool _offset);
 
-	/// Method for move with desire velocity using own function
+	    /// Method for move with desire velocity using own function
         bool velocity(float _vx, float _vy, float _vz, float _yawRate);
 
         /// Method for get telemetry
