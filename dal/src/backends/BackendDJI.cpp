@@ -159,6 +159,14 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
+        
+        // Also, since we don't have a source for relative height through subscription,
+        // start using broadcast height
+        if (!startGlobalPositionBroadcast()){
+            // Cleanup before return
+            unsubscribeToData();     // 666 TODO: Make this better 
+            return false;
+        }
 
         int timeoutInMilSec = 10000;
         int controlFreqInHz = 50; // Hz
@@ -323,6 +331,12 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
         
+        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
+            int mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
+            LogStatus::get()->error("Error vehicle not in MODE_NAVI_SDK_CTRL, mode: " + std::to_string(mode) + " exiting", true);
+            return false;
+        }
+        
         if(_offset){
             LogStatus::get()->status("Moving in global local position", true);
 
@@ -341,25 +355,25 @@ namespace dal{
             double xOffset = _x - localOffset.x;
             double yOffset = _y - localOffset.y;
             double zOffset = _z - (-localOffset.z);
-                    
+            
             mSecureGuard.lock();
-            mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
+            mVehicle->control->positionAndYawCtrl(xOffset, yOffset, zOffset, _yaw);
             mSecureGuard.unlock();
 
         }else{
             LogStatus::get()->status("Moving in local position", true);
 
-            uint8_t flag = (Control::VERTICAL_POSITION |
-                            Control::HORIZONTAL_POSITION |
-                            Control::YAW_ANGLE |
-                            Control::HORIZONTAL_GROUND |
-                            Control::STABLE_ENABLE);
-
-            DJI::OSDK::Control::CtrlData ctrlData(flag, _x, _y, _z, _yaw);
+            // uint8_t flag = (Control::VERTICAL_POSITION |
+            //                 Control::HORIZONTAL_POSITION |
+            //                 Control::YAW_ANGLE |
+            //                 Control::HORIZONTAL_GROUND |
+            //                 Control::STABLE_ENABLE);
+            // 
+            // DJI::OSDK::Control::CtrlData ctrlData(flag, _x, _y, _z, _yaw);
 
             mSecureGuard.lock();
-            //mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
-            mVehicle->control->flightCtrl(ctrlData);
+            mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
+            //mVehicle->control->flightCtrl(ctrlData);
             mSecureGuard.unlock();
 
         }
@@ -376,19 +390,25 @@ namespace dal{
         // _vz: velocity in z axis (m/s) 
         // _yawRate: yawRate set-point (deg/s) 
 
+        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
+            int mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
+            LogStatus::get()->error("Error vehicle not in MODE_NAVI_SDK_CTRL, mode: " + std::to_string(mode) + " exiting", true);
+            return false;
+        }
+        
         LogStatus::get()->status("Moving in velocity", true);
 
-        uint8_t flag = (Control::VERTICAL_VELOCITY |
-                        Control::HORIZONTAL_VELOCITY |
-                        Control::YAW_RATE |
-                        Control::HORIZONTAL_GROUND |
-                        Control::STABLE_ENABLE);
-
-        DJI::OSDK::Control::CtrlData ctrlData(flag, _vx, _vy, _vz, _yawRate);
+        // uint8_t flag = (Control::VERTICAL_VELOCITY |
+        //                 Control::HORIZONTAL_VELOCITY |
+        //                 Control::YAW_RATE |
+        //                 Control::HORIZONTAL_GROUND |
+        //                 Control::STABLE_ENABLE);
+        // 
+        // DJI::OSDK::Control::CtrlData ctrlData(flag, _vx, _vy, _vz, _yawRate);
 
         mSecureGuard.lock();
-        //mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
-        mVehicle->control->flightCtrl(ctrlData);
+        mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+        //mVehicle->control->flightCtrl(ctrlData);
         mSecureGuard.unlock();
         
         return true;
@@ -400,21 +420,28 @@ namespace dal{
         // 666 TODO: PARA LOCAL POSITION GLOBAL COGER GPS CUANDO SE INICIE EL NODO DE COGER TELEMETRÍA
         // Y USAR EL METODO LOCAL POSITION FROM OFFSET PARA OBTENER ESA POSICIÓN LOCAL GLOBAL
 
+        // 666 TODO: AÑADIR A LA TELEMETRIA DISPLAYMODE
+
         // Get all the data once before the loop to initialize vars
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type     flightStatus;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type         latLon;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type altitude;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                rc;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type          velocity;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type        quaternion;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_POSITION>::type      rtk;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_POSITION_INFO>::type rtk_pos_info;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_VELOCITY>::type      rtk_velocity;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW>::type           rtk_yaw;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW_INFO>::type      rtk_yaw_info;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type          flightStatus;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                     rc;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type               velocity;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_POSITION>::type           rtk;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_POSITION_INFO>::type      rtk_pos_info;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_VELOCITY>::type           rtk_velocity;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW>::type                rtk_yaw;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW_INFO>::type           rtk_yaw_info;
 
         mSecureGuard.lock();
         flightStatus = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>();
+        mSecureGuard.unlock();
+
+        mSecureGuard.lock();
+        mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
         mSecureGuard.unlock();
 
         mSecureGuard.lock();
@@ -437,7 +464,47 @@ namespace dal{
         quaternion   = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
         mSecureGuard.unlock();
 
-        _data.flightStatus = flightStatus; 
+        std::string sFlightStatus, sMode;
+        if(flightStatus == 0){
+            sFlightStatus = "STOPED";
+        }else if(flightStatus == 1){
+            sFlightStatus = "ON_GROUND";
+        }else if(flightStatus == 2){
+            sFlightStatus = "IN_AIR";
+        }else{
+            sFlightStatus = "UNRECOGNIZED";
+        }
+
+        if(mode == 0){
+            sMode = "MANUAL";
+        }else if(mode == 1){
+            sMode = "ATTITUDE";
+        }else if(mode == 6){
+            sMode = "P_GPS";
+        }else if(mode == 9){
+            sMode = "HOT_POINT";
+        }else if(mode == 10){
+            sMode = "ASSISTED_TAKEOFF";
+        }else if(mode == 11){
+            sMode = "AUTO_TAKEOFF";
+        }else if(mode == 12){
+            sMode = "ASSISTED_LAND";
+        }else if(mode == 15){
+            sMode = "GO_HOME";
+        }else if(mode == 17){
+            sMode = "NAVI_SDK_CTMODE_CTRLRL";
+        }else if(mode == 33){
+            sMode = "FORCE_AUTO_LANDING";
+        }else if(mode == 40){
+            sMode = "SEARCH";
+        }else if(mode == 41){
+            sMode = "ENGINE_START";
+        }else{
+            sMode = "UNRECOGNIZED";
+        }
+
+        _data.flightStatus = sFlightStatus; 
+        _data.mode = sMode;
         _data.latLon(0) = latLon.latitude;
         _data.latLon(1) = latLon.longitude; 
         _data.altitude = altitude; 
@@ -748,17 +815,17 @@ namespace dal{
         // We will subscribe to six kinds of data:
         // 1. Flight Status at 10 Hz
         // 2. Mode at 10 Hz
-        // 2. Fused Lat/Lon at 50Hz
-        // 3. Fused Altitude at 50Hz
-        // 4. RC Channels at 50 Hz
-        // 5. Velocity at 50 Hz
-        // 6. Quaternion at 200 Hz
-        // 7. RTK if available at 5 Hz
+        // 3. Fused Lat/Lon at 50Hz
+        // 4. Fused Altitude at 50Hz
+        // 5. RC Channels at 50 Hz
+        // 6. Velocity at 50 Hz
+        // 7. Quaternion at 200 Hz
+        // 8. RTK if available at 5 Hz
 
         // Please make sure your drone is in simulation mode. You can fly the drone with your RC to get different values.
 	
-	// Telemetry: Verify the subscription
-	DJI::OSDK::ACK::ErrorCode subscribeStatus;
+        // Telemetry: Verify the subscription
+        DJI::OSDK::ACK::ErrorCode subscribeStatus;
         
         mSecureGuard.lock();
         subscribeStatus = mVehicle->subscribe->verify(mFunctionTimeout);
@@ -769,7 +836,7 @@ namespace dal{
             return false;
         }
 	
-        // Package 0: Subscribe to flight status at freq 10 Hz
+        // Package 0: Subscribe to flight status and mode at freq 10 Hz
         mPkgIndex = 0;
         int freq = 10;
         DJI::OSDK::Telemetry::TopicName topicList10Hz[] = { DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT, DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE};
@@ -1048,6 +1115,53 @@ namespace dal{
 
         return result;
     
+    }
+
+    bool BackendDJI::startGlobalPositionBroadcast(){
+        uint8_t freq[16];
+
+        /* Channels definition for A3/N3/M600
+        * 0 - Timestamp
+        * 1 - Attitude Quaternions
+        * 2 - Acceleration
+        * 3 - Velocity (Ground Frame)
+        * 4 - Angular Velocity (Body Frame)
+        * 5 - Position
+        * 6 - GPS Detailed Information
+        * 7 - RTK Detailed Information
+        * 8 - Magnetometer
+        * 9 - RC Channels Data
+        * 10 - Gimbal Data
+        * 11 - Flight Status
+        * 12 - Battery Level
+        * 13 - Control Information
+        */
+        freq[0]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[1]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[2]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[3]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[4]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[5]  =  DJI::OSDK::DataBroadcast::FREQ_50HZ; // This is the only one we want to change
+        freq[6]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[7]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[8]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[9]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[10] =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[11] =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[12] =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+        freq[13] =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
+
+        mSecureGuard.lock();
+        DJI::OSDK::ACK::ErrorCode ack = mVehicle->broadcast->setBroadcastFreq(freq, 1);
+        mSecureGuard.unlock();
+        if(DJI::OSDK::ACK::getError(ack)){
+            DJI::OSDK::ACK::getErrorCodeMessage(ack, __func__);
+            LogStatus::get()->error("Global Position Broadcast error, exiting", true);
+            return false;
+        }
+        else{
+            return true;
+        }
     }
 
 }

@@ -53,7 +53,8 @@ namespace dal{
 
             /// Structs that we use to receive Telemetry
             struct dataTelemetry{
-                int flightStatus;
+                std::string flightStatus;
+                std::string mode;
                 Eigen::Vector2f latLon; 
                 double altitude;
                 Eigen::Vector4f rc;

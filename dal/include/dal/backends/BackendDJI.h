@@ -148,6 +148,8 @@ namespace dal{
 
             DJI::OSDK::Telemetry::Vector3f toEulerAngle(void* _quaternionData);
 
+            bool startGlobalPositionBroadcast();
+
         private:
             DJI::OSDK::Vehicle* mVehicle;
             DJI::OSDK::Vehicle::ActivateData mActivateData;
