@@ -214,7 +214,7 @@ namespace dal{
         // There is a deadband in position control
         // the z cmd is absolute height
         // while x and y are in relative
-        float zDeadband = 0.12 * 10;        
+        float zDeadband = 0.12;        
 
         /*! Calculate the inputs to send the position controller. We implement basic
         *  receding setpoint position control and the setpoint is always 1 m away
@@ -320,7 +320,7 @@ namespace dal{
 
         if (elapsedTimeInMs >= timeoutInMilSec){
             std::cout << "Task timeout!\n";
-            unsubscribeToData();     // 666 TODO: Make this better  
+            // unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }
                 
@@ -331,13 +331,21 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
         
-        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS ||
+        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
             int mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
             LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
             return false;
         }
-        
+
+        // Also, since we don't have a source for relative height through subscription,
+        // start using broadcast height
+        if (!startGlobalPositionBroadcast()){
+            // Cleanup before return
+            unsubscribeToData();     // 666 TODO: Make this better 
+            return false;
+        }
+
         if(_offset){
             LogStatus::get()->status("Moving in global local position", true);
 
@@ -348,15 +356,21 @@ namespace dal{
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
             mSecureGuard.unlock();
 
-            // 666 TODO: CHANGE ORIGIN SUBSCRIPTION GPS WITH THE POSITION THAT WE WILL START
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originSubscriptionGPS  = currentSubscriptionGPS;
             localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
 
-            // Get offset to go
+            // Get the broadcast GP since we need the height for z
+            mSecureGuard.lock();
+            DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = mVehicle->broadcast->getGlobalPosition();
+            mSecureGuard.unlock();
+
+            // Get initial offset. We will update this in a loop later.
             double xOffset = _x - localOffset.x;
             double yOffset = _y - localOffset.y;
-            double zOffset = _z - (-localOffset.z);
-            
+            //double zOffset = _z - (-localOffset.z);
+
+            double zOffset = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast
+ 
             mSecureGuard.lock();
             mVehicle->control->positionAndYawCtrl(xOffset, yOffset, zOffset, _yaw);
             mSecureGuard.unlock();
@@ -372,13 +386,19 @@ namespace dal{
             // 
             // DJI::OSDK::Control::CtrlData ctrlData(flag, _x, _y, _z, _yaw);
 
+            // Get the broadcast GP since we need the height for z
             mSecureGuard.lock();
-            mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
+            DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = mVehicle->broadcast->getGlobalPosition();
+            mSecureGuard.unlock();
+
+            double zOffset = currentBroadcastGP.height + _z;
+
+            mSecureGuard.lock();
+            mVehicle->control->positionAndYawCtrl(_x, _y, zOffset, _yaw);
             //mVehicle->control->flightCtrl(ctrlData);
             mSecureGuard.unlock();
 
         }
-        
 
         return true;
     }
@@ -391,7 +411,7 @@ namespace dal{
         // _vz: velocity in z axis (m/s) 
         // _yawRate: yawRate set-point (deg/s) 
 
-        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS ||
+        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
             int mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
             LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
@@ -407,11 +427,19 @@ namespace dal{
         //                 Control::STABLE_ENABLE);
         // 
         // DJI::OSDK::Control::CtrlData ctrlData(flag, _vx, _vy, _vz, _yawRate);
+        
+        auto t0 = std::chrono::high_resolution_clock::now();
+        float duration = 0;
+        while(duration < 5000){
+            auto t1 = std::chrono::high_resolution_clock::now();
+            duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1-t0).count();
 
-        mSecureGuard.lock();
-        mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
-        //mVehicle->control->flightCtrl(ctrlData);
-        mSecureGuard.unlock();
+            mSecureGuard.lock();
+            mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+            //mVehicle->control->flightCtrl(ctrlData);
+            mSecureGuard.unlock();
+        }
+        
         
         return true;
     }    
