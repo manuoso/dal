@@ -324,6 +324,8 @@ namespace dal{
     bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
         
         if(_offset){
+            LogStatus::get()->status("Moving in global local position", true);
+
             // Convert position offset from first position to local coordinates
             DJI::OSDK::Telemetry::Vector3f localOffset;
 
@@ -341,22 +343,24 @@ namespace dal{
             double zOffset = _z - (-localOffset.z);
                     
             mSecureGuard.lock();
-            DJI::OSDK::ACK::ErrorCode positionStatus = mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
+            mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
             mSecureGuard.unlock();
-            if(DJI::OSDK::ACK::getError(positionStatus) != DJI::OSDK::ACK::SUCCESS){
-                DJI::OSDK::ACK::getErrorCodeMessage(positionStatus, __func__);
-                LogStatus::get()->error("Error at move position, exiting", true);
-                return false;
-            }
+
         }else{
+            LogStatus::get()->status("Moving in local position", true);
+
+            uint8_t flag = (Control::VERTICAL_POSITION |
+                            Control::HORIZONTAL_POSITION |
+                            Control::YAW_ANGLE |
+                            Control::HORIZONTAL_GROUND |
+                            Control::STABLE_ENABLE);
+
+            DJI::OSDK::Control::CtrlData ctrlData(flag, _x, _y, _z, _yaw);
+
             mSecureGuard.lock();
-            DJI::OSDK::ACK::ErrorCode positionStatus = mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
+            //mVehicle->control->positionAndYawCtrl(_x, _y, _z, _yaw);
+            mVehicle->control->flightCtrl(ctrlData);
             mSecureGuard.unlock();
-            if(DJI::OSDK::ACK::getError(positionStatus) != DJI::OSDK::ACK::SUCCESS){
-                DJI::OSDK::ACK::getErrorCodeMessage(positionStatus, __func__);
-                LogStatus::get()->error("Error at move position, exiting", true);
-                return false;
-            }
 
         }
         
@@ -372,14 +376,20 @@ namespace dal{
         // _vz: velocity in z axis (m/s) 
         // _yawRate: yawRate set-point (deg/s) 
 
+        LogStatus::get()->status("Moving in velocity", true);
+
+        uint8_t flag = (Control::VERTICAL_VELOCITY |
+                        Control::HORIZONTAL_VELOCITY |
+                        Control::YAW_RATE |
+                        Control::HORIZONTAL_GROUND |
+                        Control::STABLE_ENABLE);
+
+        DJI::OSDK::Control::CtrlData ctrlData(flag, _vx, _vy, _vz, _yawRate);
+
         mSecureGuard.lock();
-        DJI::OSDK::ACK::ErrorCode velocityStatus = mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+        //mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+        mVehicle->control->flightCtrl(ctrlData);
         mSecureGuard.unlock();
-        if(DJI::OSDK::ACK::getError(velocityStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(velocityStatus, __func__);
-            LogStatus::get()->error("Error at moving in velocity, exiting", true);
-            return false;
-        }
         
         return true;
     }    
