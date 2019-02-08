@@ -378,14 +378,6 @@ namespace dal{
         }else{
             LogStatus::get()->status("Moving in local position", true);
 
-            // uint8_t flag = (Control::VERTICAL_POSITION |
-            //                 Control::HORIZONTAL_POSITION |
-            //                 Control::YAW_ANGLE |
-            //                 Control::HORIZONTAL_GROUND |
-            //                 Control::STABLE_ENABLE);
-            // 
-            // DJI::OSDK::Control::CtrlData ctrlData(flag, _x, _y, _z, _yaw);
-
             // Get the broadcast GP since we need the height for z
             mSecureGuard.lock();
             DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = mVehicle->broadcast->getGlobalPosition();
@@ -395,7 +387,6 @@ namespace dal{
 
             mSecureGuard.lock();
             mVehicle->control->positionAndYawCtrl(_x, _y, zOffset, _yaw);
-            //mVehicle->control->flightCtrl(ctrlData);
             mSecureGuard.unlock();
 
         }
@@ -419,27 +410,10 @@ namespace dal{
         }
         
         LogStatus::get()->status("Moving in velocity", true);
-
-        // uint8_t flag = (Control::VERTICAL_VELOCITY |
-        //                 Control::HORIZONTAL_VELOCITY |
-        //                 Control::YAW_RATE |
-        //                 Control::HORIZONTAL_GROUND |
-        //                 Control::STABLE_ENABLE);
-        // 
-        // DJI::OSDK::Control::CtrlData ctrlData(flag, _vx, _vy, _vz, _yawRate);
         
-        auto t0 = std::chrono::high_resolution_clock::now();
-        float duration = 0;
-        while(duration < 5000){
-            auto t1 = std::chrono::high_resolution_clock::now();
-            duration = std::chrono::duration_cast<std::chrono::milliseconds>(t1-t0).count();
-
-            mSecureGuard.lock();
-            mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
-            //mVehicle->control->flightCtrl(ctrlData);
-            mSecureGuard.unlock();
-        }
-        
+        mSecureGuard.lock();
+        mVehicle->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+        mSecureGuard.unlock();
         
         return true;
     }    
@@ -449,8 +423,6 @@ namespace dal{
         
         // 666 TODO: PARA LOCAL POSITION GLOBAL COGER GPS CUANDO SE INICIE EL NODO DE COGER TELEMETRÍA
         // Y USAR EL METODO LOCAL POSITION FROM OFFSET PARA OBTENER ESA POSICIÓN LOCAL GLOBAL
-
-        // 666 TODO: AÑADIR A LA TELEMETRIA DISPLAYMODE
 
         // Get all the data once before the loop to initialize vars
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type          flightStatus;
@@ -471,7 +443,7 @@ namespace dal{
         mSecureGuard.unlock();
 
         mSecureGuard.lock();
-        mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
+        mode        = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
         mSecureGuard.unlock();
 
         mSecureGuard.lock();
