@@ -160,14 +160,6 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
         
-        // Also, since we don't have a source for relative height through subscription,
-        // start using broadcast height
-        if (!startGlobalPositionBroadcast()){
-            // Cleanup before return
-            unsubscribeToData();     // 666 TODO: Make this better 
-            return false;
-        }
-
         int timeoutInMilSec = 10000;
         int controlFreqInHz = 50; // Hz
         int cycleTimeInMs = 1000 / controlFreqInHz;
@@ -338,14 +330,6 @@ namespace dal{
             return false;
         }
 
-        // Also, since we don't have a source for relative height through subscription,
-        // start using broadcast height
-        if (!startGlobalPositionBroadcast()){
-            // Cleanup before return
-            unsubscribeToData();     // 666 TODO: Make this better 
-            return false;
-        }
-
         if(_offset){
             LogStatus::get()->status("Moving in global local position", true);
 
@@ -356,10 +340,9 @@ namespace dal{
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
             mSecureGuard.unlock();
 
-            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originSubscriptionGPS  = currentSubscriptionGPS;
-            localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
+            localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&mOriginGPS));
 
-            // Get the broadcast GP since we need the height for z
+            // Get the broadcast GP since we need the height for zCmd
             mSecureGuard.lock();
             DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = mVehicle->broadcast->getGlobalPosition();
             mSecureGuard.unlock();
@@ -421,14 +404,12 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){
         
-        // 666 TODO: PARA LOCAL POSITION GLOBAL COGER GPS CUANDO SE INICIE EL NODO DE COGER TELEMETRÍA
-        // Y USAR EL METODO LOCAL POSITION FROM OFFSET PARA OBTENER ESA POSICIÓN LOCAL GLOBAL
-
         // Get all the data once before the loop to initialize vars
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type          flightStatus;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude;
+        DJI::OSDK::Telemetry::Vector3f                                                          localOffset;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                     rc;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type               velocity;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion;
@@ -453,6 +434,8 @@ namespace dal{
         mSecureGuard.lock();
         altitude     = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
         mSecureGuard.unlock();
+
+        localOffsetFromGpsOffset(localOffset, static_cast<void*>(&latLon), static_cast<void*>(&mOriginGPS));
 
         mSecureGuard.lock();
         rc           = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
@@ -510,6 +493,9 @@ namespace dal{
         _data.latLon(0) = latLon.latitude;
         _data.latLon(1) = latLon.longitude; 
         _data.altitude = altitude; 
+        _data.localPosition(0) = localOffset.x;
+        _data.localPosition(1) = localOffset.y;
+        _data.localPosition(2) = localOffset.z;
         _data.rc(0) = rc.roll; 
         _data.rc(1) = rc.pitch; 
         _data.rc(2) = rc.yaw; 
@@ -952,7 +938,15 @@ namespace dal{
         // Wait for the data to start coming in.
         sleep(1);
 
-        return true;
+        // Also, since we don't have a source for relative height through subscription,
+        // start using broadcast height
+        if (!startGlobalPositionBroadcast()){
+            // Cleanup before return
+            unsubscribeToData();     // 666 TODO: Make this better 
+            return false;
+        }
+
+        return setLocalPosition();
 
     }
 
@@ -969,6 +963,22 @@ namespace dal{
             }
         }
         
+        return true;
+
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::setLocalPosition(){
+
+        mSecureGuard.lock();
+        mOriginGPS = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+        mSecureGuard.unlock();
+        
+        // Get the broadcast GP since we need the height
+        mSecureGuard.lock();
+        mBroadcastGP = mVehicle->broadcast->getGlobalPosition();
+        mSecureGuard.unlock();
+
         return true;
 
     }

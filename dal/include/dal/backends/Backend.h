@@ -56,6 +56,7 @@ namespace dal{
                 std::string flightStatus;
                 std::string mode;
                 Eigen::Vector2f latLon; 
+                Eigen::Vector3f localPosition;
                 double altitude;
                 Eigen::Vector4f rc;
                 Eigen::Vector3f velocity;

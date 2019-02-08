@@ -131,6 +131,8 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             bool unsubscribeToData();
 
+            bool setLocalPosition();
+
             /// This method is the implementation of a very simple calculation of local NED offset between two pairs of GPS coordinates. Accurate when distances are small..
             /// \param _height: desired height to takeoff.
             /// \return true if params are good or set without errors, false if something failed.
@@ -153,6 +155,9 @@ namespace dal{
         private:
             DJI::OSDK::Vehicle* mVehicle;
             DJI::OSDK::Vehicle::ActivateData mActivateData;
+
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type mOriginGPS;
+            DJI::OSDK::Telemetry::GlobalPosition mBroadcastGP;
 
             std::mutex mSecureGuard;
 
