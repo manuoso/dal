@@ -331,9 +331,9 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
         
-        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
+        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS){
             int mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
-            LogStatus::get()->error("Error vehicle not in MODE_NAVI_SDK_CTRL, mode: " + std::to_string(mode) + " exiting", true);
+            LogStatus::get()->error("Error vehicle not in MODE_P_GPS, mode: " + std::to_string(mode) + " exiting", true);
             return false;
         }
         
@@ -390,9 +390,9 @@ namespace dal{
         // _vz: velocity in z axis (m/s) 
         // _yawRate: yawRate set-point (deg/s) 
 
-        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
+        if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS){
             int mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
-            LogStatus::get()->error("Error vehicle not in MODE_NAVI_SDK_CTRL, mode: " + std::to_string(mode) + " exiting", true);
+            LogStatus::get()->error("Error vehicle not in MODE_P_GPS, mode: " + std::to_string(mode) + " exiting", true);
             return false;
         }
         
