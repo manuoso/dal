@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
 //  DRONE ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2018 ViGUS University of Seville
+//  Copyright 2019 ViGUS University of Seville
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -19,45 +19,55 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
-
-#ifndef DAL_H_
-#define DAL_H_
-
-#include <dal/backends/Backend.h>
+#ifndef DAL_LOGSTATUS_H_
+#define DAL_LOGSTATUS_H_
 
 #include <string>
-#include <Eigen/Eigen>
-#include <math.h>
+#include <fstream>
+#include <mutex>
+#include <chrono>
 
 namespace dal{
-    class DAL {
-    public:
-        /// Construct with given configuration for backend
-        DAL(const Backend::Config &_config);
 
-        /// Method for take off
-        bool takeOff(const float _height);
+	/// Thread safe class used as logging system. 
+	class LogStatus {
+	public:	//	Static interface.
+		/// Initialize the logging system. 
+		/// \param _appName: Base name used for the log file.
+		/// \param _useCout: Write to cout too.
+		static void init(const std::string _appName);
 
-        /// Method for land
-        bool land();
+		/// Close the logging system. It makes sure that the log is closed properly.
+		static void close();
 
-        /// Method for move to desire position using function of DJI SDK Example
-        bool movePos(float _x, float _y, float _z, float _yaw);
+		/// Get current instance of the logging system.
+		static LogStatus* get();
 
-	    /// Method for go to desire position using own function
-        bool position(float _x, float _y, float _z, float _yaw, bool _offset);
+	public:	// Public interface.
+		/// Write message to the log system with a custom tag
+		void message(const std::string &_msg, const std::string &_tag, bool _useCout = false);
+		
+		/// Write to the log system with status tag.
+		void status(const std::string &_msg, bool _useCout = false);
 
-	    /// Method for move with desire velocity using own function
-        bool velocity(float _vx, float _vy, float _vz, float _yawRate);
+		/// Write to the log system with warning tag.
+		void warning(const std::string &_msg, bool _useCout = false);
 
-        /// Method for get telemetry
-        bool telemetry(Backend::dataTelemetry& _data, bool _printData, bool _saveToFile);
+		/// Write to the log system with error tag.
+		void error(const std::string &_msg, bool _useCout = false);
 
-        Backend * backend(){return mBackend;};
-    private:
-        Backend *mBackend;
-        
-    };
+
+	private:	// Private interface.
+		LogStatus(const std::string _appName);
+		~LogStatus();
+
+		static LogStatus *mSingleton;
+
+		bool mUseCout = false;
+
+		std::chrono::high_resolution_clock::time_point  mInitTime;
+		std::ofstream mLogFile;
+		std::mutex mSecureGuard;
+	};
 }
-
 #endif
