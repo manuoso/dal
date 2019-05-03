@@ -66,13 +66,11 @@ endif()
 #########################################
 
 # Collect all sources
-file(GLOB_RECURSE DAL_SOURCE_FILES "src/*.c" "src/dal.cpp" "src/backeds/*.cpp")
-file(GLOB_RECURSE DAL_HEADER_FILES "include/dal/*.inl" "include/dal/dal.h" "include/dal/backends/*.h")
+file(GLOB_RECURSE DAL_SOURCE_FILES "src/*.c" "src/*.cpp")
+file(GLOB_RECURSE DAL_HEADER_FILES "include/*.inl" "include/*.h")
 
-file(GLOB_RECURSE DAL_LOG_SOURCE_FILES "src/LogTray.cpp" "src/LogStatus.cpp")
-file(GLOB_RECURSE DAL_LOG_HEADER_FILES "include/LogTray*.h" "include/LogStatus.h")
 
-add_library(${PROJECT_NAME} SHARED ${DAL_SOURCE_FILES} ${DAL_HEADER_FILES} ${DAL_LOG_SOURCE_FILES} ${DAL_LOG_HEADER_FILES})
+add_library(${PROJECT_NAME} SHARED ${DAL_SOURCE_FILES} ${DAL_HEADER_FILES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCE_DIR}/include) 
 
