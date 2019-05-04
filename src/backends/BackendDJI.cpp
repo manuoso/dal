@@ -409,7 +409,7 @@ namespace dal{
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude;
-        DJI::OSDK::Telemetry::Vector3f                                                          localOffset;
+        DJI::OSDK::Telemetry::Vector3f                                                          localOffsetNed, localOffsetEnu;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                     rc;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type               velocity;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion;
@@ -435,7 +435,7 @@ namespace dal{
         altitude     = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
         mSecureGuard.unlock();
 
-        localOffsetFromGpsOffset(localOffset, static_cast<void*>(&latLon), static_cast<void*>(&mOriginGPS));
+        localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&latLon), static_cast<void*>(&mOriginGPS));
 
         mSecureGuard.lock();
         rc           = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
@@ -493,9 +493,12 @@ namespace dal{
         _data.latLon(0) = latLon.latitude;
         _data.latLon(1) = latLon.longitude; 
         _data.altitude = altitude; 
-        _data.localPosition(0) = localOffset.x;
-        _data.localPosition(1) = localOffset.y;
-        _data.localPosition(2) = localOffset.z;
+        _data.localPositionNED(0) = localOffsetNed.x;
+        _data.localPositionNED(1) = localOffsetNed.y;
+        _data.localPositionNED(2) = localOffsetNed.z;
+        _data.localPositionENU(0) = localOffsetEnu.x;
+        _data.localPositionENU(1) = localOffsetEnu.y;
+        _data.localPositionENU(2) = localOffsetEnu.z;
         _data.rc(0) = rc.roll; 
         _data.rc(1) = rc.pitch; 
         _data.rc(2) = rc.yaw; 
@@ -995,8 +998,8 @@ namespace dal{
         _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
         // ENU ? NEED TO CHECK
-        _deltaEnu.x = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(subscriptionTarget->latitude));
-        _deltaEnu.y = DEG2RAD(deltaLat) * C_EARTH;
+        _deltaEnu.x = DEG2RAD * deltaLon * C_EARTH * cos(DEG2RAD * subscriptionTarget->latitude);
+        _deltaEnu.y = DEG2RAD * deltaLat * C_EARTH;
         _deltaEnu.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
     }
