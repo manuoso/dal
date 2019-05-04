@@ -167,14 +167,14 @@ namespace dal{
         int withinControlBoundsTimeReqmt = 50 * cycleTimeInMs; // 50 cycles
 
         // Convert position offset from first position to local coordinates
-         DJI::OSDK::Telemetry::Vector3f localOffset;
+         DJI::OSDK::Telemetry::Vector3f localOffsetNed, localOffsetEnu;
 
         mSecureGuard.lock();
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
         mSecureGuard.unlock();
 
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originSubscriptionGPS  = currentSubscriptionGPS;
-        localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
+        localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
 
         // Get the broadcast GP since we need the height for zCmd
         mSecureGuard.lock();
@@ -182,9 +182,9 @@ namespace dal{
         mSecureGuard.unlock();
 
         // Get initial offset. We will update this in a loop later.
-        double xOffsetRemaining = _x - localOffset.x;
-        double yOffsetRemaining = _y - localOffset.y;
-        double zOffsetRemaining = _z - (-localOffset.z);
+        double xOffsetRemaining = _x - localOffsetNed.x;
+        double yOffsetRemaining = _y - localOffsetNed.y;
+        double zOffsetRemaining = _z - (-localOffsetNed.z);
 
         // Conversions
         double _yawRad     = DEG2RAD * _yaw;
@@ -256,7 +256,7 @@ namespace dal{
             mSecureGuard.lock();
             currentSubscriptionGPS = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
             mSecureGuard.unlock();
-            localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
+            localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
 
             // Get the broadcast GP since we need the height for zCmd
             mSecureGuard.lock();
@@ -264,9 +264,9 @@ namespace dal{
             mSecureGuard.unlock();
 
             //! See how much farther we have to go
-            xOffsetRemaining = _x - localOffset.x;
-            yOffsetRemaining = _y - localOffset.y;
-            zOffsetRemaining = _z - (-localOffset.z);
+            xOffsetRemaining = _x - localOffsetNed.x;
+            yOffsetRemaining = _y - localOffsetNed.y;
+            zOffsetRemaining = _z - (-localOffsetNed.z);
 
             //! See if we need to modify the setpoint
             if (std::abs(xOffsetRemaining) < speedFactor){
@@ -334,13 +334,13 @@ namespace dal{
             LogStatus::get()->status("Moving in global local position", true);
 
             // Convert position offset from first position to local coordinates
-            DJI::OSDK::Telemetry::Vector3f localOffset;
+            DJI::OSDK::Telemetry::Vector3f localOffsetNed, localOffsetEnu;
 
             mSecureGuard.lock();
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
             mSecureGuard.unlock();
 
-            localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&mOriginGPS));
+            localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&mOriginGPS));
 
             // Get the broadcast GP since we need the height for zCmd
             mSecureGuard.lock();
@@ -348,11 +348,11 @@ namespace dal{
             mSecureGuard.unlock();
 
             // Get initial offset. We will update this in a loop later.
-            double xOffset = _x - localOffset.x;
-            double yOffset = _y - localOffset.y;
-            //double zOffset = _z - (-localOffset.z);
+            double xOffset = _x - localOffsetNed.x;
+            double yOffset = _y - localOffsetNed.y;
+            double zOffset = _z - (localOffsetNed.z);
 
-            double zOffset = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast
+            // double zOffset = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast
  
             mSecureGuard.lock();
             mVehicle->control->positionAndYawCtrl(xOffset, yOffset, zOffset, _yaw);
@@ -984,7 +984,7 @@ namespace dal{
     }
     
     //-----------------------------------------------------------------------------------------------------------------
-    void BackendDJI::localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _deltaNed, void* _target, void* _origin){
+    void BackendDJI::localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _deltaNed, DJI::OSDK::Telemetry::Vector3f& _deltaEnu, void* _target, void* _origin){
     
         DJI::OSDK::Telemetry::GPSFused* subscriptionTarget = (DJI::OSDK::Telemetry::GPSFused*)_target;
         DJI::OSDK::Telemetry::GPSFused*  subscriptionOrigin = (DJI::OSDK::Telemetry::GPSFused*)_origin;
@@ -993,6 +993,11 @@ namespace dal{
         _deltaNed.x = deltaLat * C_EARTH;
         _deltaNed.y = deltaLon * C_EARTH * cos(subscriptionTarget->latitude);
         _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
+
+        // ENU ? NEED TO CHECK
+        _deltaEnu.x = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(subscriptionTarget->latitude));
+        _deltaEnu.y = DEG2RAD(deltaLat) * C_EARTH;
+        _deltaEnu.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
     }
 

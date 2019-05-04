@@ -133,10 +133,10 @@ namespace dal{
 
             bool setLocalPosition();
 
-            /// This method is the implementation of a very simple calculation of local NED offset between two pairs of GPS coordinates. Accurate when distances are small..
+            /// This method is the implementation of a very simple calculation of local NED and ENU offset between two pairs of GPS coordinates. Accurate when distances are small..
             /// \param _height: desired height to takeoff.
             /// \return true if params are good or set without errors, false if something failed.
-            void localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _deltaNed, void* _target, void* _origin);
+            void localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _deltaNed, DJI::OSDK::Telemetry::Vector3f& _deltaEnu, void* _target, void* _origin);
 
             void setWaypointDefaults(DJI::OSDK::WayPointSettings* _wp);
 
