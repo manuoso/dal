@@ -350,7 +350,7 @@ namespace dal{
             // Get initial offset. We will update this in a loop later.
             double xOffset = _x - localOffsetNed.x;
             double yOffset = _y - localOffsetNed.y;
-            double zOffset = _z - (localOffsetNed.z);
+            double zOffset = _z - (-localOffsetNed.z);
 
             // double zOffset = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast
  
