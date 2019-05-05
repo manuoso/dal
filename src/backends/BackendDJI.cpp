@@ -343,9 +343,9 @@ namespace dal{
             localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&mOriginGPS));
 
             // Get the broadcast GP since we need the height for zCmd
-            mSecureGuard.lock();
-            DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = mVehicle->broadcast->getGlobalPosition();
-            mSecureGuard.unlock();
+            // mSecureGuard.lock();
+            // DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = mVehicle->broadcast->getGlobalPosition();
+            // mSecureGuard.unlock();
 
             // Get initial offset. We will update this in a loop later.
             double xOffset = _x - localOffsetNed.x;
@@ -956,7 +956,7 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::unsubscribeToData(){
 
-        for(unsigned i = 0; i < mPkgIndex; i++ ){
+        for(int i = 0; i < mPkgIndex; i++ ){
             mSecureGuard.lock();
             DJI::OSDK::ACK::ErrorCode ack = mVehicle->subscribe->removePackage(i, mFunctionTimeout);
             mSecureGuard.unlock();
