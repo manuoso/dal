@@ -598,50 +598,50 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::runWaypointMissionPolygon(uint8_t _numWaypoints, float64_t _increment, float64_t _startAlt){
         
-        // _increment -> 0.000001
-        // _startAlt -> 10
+        // // _increment -> 0.000001
+        // // _startAlt -> 10
 
-        // Waypoint Mission : Initialization
-        DJI::OSDK::WayPointInitSettings fdata;
-        setWaypointInitDefaults(&fdata);
+        // // Waypoint Mission : Initialization
+        // DJI::OSDK::WayPointInitSettings fdata;
+        // setWaypointInitDefaults(&fdata);
 
-        fdata.indexNumber = _numWaypoints + 1; // We add 1 to get the aircarft back to the start.
+        // fdata.indexNumber = _numWaypoints + 1; // We add 1 to get the aircarft back to the start.
 
-        mSecureGuard.lock();
-        DJI::OSDK::ACK::ErrorCode initAck = mVehicle->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, mFunctionTimeout, &fdata);
-        mSecureGuard.unlock();
-        if (DJI::OSDK::ACK::getError(initAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
-            LogStatus::get()->error("Error at init mission manager, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
-        }
+        // mSecureGuard.lock();
+        // DJI::OSDK::ACK::ErrorCode initAck = mVehicle->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, mFunctionTimeout, &fdata);
+        // mSecureGuard.unlock();
+        // if (DJI::OSDK::ACK::getError(initAck)){
+        //     DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
+        //     LogStatus::get()->error("Error at init mission manager, exiting", true);
+        //     unsubscribeToData();     // 666 TODO: Make this better  
+        //     return false;
+        // }
 
-        mSecureGuard.lock();
-        mVehicle->missionManager->printInfo();
-        mSecureGuard.unlock();
-        LogStatus::get()->status("Initializing Waypoint Mission...", true);
+        // mSecureGuard.lock();
+        // mVehicle->missionManager->printInfo();
+        // mSecureGuard.unlock();
+        // LogStatus::get()->status("Initializing Waypoint Mission...", true);
 
-        // Waypoint Mission: Create Waypoints
-        std::vector<WayPointSettings> generatedWaypts = createWaypoints(_numWaypoints, _increment, _startAlt);
-        LogStatus::get()->status("Creating Waypoints...", true);
+        // // Waypoint Mission: Create Waypoints
+        // std::vector<WayPointSettings> generatedWaypts = createWaypoints(_numWaypoints, _increment, _startAlt);
+        // LogStatus::get()->status("Creating Waypoints...", true);
 
-        // Waypoint Mission: Upload the waypoints
-        uploadWaypoints(generatedWaypts);
-        LogStatus::get()->status("Uploading Waypoints...", true);
+        // // Waypoint Mission: Upload the waypoints
+        // uploadWaypoints(generatedWaypts);
+        // LogStatus::get()->status("Uploading Waypoints...", true);
 
-        // Waypoint Mission: Start
-        mSecureGuard.lock();
-        DJI::OSDK::ACK::ErrorCode startAck = mVehicle->missionManager->wpMission->start(mFunctionTimeout);
-        mSecureGuard.unlock();
-        if (DJI::OSDK::ACK::getError(startAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
-            LogStatus::get()->error("Error at start mission, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
-        }else{
-            LogStatus::get()->status("Starting Waypoint Mission...", true);
-        }
+        // // Waypoint Mission: Start
+        // mSecureGuard.lock();
+        // DJI::OSDK::ACK::ErrorCode startAck = mVehicle->missionManager->wpMission->start(mFunctionTimeout);
+        // mSecureGuard.unlock();
+        // if (DJI::OSDK::ACK::getError(startAck)){
+        //     DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
+        //     LogStatus::get()->error("Error at start mission, exiting", true);
+        //     unsubscribeToData();     // 666 TODO: Make this better  
+        //     return false;
+        // }else{
+        //     LogStatus::get()->status("Starting Waypoint Mission...", true);
+        // }
 
         return true;
 
@@ -650,37 +650,37 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::runHotpointMissionRadius(int _initialRadius, int _time){
 
-        // Hotpoint Mission Initialize
-        mSecureGuard.lock();
-        mVehicle->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::HOTPOINT, mFunctionTimeout, NULL);
-        mSecureGuard.unlock();
+        // // Hotpoint Mission Initialize
+        // mSecureGuard.lock();
+        // mVehicle->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::HOTPOINT, mFunctionTimeout, NULL);
+        // mSecureGuard.unlock();
 
-        mSecureGuard.lock();
-        mVehicle->missionManager->printInfo();
-        mSecureGuard.unlock();
+        // mSecureGuard.lock();
+        // mVehicle->missionManager->printInfo();
+        // mSecureGuard.unlock();
 
-        // Global position retrieved via subscription
-        mSecureGuard.lock();
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type subscribeGPosition = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-        mSecureGuard.unlock();
+        // // Global position retrieved via subscription
+        // mSecureGuard.lock();
+        // DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type subscribeGPosition = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+        // mSecureGuard.unlock();
 
-        mSecureGuard.lock();
-        mVehicle->missionManager->hpMission->setHotPoint(subscribeGPosition.longitude, subscribeGPosition.latitude, _initialRadius);
-        mSecureGuard.unlock();
+        // mSecureGuard.lock();
+        // mVehicle->missionManager->hpMission->setHotPoint(subscribeGPosition.longitude, subscribeGPosition.latitude, _initialRadius);
+        // mSecureGuard.unlock();
 
-        // Start
-        LogStatus::get()->status("Start with default rotation rate: 15 deg/s", true);
-        mSecureGuard.lock();
-        DJI::OSDK::ACK::ErrorCode startAck = mVehicle->missionManager->hpMission->start(mFunctionTimeout);
-        mSecureGuard.unlock();
-        if (DJI::OSDK::ACK::getError(startAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
-            LogStatus::get()->error("Error at start mission, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
-        }
+        // // Start
+        // LogStatus::get()->status("Start with default rotation rate: 15 deg/s", true);
+        // mSecureGuard.lock();
+        // DJI::OSDK::ACK::ErrorCode startAck = mVehicle->missionManager->hpMission->start(mFunctionTimeout);
+        // mSecureGuard.unlock();
+        // if (DJI::OSDK::ACK::getError(startAck)){
+        //     DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
+        //     LogStatus::get()->error("Error at start mission, exiting", true);
+        //     unsubscribeToData();     // 666 TODO: Make this better  
+        //     return false;
+        // }
 
-        sleep(_time);
+        // sleep(_time);
 
         // // Pause
         // LogStatus::get()->status("Pause for 5s", true);
@@ -725,17 +725,17 @@ namespace dal{
         // mSecureGuard.unlock();
         // sleep(5);
 
-        // Stop
-        LogStatus::get()->status("Stop mission", true);
-        mSecureGuard.lock();
-        DJI::OSDK::ACK::ErrorCode stopAck = mVehicle->missionManager->hpMission->stop(mFunctionTimeout);
-        mSecureGuard.unlock();
-        if (DJI::OSDK::ACK::getError(stopAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
-            LogStatus::get()->error("Error at stop mission, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
-        }
+        // // Stop
+        // LogStatus::get()->status("Stop mission", true);
+        // mSecureGuard.lock();
+        // DJI::OSDK::ACK::ErrorCode stopAck = mVehicle->missionManager->hpMission->stop(mFunctionTimeout);
+        // mSecureGuard.unlock();
+        // if (DJI::OSDK::ACK::getError(stopAck)){
+        //     DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
+        //     LogStatus::get()->error("Error at stop mission, exiting", true);
+        //     unsubscribeToData();     // 666 TODO: Make this better  
+        //     return false;
+        // }
 
         return true;
 
@@ -791,7 +791,11 @@ namespace dal{
         LogStatus::get()->status("Vehicle initialized", true);
       
         // Obtain Control Authority
-        obtainControlAuthority(true);
+        if(obtainControlAuthority(true)){
+            return true;
+        }else{
+            return false;
+        }    
 
         if(subscribeToData()){     // 666 TODO: MAKE THIS BETTER, UNA ESPECIE DE SINGLETON?
             LogStatus::get()->status("subscribe To Data success", true);
@@ -967,6 +971,9 @@ namespace dal{
             return false;
         }
 
+        // Wait for the data to start coming in.
+        sleep(1);
+        
         return setLocalPosition();
 
     }
