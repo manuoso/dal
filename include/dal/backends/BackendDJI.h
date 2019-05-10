@@ -114,6 +114,10 @@ namespace dal{
             /// \param _config: needed configuration to initialize DJI SDK
             virtual bool init(const Config &_config);
 
+            /// This method is the implementation of obtain the control of the vehicle.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool obtainControlAuthority(bool _info);
+
             /// This method is the implementation of subscription to Telemetry data and others.
             /// By defect, we will subscribe to six kinds of data:
             /// 1. Flight Status at 10 Hz
@@ -131,6 +135,8 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             bool unsubscribeToData();
 
+            /// This method is the implementation of set the local position to move the vehicle in local coordinates.
+            /// \return true if params are good or set without errors, false if something failed.
             bool setLocalPosition();
 
             /// This method is the implementation of a very simple calculation of local NED and ENU offset between two pairs of GPS coordinates. Accurate when distances are small..

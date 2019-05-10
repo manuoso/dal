@@ -30,6 +30,9 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::takeOff(const float _height){
 
+        // Obtain Control Authority
+        obtainControlAuthority(false);
+
         // Start takeoff
         mSecureGuard.lock();
         DJI::OSDK::ACK::ErrorCode takeoffStatus = mVehicle->control->takeoff(mFunctionTimeout);
@@ -107,6 +110,9 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::land(){
 
+        // Obtain Control Authority
+        obtainControlAuthority(false);
+
         // Start landing
         mSecureGuard.lock();
         DJI::OSDK::ACK::ErrorCode landingStatus = mVehicle->control->land(mFunctionTimeout);
@@ -160,6 +166,9 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
         
+        // Obtain Control Authority
+        obtainControlAuthority(false);
+
         int timeoutInMilSec = 10000;
         int controlFreqInHz = 50; // Hz
         int cycleTimeInMs = 1000 / controlFreqInHz;
@@ -323,6 +332,9 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
         
+        // Obtain Control Authority
+        obtainControlAuthority(false);
+
         if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
             int mode = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
@@ -379,11 +391,9 @@ namespace dal{
     
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){
-
-        // _vx: velocity in x axis (m/s) 
-        // _vy: velocity in y axis (m/s) 
-        // _vz: velocity in z axis (m/s) 
-        // _yawRate: yawRate set-point (deg/s) 
+        
+        // Obtain Control Authority
+        obtainControlAuthority(false);
 
         if(mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
@@ -781,15 +791,7 @@ namespace dal{
         LogStatus::get()->status("Vehicle initialized", true);
       
         // Obtain Control Authority
-        mSecureGuard.lock();
-        DJI::OSDK::ACK::ErrorCode ctrlStatus = mVehicle->obtainCtrlAuthority(mFunctionTimeout);
-        mSecureGuard.unlock();
-        if (DJI::OSDK::ACK::getError(ctrlStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(ctrlStatus, __func__);
-            LogStatus::get()->error("Not obtained Control Authority, exiting", true);
-            return false;
-        }
-        LogStatus::get()->status("Obtained Control Authority of the Vehicle", true);
+        obtainControlAuthority(true);
 
         if(subscribeToData()){     // 666 TODO: MAKE THIS BETTER, UNA ESPECIE DE SINGLETON?
             LogStatus::get()->status("subscribe To Data success", true);
@@ -798,6 +800,22 @@ namespace dal{
             LogStatus::get()->status("subscribe To Data failed", true);
             return false;
         }    
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::obtainControlAuthority(bool _info){ 
+
+        mSecureGuard.lock();
+        DJI::OSDK::ACK::ErrorCode ctrlStatus = mVehicle->obtainCtrlAuthority(mFunctionTimeout);
+        mSecureGuard.unlock();
+        if (DJI::OSDK::ACK::getError(ctrlStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(ctrlStatus, __func__);
+            LogStatus::get()->error("Not obtained Control Authority, exiting", _info);
+            return false;
+        }
+        LogStatus::get()->status("Obtained Control Authority of the Vehicle", _info);
+        return true;
+
     }
 
     //-----------------------------------------------------------------------------------------------------------------
