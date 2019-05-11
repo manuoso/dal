@@ -503,6 +503,7 @@ namespace dal{
         _data.mode = sMode;
         _data.latLon(0) = latLon.latitude;
         _data.latLon(1) = latLon.longitude; 
+        _data.nGPS = latLon.visibleSatelliteNumber; 
         _data.altitude = altitude; 
         _data.localPositionNED(0) = localOffsetNed.x;
         _data.localPositionNED(1) = localOffsetNed.y;

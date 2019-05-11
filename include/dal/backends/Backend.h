@@ -55,7 +55,8 @@ namespace dal{
             struct dataTelemetry{
                 std::string flightStatus;
                 std::string mode;
-                Eigen::Vector2f latLon; 
+                Eigen::Vector2f latLon;
+                int nGPS; 
                 Eigen::Vector3f localPositionNED;
                 Eigen::Vector3f localPositionENU;
                 double altitude;
