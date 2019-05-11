@@ -163,20 +163,20 @@ namespace dal{
             bool startGlobalPositionBroadcast();
 
         private:
-            DJI::OSDK::Vehicle* mVehicle;
-            DJI::OSDK::Vehicle::ActivateData mActivateData;
+            DJI::OSDK::Vehicle* vehicle_;
+            DJI::OSDK::Vehicle::ActivateData activateData_;
 
-            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type mOriginGPS;
-            DJI::OSDK::Telemetry::GlobalPosition mBroadcastGP;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originGPS_;
+            DJI::OSDK::Telemetry::GlobalPosition broadcastGP_;
 
-            std::mutex mSecureGuard;
+            std::mutex secureGuard_;
 
             // RTK can be detected as unavailable only for Flight controllers that don't support RTK
-            bool mRTKAvailable = false;
+            bool rtkAvailable_ = false;
 
-            int mPkgIndex = 0;
+            int pkgIndex_ = 0;
 
-            int mFunctionTimeout = 1; // 666 TODO: WTF IS FUNCTIONTIMEOUT???
+            int functionTimeout_ = 1; // 666 TODO: WTF IS FUNCTIONTIMEOUT???
     };
 }
 
