@@ -45,7 +45,11 @@
 #include <dal/LogTelemetry.h>
 
 #define C_EARTH (double)6378137.0
-#define DEG2RAD 0.01745329252
+#define C_PI (double)3.141592653589793
+#define DEG2RAD(DEG) ((DEG) * ((C_PI) / (180.0)))
+
+const float deg2rad = C_PI/180.0;
+const float rad2deg = 180.0/C_PI;
 
 namespace dal{
     class BackendDJI: public Backend{

@@ -196,14 +196,14 @@ namespace dal{
         double zOffsetRemaining = _z - (-localOffsetNed.z);
 
         // Conversions
-        double _yawRad     = DEG2RAD * _yaw;
-        double yawThresholdInRad = DEG2RAD * _yawThreshold;
+        double _yawRad     = deg2rad * _yaw;
+        double yawThresholdInRad = deg2rad * _yawThreshold;
 
         //! Get Euler angle
         mSecureGuard.lock();
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type subscriptionQ = mVehicle->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
         mSecureGuard.unlock();
-        double yawInRad = toEulerAngle((static_cast<void*>(&subscriptionQ))).z / DEG2RAD;
+        double yawInRad = toEulerAngle((static_cast<void*>(&subscriptionQ))).z / deg2rad;
 
         int elapsedTimeInMs = 0;
         int withinBoundsCounter = 0;
@@ -250,7 +250,7 @@ namespace dal{
             LogStatus::get()->status("(While) xOffsetRemaining: " + std::to_string(xOffsetRemaining) + " yOffsetRemaining: " + std::to_string(yOffsetRemaining) + " zOffsetRemaining: " + std::to_string(zOffsetRemaining), true);
 
             mSecureGuard.lock();
-            mVehicle->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yawRad / DEG2RAD);
+            mVehicle->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yawRad / deg2rad);
             mSecureGuard.unlock();
 
             usleep(cycleTimeInMs * 1000);
@@ -1018,14 +1018,14 @@ namespace dal{
         DJI::OSDK::Telemetry::GPSFused*  subscriptionOrigin = (DJI::OSDK::Telemetry::GPSFused*)_origin;
         double deltaLon   = subscriptionTarget->longitude - subscriptionOrigin->longitude;
         double deltaLat   = subscriptionTarget->latitude - subscriptionOrigin->latitude;
-        _deltaNed.x = deltaLat * C_EARTH;
-        _deltaNed.y = deltaLon * C_EARTH * cos(subscriptionTarget->latitude);
-        _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
+        // _deltaNed.x = deltaLat * C_EARTH;
+        // _deltaNed.y = deltaLon * C_EARTH * cos(subscriptionTarget->latitude);
+        // _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
-        // ENU ? NEED TO CHECK
-        _deltaEnu.x = DEG2RAD * deltaLon * C_EARTH * cos(DEG2RAD * subscriptionTarget->latitude);
-        _deltaEnu.y = DEG2RAD * deltaLat * C_EARTH;
-        _deltaEnu.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
+        // NED ? NEED TO CHECK
+        _deltaNed.x = deg2rad * deltaLon * C_EARTH * cos(deg2rad * subscriptionTarget->latitude);
+        _deltaNed.y = deg2rad * deltaLat * C_EARTH;
+        _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
     }
 
