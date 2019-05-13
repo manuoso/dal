@@ -49,6 +49,13 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
+    bool BackendAPM::mission(std::vector<Eigen::Vector3f> _wayPoints){
+
+        
+        return true;        
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
     bool BackendAPM::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
 
         

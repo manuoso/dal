@@ -168,11 +168,18 @@ namespace dal{
         
         // Obtain Control Authority
         obtainControlAuthority(false);
-        
+
         secureGuard_.lock();
         vehicle_->control->emergencyBrake();
         secureGuard_.unlock();
 
+        return true;        
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints){
+
+        
         return true;        
     }
 

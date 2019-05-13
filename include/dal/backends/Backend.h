@@ -76,6 +76,9 @@ namespace dal{
 
             /// \brief abstract method for emergency brake
             virtual bool emergencyBrake() = 0;
+
+            /// \brief abstract method for to do a desired mission given the waypoints
+            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints) = 0;
 	
             /// \brief abstract method for position control and yaw using DJI SDK.
             virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0) = 0;
@@ -100,6 +103,7 @@ namespace dal{
         virtual bool takeOff(const float _height){return true;}
         virtual bool land(){return true;}
         virtual bool emergencyBrake(){return true;}
+        virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints){return true;}
         virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;}
         virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){return true;}
         virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){return true;}

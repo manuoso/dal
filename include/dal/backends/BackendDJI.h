@@ -70,6 +70,10 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool emergencyBrake();
 
+            /// This method is for to do a desired mission given the waypoints.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints);
+
             /// This method is the implementation of move to position using DJI SDK.
             /// \param _x: desired x in NEU coordinates.
             /// \param _y: desired y in NEU coordinates.
