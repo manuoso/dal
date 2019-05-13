@@ -178,6 +178,9 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
+        
+        // Obtain Control Authority
+        obtainControlAuthority(false);
 
         if(_missionType == "waypoint"){
 
@@ -244,6 +247,9 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::start_mission(){
 
+        // Obtain Control Authority
+        obtainControlAuthority(false);
+
         if(missionType_ == "waypoint"){
 
             secureGuard_.lock();
@@ -282,6 +288,9 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::pause_mission(){
+
+        // Obtain Control Authority
+        obtainControlAuthority(false);
 
         if(missionType_ == "waypoint"){
             
@@ -322,6 +331,9 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::stop_mission(){
         
+        // Obtain Control Authority
+        obtainControlAuthority(false);
+
         if(missionType_ == "waypoint"){
 
             secureGuard_.lock();
@@ -360,6 +372,9 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::resume_mission(){
+
+        // Obtain Control Authority
+        obtainControlAuthority(false);
 
         if(missionType_ == "waypoint"){
 
