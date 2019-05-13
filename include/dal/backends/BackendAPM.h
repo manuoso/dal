@@ -43,6 +43,10 @@ namespace dal{
             /// This method is the implementation of land.
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool land();
+
+            /// This method is the implementation of emergency brake.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool emergencyBrake();
 	
             /// This method is the implementation of move to position using DJI SDK not for use in APM
             virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;};

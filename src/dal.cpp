@@ -44,6 +44,11 @@ namespace dal{
     }   
 
     //---------------------------------------------------------------------------------------------------------------------
+    bool DAL::emergencyBrake(){
+        return mBackend->emergencyBrake();
+    }   
+
+    //---------------------------------------------------------------------------------------------------------------------
     bool DAL::movePos(float _x, float _y, float _z, float _yaw){
         return mBackend->movePosition(_x, _y, _z, _yaw, 0.2, 1.0);
     }

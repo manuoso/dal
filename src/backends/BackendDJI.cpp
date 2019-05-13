@@ -164,6 +164,19 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::emergencyBrake(){
+        
+        // Obtain Control Authority
+        obtainControlAuthority(false);
+        
+        secureGuard_.lock();
+        vehicle_->control->emergencyBrake();
+        secureGuard_.unlock();
+
+        return true;        
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
         
         // Obtain Control Authority
@@ -1028,6 +1041,11 @@ namespace dal{
         _deltaNed.x = deg2rad * deltaLon * C_EARTH * cos(deg2rad * subscriptionTarget->latitude);
         _deltaNed.y = deg2rad * deltaLat * C_EARTH;
         _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
+
+        // ENU ? NEED TO CHECK
+        _deltaEnu.x = deg2rad * deltaLon * C_EARTH * cos(deg2rad * subscriptionTarget->latitude);
+        _deltaEnu.y = deg2rad * deltaLat * C_EARTH;
+        _deltaEnu.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
     }
 
