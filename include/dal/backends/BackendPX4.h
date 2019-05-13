@@ -48,10 +48,13 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool emergencyBrake();
 
-            /// This method is for configure a desired mission given the waypoints.
-            /// \param _wayPoints: vector with the GPS coordinates of each point, where x = lat, y = lon, z = alt.
+            /// This method is for configure a desired mission given the waypoints in GPS coordinates.
+            /// \param _wayPoints: vector with the GPS coordinates of each point, where 0 = lat, 1 = lon, 2 = alt.
+            /// \param _missionType: type of mission to configure, there is enable waypoint and hotpoint. 
+            /// If you select hotpoint, _wayPoints[0](0) will be the longitude, 
+            /// _wayPoints[0](1) will be the latitude and _wayPoints[0](2) the radius of the hotpoint.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints);
+            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType);
 
             /// This method is for start a configured mission.
             /// \return true if params are good or set without errors, false if something failed.

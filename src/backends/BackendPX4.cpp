@@ -42,7 +42,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendPX4::mission(std::vector<Eigen::Vector3f> _wayPoints){
+    bool BackendPX4::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
 
         
         return true;        

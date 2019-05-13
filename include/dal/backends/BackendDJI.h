@@ -71,9 +71,12 @@ namespace dal{
             virtual bool emergencyBrake();
 
             /// This method is for configure a desired mission given the waypoints in GPS coordinates.
-            /// \param _wayPoints: vector with the GPS coordinates of each point, where x = lat, y = lon, z = alt.
+            /// \param _wayPoints: vector with the GPS coordinates of each point, where 0 = lat, 1 = lon, 2 = alt.
+            /// \param _missionType: type of mission to configure, there is enable waypoint and hotpoint. 
+            /// If you select hotpoint, _wayPoints[0](0) will be the longitude, 
+            /// _wayPoints[0](1) will be the latitude and _wayPoints[0](2) the radius of the hotpoint.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints);
+            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType);
 
             /// This method is for start a configured mission.
             /// \return true if params are good or set without errors, false if something failed.
@@ -177,11 +180,12 @@ namespace dal{
             void setWaypointInitDefaults(DJI::OSDK::WayPointInitSettings* _wp);
 
             /// This method generates a list of waypoints for the mission of DJI given a list of waypoints in GPS coordinates.
-            /// \param _wp: list of waypoints.
+            /// \param _wayPoints: list of waypoints.
+            /// \return the waypoints converted.
             std::vector<DJI::OSDK::WayPointSettings> createWaypoints(std::vector<Eigen::Vector3f> _wayPoints);
 
             /// This method upload a list of waypoints for the mission of DJI given a list of waypoints in DJI type.
-            /// \param _wp: list of waypoints to upload.
+            /// \param _wpList: list of waypoints to upload.
             void uploadWaypoints(std::vector<DJI::OSDK::WayPointSettings>& _wpList);
 
             /// This method convert a quaternion to Euler Angle.
@@ -206,6 +210,7 @@ namespace dal{
             bool rtkAvailable_ = false;
 
             int pkgIndex_ = 0;
+            std::string missionType_ = "";
 
             int functionTimeout_ = 1; // 666 TODO: WTF IS FUNCTIONTIMEOUT???
     };

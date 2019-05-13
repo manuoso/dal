@@ -177,37 +177,66 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints){
+    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
 
-        // Waypoint Mission : Initialization
-        DJI::OSDK::WayPointInitSettings fdata;
-        setWaypointInitDefaults(&fdata);
+        if(_missionType == "waypoint"){
 
-        int numWaypoints = _wayPoints.size();
-        fdata.indexNumber = numWaypoints + 1; // We add 1 to get the aircarft back to the start
+            // WAYPOINTS MISSION
+            missionType_ = "waypoint";
 
-        secureGuard_.lock();
-        DJI::OSDK::ACK::ErrorCode initAck = vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, functionTimeout_, &fdata);
-        secureGuard_.unlock();
-        if (DJI::OSDK::ACK::getError(initAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
-            LogStatus::get()->error("Error at init mission manager, exiting", true);
-            // unsubscribeToData();     // 666 TODO: Make this better  
+            // Waypoint Mission : Initialization
+            DJI::OSDK::WayPointInitSettings fdata;
+            setWaypointInitDefaults(&fdata);
+
+            int numWaypoints = _wayPoints.size();
+            fdata.indexNumber = numWaypoints + 1; // We add 1 to get the aircarft back to the start
+
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode initAck = vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, functionTimeout_, &fdata);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(initAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
+                LogStatus::get()->error("Error at init mission manager, exiting", true);
+                // unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }
+
+            secureGuard_.lock();
+            vehicle_->missionManager->printInfo();
+            secureGuard_.unlock();
+            LogStatus::get()->status("Initializing Waypoint Mission...", true);
+
+            // Waypoint Mission: Create Waypoints
+            std::vector<WayPointSettings> generatedWaypts = createWaypoints(_wayPoints);
+            LogStatus::get()->status("Creating Waypoints...", true);
+
+            // Waypoint Mission: Upload the waypoints
+            uploadWaypoints(generatedWaypts);
+            LogStatus::get()->status("Uploading Waypoints...", true);
+
+        }else if(_missionType == "hotpoint"){
+
+            // HOTPOINT MISSION
+            missionType_ = "hotpoint";
+
+            // Hotpoint Mission Initialize
+            secureGuard_.lock();
+            vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::HOTPOINT, functionTimeout_, NULL);
+            secureGuard_.unlock();
+
+            secureGuard_.lock();
+            vehicle_->missionManager->printInfo();
+            secureGuard_.unlock();
+
+            secureGuard_.lock();
+            vehicle_->missionManager->hpMission->setHotPoint(_wayPoints[0](0), _wayPoints[0](1), _wayPoints[0](2));
+            secureGuard_.unlock();
+
+        }else{
+            LogStatus::get()->error("Unrecognised mission type, exiting", true);
             return false;
         }
-
-        secureGuard_.lock();
-        vehicle_->missionManager->printInfo();
-        secureGuard_.unlock();
-        LogStatus::get()->status("Initializing Waypoint Mission...", true);
-
-        // Waypoint Mission: Create Waypoints
-        std::vector<WayPointSettings> generatedWaypts = createWaypoints(_wayPoints);
-        LogStatus::get()->status("Creating Waypoints...", true);
-
-        // Waypoint Mission: Upload the waypoints
-        uploadWaypoints(generatedWaypts);
-        LogStatus::get()->status("Uploading Waypoints...", true);
+        
 
         return true;        
     }
@@ -215,16 +244,37 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::start_mission(){
 
-        secureGuard_.lock();
-        DJI::OSDK::ACK::ErrorCode startAck = vehicle_->missionManager->wpMission->start(functionTimeout_);
-        secureGuard_.unlock();
-        if (DJI::OSDK::ACK::getError(startAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
-            LogStatus::get()->error("Error at start mission, exiting", true);
-            // unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
+        if(missionType_ == "waypoint"){
+
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode startAck = vehicle_->missionManager->wpMission->start(functionTimeout_);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(startAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
+                LogStatus::get()->error("Error at start mission, exiting", true);
+                // unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }else{
+                LogStatus::get()->status("Starting Waypoint Mission...", true);
+            }
+
+        }else if(missionType_ == "hotpoint"){
+
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode startAck = vehicle_->missionManager->hpMission->start(functionTimeout_);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(startAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
+                LogStatus::get()->error("Error at start mission, exiting", true);
+                // unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }else{
+                LogStatus::get()->status("Starting Waypoint Mission...", true);
+            }
+
         }else{
-            LogStatus::get()->status("Starting Waypoint Mission...", true);
+            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            return false;
         }
 
         return true;        
@@ -233,16 +283,37 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::pause_mission(){
 
-        secureGuard_.lock();
-        DJI::OSDK::ACK::ErrorCode pauseAck = vehicle_->missionManager->hpMission->pause(functionTimeout_);
-        secureGuard_.unlock();
-        if (DJI::OSDK::ACK::getError(pauseAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
-            LogStatus::get()->error("Error at pause mission, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
+        if(missionType_ == "waypoint"){
+            
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode pauseAck = vehicle_->missionManager->wpMission->pause(functionTimeout_);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(pauseAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
+                LogStatus::get()->error("Error at pause mission, exiting", true);
+                unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }else{
+                LogStatus::get()->status("Pause Waypoint Mission...", true);
+            }
+
+        }else if(missionType_ == "hotpoint"){
+
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode pauseAck = vehicle_->missionManager->hpMission->pause(functionTimeout_);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(pauseAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
+                LogStatus::get()->error("Error at pause mission, exiting", true);
+                unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }else{
+                LogStatus::get()->status("Pause Waypoint Mission...", true);
+            }
+
         }else{
-            LogStatus::get()->status("Pause Waypoint Mission...", true);
+            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            return false;
         }
 
         return true;        
@@ -250,19 +321,39 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::stop_mission(){
+        
+        if(missionType_ == "waypoint"){
 
-        secureGuard_.lock();
-        DJI::OSDK::ACK::ErrorCode stopAck = vehicle_->missionManager->hpMission->stop(functionTimeout_);
-        secureGuard_.unlock();
-        if (DJI::OSDK::ACK::getError(stopAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
-            LogStatus::get()->error("Error at stop mission, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode stopAck = vehicle_->missionManager->wpMission->stop(functionTimeout_);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(stopAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
+                LogStatus::get()->error("Error at stop mission, exiting", true);
+                unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }else{
+                LogStatus::get()->status("Stop Waypoint Mission...", true);
+            }
+
+        }else if(missionType_ == "hotpoint"){
+            
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode stopAck = vehicle_->missionManager->hpMission->stop(functionTimeout_);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(stopAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
+                LogStatus::get()->error("Error at stop mission, exiting", true);
+                unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }else{
+                LogStatus::get()->status("Stop Waypoint Mission...", true);
+            }
+
         }else{
-            LogStatus::get()->status("Stop Waypoint Mission...", true);
+            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            return false;
         }
-
 
         return true;        
     }
@@ -270,16 +361,37 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::resume_mission(){
 
-        secureGuard_.lock();
-        DJI::OSDK::ACK::ErrorCode resumeAck = vehicle_->missionManager->hpMission->resume(functionTimeout_);
-        secureGuard_.unlock();
-        if (DJI::OSDK::ACK::getError(resumeAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
-            LogStatus::get()->error("Error at resume mission, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
+        if(missionType_ == "waypoint"){
+
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode resumeAck = vehicle_->missionManager->wpMission->resume(functionTimeout_);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(resumeAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
+                LogStatus::get()->error("Error at resume mission, exiting", true);
+                unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }else{
+                LogStatus::get()->status("Resume Waypoint Mission...", true);
+            }
+
+        }else if(missionType_ == "hotpoint"){
+
+            secureGuard_.lock();
+            DJI::OSDK::ACK::ErrorCode resumeAck = vehicle_->missionManager->hpMission->resume(functionTimeout_);
+            secureGuard_.unlock();
+            if (DJI::OSDK::ACK::getError(resumeAck)){
+                DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
+                LogStatus::get()->error("Error at resume mission, exiting", true);
+                unsubscribeToData();     // 666 TODO: Make this better  
+                return false;
+            }else{
+                LogStatus::get()->status("Resume Waypoint Mission...", true);
+            }
+
         }else{
-            LogStatus::get()->status("Resume Waypoint Mission...", true);
+            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            return false;
         }
 
         return true;        

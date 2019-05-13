@@ -49,8 +49,8 @@ namespace dal{
     }   
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::mission(std::vector<Eigen::Vector3f> _wayPoints){
-        return mBackend->mission(_wayPoints);
+    bool DAL::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
+        return mBackend->mission(_wayPoints, _missionType);
     }  
 
     //---------------------------------------------------------------------------------------------------------------------
