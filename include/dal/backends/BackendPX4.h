@@ -57,6 +57,18 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool start_mission();
 
+            /// This method is for pause a configured mission.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool pause_mission();
+
+            /// This method is for stop a configured mission.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool stop_mission();
+
+            /// This method is for resume a configured mission.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool resume_mission();
+
             /// This method is the implementation of move to position using DJI SDK not for PX4.
             virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;};
 

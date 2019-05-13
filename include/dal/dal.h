@@ -50,6 +50,15 @@ namespace dal{
         /// Method for start a configured mission
         bool start_mission();
 
+        /// Method for pause a configured mission
+        bool pause_mission();
+
+        /// Method for stop a configured mission
+        bool stop_mission();
+
+        /// Method for resume a configured mission
+        bool resume_mission();
+
         /// Method for move to desire position using function of DJI SDK Example
         bool movePos(float _x, float _y, float _z, float _yaw);
 
