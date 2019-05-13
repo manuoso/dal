@@ -44,8 +44,11 @@ namespace dal{
         /// Method for emergency brake
         bool emergencyBrake();
         
-        /// Method for to do a desired mission given the waypoints
+        /// Method for configure a desired mission given the waypoints
         bool mission(std::vector<Eigen::Vector3f> _wayPoints);
+
+        /// Method for start a configured mission
+        bool start_mission();
 
         /// Method for move to desire position using function of DJI SDK Example
         bool movePos(float _x, float _y, float _z, float _yaw);

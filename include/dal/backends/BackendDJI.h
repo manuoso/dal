@@ -70,9 +70,14 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool emergencyBrake();
 
-            /// This method is for to do a desired mission given the waypoints.
+            /// This method is for configure a desired mission given the waypoints in GPS coordinates.
+            /// \param _wayPoints: vector with the GPS coordinates of each point, where x = lat, y = lon, z = alt.
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints);
+
+            /// This method is for start a configured mission.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool start_mission();
 
             /// This method is the implementation of move to position using DJI SDK.
             /// \param _x: desired x in NEU coordinates.
@@ -107,13 +112,6 @@ namespace dal{
             /// \param _saveToFile: if true save data received.
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile);
-
-            /// This method is the implementation of mission with waypoints to do a polygon.
-            /// \param _numWaypoints: number of desired points of the polygon.
-            /// \param _increment: increment of each step in the mision.
-            /// \param _startAlt: altitude of start.
-            /// \return true if params are good or set without errors, false if something failed.
-            bool runWaypointMissionPolygon(uint8_t _numWaypoints, float64_t _increment, float64_t _startAlt);
 
             /// This method is the implementation of mission with hot point to do a radius.
             /// \param _initialRadius: center of the desired radius.
@@ -152,22 +150,35 @@ namespace dal{
             bool setLocalPosition();
 
             /// This method is the implementation of a very simple calculation of local NED and ENU offset between two pairs of GPS coordinates. Accurate when distances are small..
-            /// \param _height: desired height to takeoff.
-            /// \return true if params are good or set without errors, false if something failed.
+            /// \param _deltaNed: offset returned in NED coordinates.
+            /// \param _deltaEnu: offset returned in ENU coordinates.
+            /// \param _target: target position in GPS coordinates.
+            /// \param _origin: origin position in GPS coordinates.
             void localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _deltaNed, DJI::OSDK::Telemetry::Vector3f& _deltaEnu, void* _target, void* _origin);
 
+            /// This method defaults the waypoint options.
+            /// \param _wp: waypoint to put by default.
             void setWaypointDefaults(DJI::OSDK::WayPointSettings* _wp);
 
+            /// This method defaults the init waypoint options for DJI function.
+            /// \param _wp: waypoint to put by default.
             void setWaypointInitDefaults(DJI::OSDK::WayPointInitSettings* _wp);
 
-            std::vector<DJI::OSDK::WayPointSettings> createWaypoints(int _numWaypoints, DJI::OSDK::float64_t _distanceIncrement, DJI::OSDK::float32_t _startAlt);
+            /// This method generates a list of waypoints for the mission of DJI given a list of waypoints in GPS coordinates.
+            /// \param _wp: list of waypoints.
+            std::vector<DJI::OSDK::WayPointSettings> createWaypoints(std::vector<Eigen::Vector3f> _wayPoints);
 
-            std::vector<DJI::OSDK::WayPointSettings> generateWaypointsPolygon(DJI::OSDK::WayPointSettings* _startData, DJI::OSDK::float64_t _increment, int _numWp);
-
+            /// This method upload a list of waypoints for the mission of DJI given a list of waypoints in DJI type.
+            /// \param _wp: list of waypoints to upload.
             void uploadWaypoints(std::vector<DJI::OSDK::WayPointSettings>& _wpList);
 
+            /// This method convert a quaternion to Euler Angle.
+            /// \param _quaternionData: quaternion to convert.
+            /// \return the converted result.
             DJI::OSDK::Telemetry::Vector3f toEulerAngle(void* _quaternionData);
 
+            /// This method is the implementation of start global broadcast of all data.
+            /// \return true if params are good or set without errors, false if something failed.
             bool startGlobalPositionBroadcast();
 
         private:

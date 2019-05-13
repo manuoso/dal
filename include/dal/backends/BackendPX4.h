@@ -48,9 +48,14 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool emergencyBrake();
 
-            /// This method is for to do a desired mission given the waypoints.
+            /// This method is for configure a desired mission given the waypoints.
+            /// \param _wayPoints: vector with the GPS coordinates of each point, where x = lat, y = lon, z = alt.
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints);
+
+            /// This method is for start a configured mission.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool start_mission();
 
             /// This method is the implementation of move to position using DJI SDK not for PX4.
             virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;};

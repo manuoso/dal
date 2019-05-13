@@ -179,7 +179,55 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints){
 
-        
+        // Waypoint Mission : Initialization
+        DJI::OSDK::WayPointInitSettings fdata;
+        setWaypointInitDefaults(&fdata);
+
+        int numWaypoints = _wayPoints.size();
+        fdata.indexNumber = numWaypoints + 1; // We add 1 to get the aircarft back to the start
+
+        secureGuard_.lock();
+        DJI::OSDK::ACK::ErrorCode initAck = vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, functionTimeout_, &fdata);
+        secureGuard_.unlock();
+        if (DJI::OSDK::ACK::getError(initAck)){
+            DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
+            LogStatus::get()->error("Error at init mission manager, exiting", true);
+            // unsubscribeToData();     // 666 TODO: Make this better  
+            return false;
+        }
+
+        secureGuard_.lock();
+        vehicle_->missionManager->printInfo();
+        secureGuard_.unlock();
+        LogStatus::get()->status("Initializing Waypoint Mission...", true);
+
+        // Waypoint Mission: Create Waypoints
+        std::vector<WayPointSettings> generatedWaypts = createWaypoints(_wayPoints);
+        LogStatus::get()->status("Creating Waypoints...", true);
+
+        // Waypoint Mission: Upload the waypoints
+        uploadWaypoints(generatedWaypts);
+        LogStatus::get()->status("Uploading Waypoints...", true);
+
+        return true;        
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::start_mission(){
+
+        // Waypoint Mission: Start
+        secureGuard_.lock();
+        DJI::OSDK::ACK::ErrorCode startAck = vehicle_->missionManager->wpMission->start(functionTimeout_);
+        secureGuard_.unlock();
+        if (DJI::OSDK::ACK::getError(startAck)){
+            DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
+            LogStatus::get()->error("Error at start mission, exiting", true);
+            // unsubscribeToData();     // 666 TODO: Make this better  
+            return false;
+        }else{
+            LogStatus::get()->status("Starting Waypoint Mission...", true);
+        }
+
         return true;        
     }
 
@@ -618,58 +666,6 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::runWaypointMissionPolygon(uint8_t _numWaypoints, float64_t _increment, float64_t _startAlt){
-        
-        // // _increment -> 0.000001
-        // // _startAlt -> 10
-
-        // // Waypoint Mission : Initialization
-        // DJI::OSDK::WayPointInitSettings fdata;
-        // setWaypointInitDefaults(&fdata);
-
-        // fdata.indexNumber = _numWaypoints + 1; // We add 1 to get the aircarft back to the start.
-
-        // secureGuard_.lock();
-        // DJI::OSDK::ACK::ErrorCode initAck = vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, functionTimeout_, &fdata);
-        // secureGuard_.unlock();
-        // if (DJI::OSDK::ACK::getError(initAck)){
-        //     DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
-        //     LogStatus::get()->error("Error at init mission manager, exiting", true);
-        //     unsubscribeToData();     // 666 TODO: Make this better  
-        //     return false;
-        // }
-
-        // secureGuard_.lock();
-        // vehicle_->missionManager->printInfo();
-        // secureGuard_.unlock();
-        // LogStatus::get()->status("Initializing Waypoint Mission...", true);
-
-        // // Waypoint Mission: Create Waypoints
-        // std::vector<WayPointSettings> generatedWaypts = createWaypoints(_numWaypoints, _increment, _startAlt);
-        // LogStatus::get()->status("Creating Waypoints...", true);
-
-        // // Waypoint Mission: Upload the waypoints
-        // uploadWaypoints(generatedWaypts);
-        // LogStatus::get()->status("Uploading Waypoints...", true);
-
-        // // Waypoint Mission: Start
-        // secureGuard_.lock();
-        // DJI::OSDK::ACK::ErrorCode startAck = vehicle_->missionManager->wpMission->start(functionTimeout_);
-        // secureGuard_.unlock();
-        // if (DJI::OSDK::ACK::getError(startAck)){
-        //     DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
-        //     LogStatus::get()->error("Error at start mission, exiting", true);
-        //     unsubscribeToData();     // 666 TODO: Make this better  
-        //     return false;
-        // }else{
-        //     LogStatus::get()->status("Starting Waypoint Mission...", true);
-        // }
-
-        return true;
-
-    }
-
-    //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::runHotpointMissionRadius(int _initialRadius, int _time){
 
         // // Hotpoint Mission Initialize
@@ -1093,56 +1089,33 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    std::vector<DJI::OSDK::WayPointSettings> BackendDJI::createWaypoints(int _numWaypoints, DJI::OSDK::float64_t _distanceIncrement, DJI::OSDK::float32_t _startAlt){
-    
-         // Create Start Waypoint
-        DJI::OSDK::WayPointSettings start_wp;
-        setWaypointDefaults(&start_wp);
-
-        // Global position retrieved via subscription
-        secureGuard_.lock();
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type subscribeGPosition = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();;
-        secureGuard_.unlock();
-        
-        start_wp.latitude  = subscribeGPosition.latitude;
-        start_wp.longitude = subscribeGPosition.longitude;
-        start_wp.altitude  = _startAlt;
-        printf("Waypoint created at (LLA): %f \t%f \t%f\n", subscribeGPosition.latitude, subscribeGPosition.longitude, _startAlt);
-        
-        std::vector<DJI::OSDK::WayPointSettings> wpVector = generateWaypointsPolygon(&start_wp, _distanceIncrement, _numWaypoints);
-        return wpVector;
-
-    }
-
-    //-----------------------------------------------------------------------------------------------------------------
-    std::vector<DJI::OSDK::WayPointSettings> BackendDJI::generateWaypointsPolygon(DJI::OSDK::WayPointSettings* _startData, DJI::OSDK::float64_t _increment, int _numWp){
-
-        // Let's create a vector to store our waypoints in.
+    std::vector<DJI::OSDK::WayPointSettings> BackendDJI::createWaypoints(std::vector<Eigen::Vector3f> _wayPoints){
+            
+        // Let's create a vector to store our waypoints in
         std::vector<DJI::OSDK::WayPointSettings> wp_list;
 
-        // Some calculation for the polygon
-        float64_t extAngle = 2 * M_PI / _numWp;
+        for (int i = 0; i < _wayPoints.size(); i++){
 
-        // First waypoint
-        _startData->index = 0;
-        wp_list.push_back(*_startData);
-
-        // Iterative algorithm
-        for (int i = 1; i < _numWp; i++)
-        {
             DJI::OSDK::WayPointSettings  wp;
-            DJI::OSDK::WayPointSettings* prevWp = &wp_list[i - 1];
             setWaypointDefaults(&wp);
             wp.index     = i;
-            wp.latitude  = (prevWp->latitude + (_increment * cos(i * extAngle)));
-            wp.longitude = (prevWp->longitude + (_increment * sin(i * extAngle)));
-            wp.altitude  = (prevWp->altitude + 1);
+            wp.latitude  = _wayPoints[i](0);
+            wp.longitude = _wayPoints[i](1);
+            wp.altitude  = _wayPoints[i](2);
             wp_list.push_back(wp);
+
         }
 
         // Come back home
-        _startData->index = _numWp;
-        wp_list.push_back(*_startData);
+        DJI::OSDK::WayPointSettings final_wp;
+        setWaypointDefaults(&final_wp);
+
+        final_wp.index = _wayPoints.size();
+        final_wp.latitude  = _wayPoints[0](0);
+        final_wp.longitude = _wayPoints[0](1);
+        final_wp.altitude  = _wayPoints[0](2);
+
+        wp_list.push_back(final_wp);        
 
         return wp_list;
 
