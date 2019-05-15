@@ -992,18 +992,17 @@ namespace dal{
       
         // Obtain Control Authority
         if(obtainControlAuthority(true)){
-            return true;
+            if(subscribeToData()){     // 666 TODO: MAKE THIS BETTER, UNA ESPECIE DE SINGLETON?
+            LogStatus::get()->status("Subscribe To Data success", true);
+                return true;
+            }else{
+                LogStatus::get()->status("Subscribe To Data failed", true);
+                return false;
+            }
         }else{
             return false;
         }    
-
-        if(subscribeToData()){     // 666 TODO: MAKE THIS BETTER, UNA ESPECIE DE SINGLETON?
-            LogStatus::get()->status("subscribe To Data success", true);
-            return true;
-        }else{
-            LogStatus::get()->status("subscribe To Data failed", true);
-            return false;
-        }    
+    
     }
 
     //-----------------------------------------------------------------------------------------------------------------
