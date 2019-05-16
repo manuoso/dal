@@ -48,6 +48,11 @@ namespace dal{
         return mBackend->emergencyBrake();
     }   
 
+    //-----------------------------------------------------------------------------------------------------------------
+    bool DAL::recoverFromManual(){
+        return mBackend->recoverFromManual();
+    }
+
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
         return mBackend->mission(_wayPoints, _missionType);

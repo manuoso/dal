@@ -70,6 +70,10 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool emergencyBrake();
 
+            /// This method is the implementation of recover control.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool recoverFromManual();
+
             /// This method is for configure a desired mission given the waypoints in GPS coordinates.
             /// \param _wayPoints: vector with the GPS coordinates of each point, where 0 = lat, 1 = lon, 2 = alt.
             /// \param _missionType: type of mission to configure, there is enable waypoint and hotpoint. 
@@ -127,12 +131,6 @@ namespace dal{
             /// \param _saveToFile: if true save data received.
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile);
-
-            /// This method is the implementation of mission with hot point to do a radius.
-            /// \param _initialRadius: center of the desired radius.
-            /// \param _time: time to do the circle.
-            /// \return true if params are good or set without errors, false if something failed.
-            bool runHotpointMissionRadius(int _initialRadius, int _time);
 
         private:
             /// This method initialize DJI Vehicle and some important params.

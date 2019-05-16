@@ -77,6 +77,9 @@ namespace dal{
             /// \brief abstract method for emergency brake
             virtual bool emergencyBrake() = 0;
 
+            /// \brief abstract method for recover control
+            virtual bool recoverFromManual() = 0;
+
             /// \brief abstract method for configure a desired mission given the waypoints
             virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType) = 0;
 
@@ -115,6 +118,7 @@ namespace dal{
         virtual bool takeOff(const float _height){return true;}
         virtual bool land(){return true;}
         virtual bool emergencyBrake(){return true;}
+        virtual bool recoverFromManual(){return true;}
         virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){return true;}
         virtual bool start_mission(){return true;}
         virtual bool pause_mission(){return true;}

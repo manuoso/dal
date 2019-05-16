@@ -42,6 +42,20 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
+    bool BackendPX4::emergencyBrake(){
+
+        
+        return true;        
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendPX4::recoverFromManual(){
+
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
     bool BackendPX4::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
 
         
@@ -73,13 +87,6 @@ namespace dal{
     bool BackendPX4::resume_mission(){
 
 
-        return true;        
-    }
-
-    //-----------------------------------------------------------------------------------------------------------------
-    bool BackendPX4::emergencyBrake(){
-
-        
         return true;        
     }
 

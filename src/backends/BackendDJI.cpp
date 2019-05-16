@@ -30,9 +30,6 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::takeOff(const float _height){
 
-        // Obtain Control Authority
-        obtainControlAuthority(false);
-
         // Start takeoff
         secureGuard_.lock();
         DJI::OSDK::ACK::ErrorCode takeoffStatus = vehicle_->control->takeoff(functionTimeout_);
@@ -110,9 +107,6 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::land(){
 
-        // Obtain Control Authority
-        obtainControlAuthority(false);
-
         // Start landing
         secureGuard_.lock();
         DJI::OSDK::ACK::ErrorCode landingStatus = vehicle_->control->land(functionTimeout_);
@@ -165,9 +159,6 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::emergencyBrake(){
-        
-        // Obtain Control Authority
-        obtainControlAuthority(false);
 
         secureGuard_.lock();
         vehicle_->control->emergencyBrake();
@@ -177,10 +168,14 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
+    bool BackendDJI::recoverFromManual(){
         
         // Obtain Control Authority
-        obtainControlAuthority(false);
+        return obtainControlAuthority(true);
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
 
         if(_missionType == "waypoint"){
 
@@ -247,9 +242,6 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::start_mission(){
 
-        // Obtain Control Authority
-        obtainControlAuthority(false);
-
         if(missionType_ == "waypoint"){
 
             secureGuard_.lock();
@@ -289,9 +281,6 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::pause_mission(){
 
-        // Obtain Control Authority
-        obtainControlAuthority(false);
-
         if(missionType_ == "waypoint"){
             
             secureGuard_.lock();
@@ -330,9 +319,6 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::stop_mission(){
-        
-        // Obtain Control Authority
-        obtainControlAuthority(false);
 
         if(missionType_ == "waypoint"){
 
@@ -373,9 +359,6 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::resume_mission(){
 
-        // Obtain Control Authority
-        obtainControlAuthority(false);
-
         if(missionType_ == "waypoint"){
 
             secureGuard_.lock();
@@ -415,9 +398,6 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
-        
-        // Obtain Control Authority
-        obtainControlAuthority(false);
 
         int timeoutInMilSec = 10000;
         int controlFreqInHz = 50; // Hz
@@ -581,9 +561,6 @@ namespace dal{
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
-        
-        // Obtain Control Authority
-        obtainControlAuthority(false);
 
         if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
@@ -593,7 +570,7 @@ namespace dal{
         }
 
         if(_offset){
-            LogStatus::get()->status("Moving in global local position", true);
+            LogStatus::get()->status("Moving in global local position", false);
 
             // Convert position offset from first position to local coordinates
             DJI::OSDK::Telemetry::Vector3f localOffsetNed, localOffsetEnu;
@@ -621,7 +598,7 @@ namespace dal{
             secureGuard_.unlock();
 
         }else{
-            LogStatus::get()->status("Moving in local position", true);
+            LogStatus::get()->status("Moving in local position", false);
 
             // Get the broadcast GP since we need the height for z
             // secureGuard_.lock();
@@ -642,9 +619,6 @@ namespace dal{
     
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){
-        
-        // Obtain Control Authority
-        obtainControlAuthority(false);
 
         if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
@@ -653,7 +627,7 @@ namespace dal{
             return false;
         }
         
-        LogStatus::get()->status("Moving in velocity", true);
+        LogStatus::get()->status("Moving in velocity", false);
         
         secureGuard_.lock();
         vehicle_->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
@@ -845,100 +819,6 @@ namespace dal{
         }
                     
         return true;
-    }
-
-    //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::runHotpointMissionRadius(int _initialRadius, int _time){
-
-        // // Hotpoint Mission Initialize
-        // secureGuard_.lock();
-        // vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::HOTPOINT, functionTimeout_, NULL);
-        // secureGuard_.unlock();
-
-        // secureGuard_.lock();
-        // vehicle_->missionManager->printInfo();
-        // secureGuard_.unlock();
-
-        // // Global position retrieved via subscription
-        // secureGuard_.lock();
-        // DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type subscribeGPosition = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-        // secureGuard_.unlock();
-
-        // secureGuard_.lock();
-        // vehicle_->missionManager->hpMission->setHotPoint(subscribeGPosition.longitude, subscribeGPosition.latitude, _initialRadius);
-        // secureGuard_.unlock();
-
-        // // Start
-        // LogStatus::get()->status("Start with default rotation rate: 15 deg/s", true);
-        // secureGuard_.lock();
-        // DJI::OSDK::ACK::ErrorCode startAck = vehicle_->missionManager->hpMission->start(functionTimeout_);
-        // secureGuard_.unlock();
-        // if (DJI::OSDK::ACK::getError(startAck)){
-        //     DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
-        //     LogStatus::get()->error("Error at start mission, exiting", true);
-        //     unsubscribeToData();     // 666 TODO: Make this better  
-        //     return false;
-        // }
-
-        // sleep(_time);
-
-        // // Pause
-        // LogStatus::get()->status("Pause for 5s", true);
-        // secureGuard_.lock();
-        // DJI::OSDK::ACK::ErrorCode pauseAck = vehicle_->missionManager->hpMission->pause(functionTimeout_);
-        // secureGuard_.unlock();
-        // if (DJI::OSDK::ACK::getError(pauseAck)){
-        //     DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
-        //     LogStatus::get()->error("Error at pause mission, exiting", true);
-        //     unsubscribeToData();     // 666 TODO: Make this better  
-        //     return false;
-        // }
-        // sleep(5);
-
-        // // Resume
-        // LogStatus::get()->status("Resume mission", true);
-        // secureGuard_.lock();
-        // DJI::OSDK::ACK::ErrorCode resumeAck = vehicle_->missionManager->hpMission->resume(functionTimeout_);
-        // secureGuard_.unlock();
-        // if (DJI::OSDK::ACK::getError(resumeAck)){
-        //     DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
-        //     LogStatus::get()->error("Error at resume mission, exiting", true);
-        //     unsubscribeToData();     // 666 TODO: Make this better  
-        //     return false;
-        // }
-        // sleep(5);
-
-        // // Update radius, no ACK
-        // LogStatus::get()->status("Update radius to 1.5x: new radius = " + std::to_string(1.5 * _initialRadius), true);
-        // secureGuard_.lock();
-        // vehicle_->missionManager->hpMission->updateRadius(1.5 * _initialRadius);
-        // secureGuard_.unlock();
-        // sleep(5);
-
-        // // Update velocity (yawRate), no ACK
-        // LogStatus::get()->status("Update hotpoint rotation rate: new rate = 5 deg/s", true);
-        // DJI::OSDK::HotpointMission::YawRate yawRateStruct;
-        // yawRateStruct.clockwise = 1;
-        // yawRateStruct.yawRate   = 5;
-        // secureGuard_.lock();
-        // vehicle_->missionManager->hpMission->updateYawRate(yawRateStruct);
-        // secureGuard_.unlock();
-        // sleep(5);
-
-        // // Stop
-        // LogStatus::get()->status("Stop mission", true);
-        // secureGuard_.lock();
-        // DJI::OSDK::ACK::ErrorCode stopAck = vehicle_->missionManager->hpMission->stop(functionTimeout_);
-        // secureGuard_.unlock();
-        // if (DJI::OSDK::ACK::getError(stopAck)){
-        //     DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
-        //     LogStatus::get()->error("Error at stop mission, exiting", true);
-        //     unsubscribeToData();     // 666 TODO: Make this better  
-        //     return false;
-        // }
-
-        return true;
-
     }
 
     //-----------------------------------------------------------------------------------------------------------------

@@ -49,6 +49,13 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
+    bool BackendAPM::recoverFromManual(){
+
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
     bool BackendAPM::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
 
         

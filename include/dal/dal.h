@@ -43,6 +43,9 @@ namespace dal{
         
         /// Method for emergency brake
         bool emergencyBrake();
+
+        /// Method for recover control
+        bool recoverFromManual();
         
         /// Method for configure a desired mission given the waypoints
         bool mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType);
