@@ -405,6 +405,9 @@ namespace dal{
         int outOfControlBoundsTimeLimit = 10 * cycleTimeInMs; // 10 cycles
         int withinControlBoundsTimeReqmt = 50 * cycleTimeInMs; // 50 cycles
 
+        float deg2rad = C_PI/180.0;
+        float rad2deg = 180.0/C_PI;
+
         // Convert position offset from first position to local coordinates
          DJI::OSDK::Telemetry::Vector3f localOffsetNed, localOffsetEnu;
 
@@ -560,7 +563,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset){
+    bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
 
         if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
@@ -569,50 +572,27 @@ namespace dal{
             return false;
         }
 
-        if(_offset){
-            LogStatus::get()->status("Moving in global local position", false);
+        LogStatus::get()->status("Moving in local position", false);
 
-            // Convert position offset from first position to local coordinates
-            DJI::OSDK::Telemetry::Vector3f localOffsetNed, localOffsetEnu;
+        // Convert position offset from first position to local coordinates
+        DJI::OSDK::Telemetry::Vector3f localOffsetNed, localOffsetEnu;
 
-            secureGuard_.lock();
-            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-            secureGuard_.unlock();
+        secureGuard_.lock();
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+        secureGuard_.unlock();
 
-            localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
+        localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
 
-            // Get the broadcast GP since we need the height for zCmd
-            // secureGuard_.lock();
-            // DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = vehicle_->broadcast->getGlobalPosition();
-            // secureGuard_.unlock();
+        // Get initial offset. We will update this in a loop later.
+        double xOffset = _x - localOffsetEnu.x;
+        double yOffset = _y - localOffsetEnu.y;
+        double zOffset = _z - localOffsetEnu.z;
 
-            // Get initial offset. We will update this in a loop later.
-            double xOffset = _x - localOffsetNed.x;
-            double yOffset = _y - localOffsetNed.y;
-            double zOffset = _z - (-localOffsetNed.z);
+        // 666 TODO: YAW NOT IMPLEMENTED!
 
-            // double zOffset = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast
- 
-            secureGuard_.lock();
-            vehicle_->control->positionAndYawCtrl(xOffset, yOffset, zOffset, _yaw);
-            secureGuard_.unlock();
-
-        }else{
-            LogStatus::get()->status("Moving in local position", false);
-
-            // Get the broadcast GP since we need the height for z
-            // secureGuard_.lock();
-            // DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = vehicle_->broadcast->getGlobalPosition();
-            // secureGuard_.unlock();
-
-            // double zOffset = currentBroadcastGP.height + _z;
-
-            secureGuard_.lock();
-            // vehicle_->control->positionAndYawCtrl(_x, _y, zOffset, _yaw);
-            vehicle_->control->positionAndYawCtrl(_x, _y, _z, _yaw);
-            secureGuard_.unlock();
-
-        }
+        secureGuard_.lock();
+        vehicle_->control->positionAndYawCtrl(xOffset, yOffset, zOffset, _yaw);
+        secureGuard_.unlock();
 
         return true;
     }
@@ -1097,18 +1077,15 @@ namespace dal{
         DJI::OSDK::Telemetry::GPSFused*  subscriptionOrigin = (DJI::OSDK::Telemetry::GPSFused*)_origin;
         double deltaLon   = subscriptionTarget->longitude - subscriptionOrigin->longitude;
         double deltaLat   = subscriptionTarget->latitude - subscriptionOrigin->latitude;
-        // _deltaNed.x = deltaLat * C_EARTH;
-        // _deltaNed.y = deltaLon * C_EARTH * cos(subscriptionTarget->latitude);
-        // _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
         // NED ? NEED TO CHECK
-        _deltaNed.x = deg2rad * deltaLon * C_EARTH * cos(deg2rad * subscriptionTarget->latitude);
-        _deltaNed.y = deg2rad * deltaLat * C_EARTH;
+        _deltaNed.x = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(subscriptionTarget->latitude));
+        _deltaNed.y = DEG2RAD(deltaLat) * C_EARTH;
         _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
         // ENU ? NEED TO CHECK
-        _deltaEnu.x = deg2rad * deltaLon * C_EARTH * cos(deg2rad * subscriptionTarget->latitude);
-        _deltaEnu.y = deg2rad * deltaLat * C_EARTH;
+        _deltaEnu.x = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(subscriptionTarget->latitude));
+        _deltaEnu.y = DEG2RAD(deltaLat) * C_EARTH;
         _deltaEnu.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
     }

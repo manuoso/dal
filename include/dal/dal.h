@@ -66,7 +66,7 @@ namespace dal{
         bool movePos(float _x, float _y, float _z, float _yaw);
 
 	    /// Method for go to desire position using own function
-        bool position(float _x, float _y, float _z, float _yaw, bool _offset);
+        bool position(float _x, float _y, float _z, float _yaw);
 
 	    /// Method for move with desire velocity using own function
         bool velocity(float _vx, float _vy, float _vz, float _yawRate);

@@ -84,8 +84,8 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::position(float _x, float _y, float _z, float _yaw, bool _offset){
-        return mBackend->positionCtrlYaw(_x, _y, _z, _yaw, _offset);
+    bool DAL::position(float _x, float _y, float _z, float _yaw){
+        return mBackend->positionCtrlYaw(_x, _y, _z, _yaw);
     }
 
     //---------------------------------------------------------------------------------------------------------------------

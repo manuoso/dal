@@ -47,9 +47,7 @@
 #define C_EARTH (double)6378137.0
 #define C_PI (double)3.141592653589793
 #define DEG2RAD(DEG) ((DEG) * ((C_PI) / (180.0)))
-
-const float deg2rad = C_PI/180.0;
-const float rad2deg = 180.0/C_PI;
+#define RAD2DEG(RAD) ((RAD) * (180.0) / (C_PI))
 
 namespace dal{
     class BackendDJI: public Backend{
@@ -113,9 +111,8 @@ namespace dal{
             /// \param _y: desired y in NEU coordinates.
             /// \param _z: desired z in NEU coordinates.
             /// \param _yaw: desired yaw.
-            /// \param _offset: calculate the position with offset or without a offset, that is local position in frame(local) or global.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw, bool _offset);
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw);
 	    
             /// This method is the implementation of velocity control and yaw using DJI SDK.
             /// \param _x: desired Vx in NEU coordinates.
