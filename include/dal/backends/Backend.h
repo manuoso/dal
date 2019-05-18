@@ -58,7 +58,7 @@ namespace dal{
                 Eigen::Vector2f latLon;
                 double altitude;
                 int nGPS; 
-                float bateryLevel;
+                float batteryLevel;
                 Eigen::Vector3f localPosition;
                 Eigen::Vector4f rc;
                 Eigen::Vector3f velocity;
