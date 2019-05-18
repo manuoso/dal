@@ -56,10 +56,10 @@ namespace dal{
                 std::string flightStatus;
                 std::string mode;
                 Eigen::Vector2f latLon;
-                int nGPS; 
-                Eigen::Vector3f localPositionNED;
-                Eigen::Vector3f localPositionENU;
                 double altitude;
+                int nGPS; 
+                float bateryLevel;
+                Eigen::Vector3f localPosition;
                 Eigen::Vector4f rc;
                 Eigen::Vector3f velocity;
                 Eigen::Vector4f quaternion;
@@ -95,9 +95,6 @@ namespace dal{
             /// \brief abstract method for resume a configured mission
             virtual bool resume_mission() = 0;
 	
-            /// \brief abstract method for position control and yaw using DJI SDK.
-            virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0) = 0;
-
             /// \brief abstract method for position control and yaw
             virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw) = 0;
 	    
@@ -105,7 +102,7 @@ namespace dal{
             virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate) = 0;
             
             /// \brief abstract method for receive telemetry of the uav
-            virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile) = 0;
+            virtual bool receiveTelemetry(dataTelemetry& _data, bool _saveToFile) = 0;
 
         protected:
             Backend() {}  
@@ -124,10 +121,9 @@ namespace dal{
         virtual bool pause_mission(){return true;}
         virtual bool stop_mission(){return true;}
         virtual bool resume_mission(){return true;}
-        virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;}
         virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw){return true;}
         virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){return true;}
-        virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){return true;}
+        virtual bool receiveTelemetry(dataTelemetry& _data, bool _saveToFile){return true;}
 
     private:
         virtual bool init(const Config &_config){return true;}

@@ -105,7 +105,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendPX4::receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){
+    bool BackendPX4::receiveTelemetry(dataTelemetry& _data, bool _saveToFile){
 
          
         return true;

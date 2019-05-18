@@ -105,7 +105,7 @@ namespace dal{
     }    
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendAPM::receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){
+    bool BackendAPM::receiveTelemetry(dataTelemetry& _data, bool _saveToFile){
 
          
         return true;

@@ -96,16 +96,6 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool resume_mission();
 
-            /// This method is the implementation of move to position using DJI SDK.
-            /// \param _x: desired x in NEU coordinates.
-            /// \param _y: desired y in NEU coordinates.
-            /// \param _z: desired z in NEU coordinates.
-            /// \param _yaw: desired yaw.
-            /// \param _posThreshold: position threshold in the desired position in Meters.
-            /// \param _yawThreshold: yaw threshold in the desired position in Deg.
-            /// \return true if params are good or set without errors, false if something failed.
-            virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0);
-
             /// This method is the implementation of position control and yaw using DJI SDK.
             /// \param _x: desired x in NEU coordinates.
             /// \param _y: desired y in NEU coordinates.
@@ -124,10 +114,9 @@ namespace dal{
 
             /// This method is the implementation of get Telemetry data.
             /// \param _data: struct with the desired received data.
-            /// \param _printData: if true print data received.
             /// \param _saveToFile: if true save data received.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile);
+            virtual bool receiveTelemetry(dataTelemetry& _data, bool _saveToFile);
 
         private:
             /// This method initialize DJI Vehicle and some important params.
@@ -159,12 +148,11 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             bool setLocalPosition();
 
-            /// This method is the implementation of a very simple calculation of local NED and ENU offset between two pairs of GPS coordinates. Accurate when distances are small..
-            /// \param _deltaNed: offset returned in NED coordinates.
-            /// \param _deltaEnu: offset returned in ENU coordinates.
+            /// This method is the implementation of a very simple calculation of local NED offset between two pairs of GPS coordinates. Accurate when distances are small.
+            /// \param _delta: offset returned in NED coordinates.
             /// \param _target: target position in GPS coordinates.
             /// \param _origin: origin position in GPS coordinates.
-            void localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _deltaNed, DJI::OSDK::Telemetry::Vector3f& _deltaEnu, void* _target, void* _origin);
+            void localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _delta, void* _target, void* _origin);
 
             /// This method defaults the waypoint options.
             /// \param _wp: waypoint to put by default.
@@ -183,6 +171,7 @@ namespace dal{
             /// \param _wpList: list of waypoints to upload.
             void uploadWaypoints(std::vector<DJI::OSDK::WayPointSettings>& _wpList);
 
+            /// 666 TODO: NEED TO CHECK!!!
             /// This method convert a quaternion to Euler Angle.
             /// \param _quaternionData: quaternion to convert.
             /// \return the converted result.

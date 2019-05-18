@@ -76,9 +76,6 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool resume_mission();
 
-            /// This method is the implementation of move to position using DJI SDK not for PX4.
-            virtual bool movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold = 0.2, float _yawThreshold = 1.0){return true;};
-
             /// This method is the implementation of position control and yaw.
             /// \param _x: desired x.
             /// \param _y: desired y.
@@ -97,10 +94,9 @@ namespace dal{
 
             /// This method is the implementation of get Telemetry data.
             /// \param _data: struct with the desired received data.
-            /// \param _printData: if true print data received.
             /// \param _saveToFile: if true save data received.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile);
+            virtual bool receiveTelemetry(dataTelemetry& _data, bool _saveToFile);
 
         private:
             /// This method initialize and some important params.

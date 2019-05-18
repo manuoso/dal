@@ -62,9 +62,6 @@ namespace dal{
         /// Method for resume a configured mission
         bool resume_mission();
 
-        /// Method for move to desire position using function of DJI SDK Example
-        bool movePos(float _x, float _y, float _z, float _yaw);
-
 	    /// Method for go to desire position using own function
         bool position(float _x, float _y, float _z, float _yaw);
 
@@ -72,7 +69,7 @@ namespace dal{
         bool velocity(float _vx, float _vy, float _vz, float _yawRate);
 
         /// Method for get telemetry
-        bool telemetry(Backend::dataTelemetry& _data, bool _printData, bool _saveToFile);
+        bool telemetry(Backend::dataTelemetry& _data, bool _saveToFile);
 
         Backend * backend(){return mBackend;};
     private:

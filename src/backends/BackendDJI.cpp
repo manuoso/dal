@@ -395,173 +395,6 @@ namespace dal{
         return true;        
     }
 
-
-    //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::movePosition(float _x, float _y, float _z, float _yaw, float _posThreshold, float _yawThreshold){
-
-        int timeoutInMilSec = 10000;
-        int controlFreqInHz = 50; // Hz
-        int cycleTimeInMs = 1000 / controlFreqInHz;
-        int outOfControlBoundsTimeLimit = 10 * cycleTimeInMs; // 10 cycles
-        int withinControlBoundsTimeReqmt = 50 * cycleTimeInMs; // 50 cycles
-
-        float deg2rad = C_PI/180.0;
-        float rad2deg = 180.0/C_PI;
-
-        // Convert position offset from first position to local coordinates
-         DJI::OSDK::Telemetry::Vector3f localOffsetNed, localOffsetEnu;
-
-        secureGuard_.lock();
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-        secureGuard_.unlock();
-
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originSubscriptionGPS  = currentSubscriptionGPS;
-        localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
-
-        // Get the broadcast GP since we need the height for zCmd
-        secureGuard_.lock();
-        DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = vehicle_->broadcast->getGlobalPosition();
-        secureGuard_.unlock();
-
-        // Get initial offset. We will update this in a loop later.
-        double xOffsetRemaining = _x - localOffsetNed.x;
-        double yOffsetRemaining = _y - localOffsetNed.y;
-        double zOffsetRemaining = _z - (-localOffsetNed.z);
-
-        // Conversions
-        double _yawRad     = deg2rad * _yaw;
-        double yawThresholdInRad = deg2rad * _yawThreshold;
-
-        //! Get Euler angle
-        secureGuard_.lock();
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type subscriptionQ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
-        secureGuard_.unlock();
-        double yawInRad = toEulerAngle((static_cast<void*>(&subscriptionQ))).z / deg2rad;
-
-        int elapsedTimeInMs = 0;
-        int withinBoundsCounter = 0;
-        int outOfBounds = 0;
-        int brakeCounter = 0;
-        int speedFactor = 2;
-        float xCmd, yCmd, zCmd;
-
-        // There is a deadband in position control
-        // the z cmd is absolute height
-        // while x and y are in relative
-        float zDeadband = 0.12;        
-
-        /*! Calculate the inputs to send the position controller. We implement basic
-        *  receding setpoint position control and the setpoint is always 1 m away
-        *  from the current position - until we get within a threshold of the goal.
-        *  From that point on, we send the remaining distance as the setpoint.
-        */
-        if (_x > 0){
-            xCmd = (_x < speedFactor) ? _x : speedFactor;
-        }else if (_x < 0){
-            xCmd = (_x > -1 * speedFactor) ? _x : -1 * speedFactor;
-        }else{
-            xCmd = 0;
-        }   
-
-        if (_y > 0){
-            yCmd = (_y < speedFactor) ? _y : speedFactor;
-        }else if (_y < 0){
-            yCmd = (_y > -1 * speedFactor) ? _y : -1 * speedFactor;
-        }else{
-            yCmd = 0;
-        }
-        
-        zCmd = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast.
-        
-        LogStatus::get()->status("(Before while) xCmd: " + std::to_string(xCmd) + " yCmd: " + std::to_string(yCmd) + " zCmd: " + std::to_string(zCmd), true);
-        LogStatus::get()->status("(Before while) xOffsetRemaining: " + std::to_string(xOffsetRemaining) + " yOffsetRemaining: " + std::to_string(yOffsetRemaining) + " zOffsetRemaining: " + std::to_string(zOffsetRemaining), true);
-
-        //! Main closed-loop receding setpoint position control
-        while (elapsedTimeInMs < timeoutInMilSec){
-
-            LogStatus::get()->status("(While) xCmd: " + std::to_string(xCmd) + " yCmd: " + std::to_string(yCmd) + " zCmd: " + std::to_string(zCmd), true);
-            LogStatus::get()->status("(While) xOffsetRemaining: " + std::to_string(xOffsetRemaining) + " yOffsetRemaining: " + std::to_string(yOffsetRemaining) + " zOffsetRemaining: " + std::to_string(zOffsetRemaining), true);
-
-            secureGuard_.lock();
-            vehicle_->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yawRad / deg2rad);
-            secureGuard_.unlock();
-
-            usleep(cycleTimeInMs * 1000);
-            elapsedTimeInMs += cycleTimeInMs;
-
-            //! Get current position in required coordinates and units
-            secureGuard_.lock();
-            subscriptionQ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
-            secureGuard_.unlock();
-            yawInRad = toEulerAngle((static_cast<void*>(&subscriptionQ))).z;
-
-            secureGuard_.lock();
-            currentSubscriptionGPS = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-            secureGuard_.unlock();
-            localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originSubscriptionGPS));
-
-            // Get the broadcast GP since we need the height for zCmd
-            secureGuard_.lock();
-            currentBroadcastGP = vehicle_->broadcast->getGlobalPosition();
-            secureGuard_.unlock();
-
-            //! See how much farther we have to go
-            xOffsetRemaining = _x - localOffsetNed.x;
-            yOffsetRemaining = _y - localOffsetNed.y;
-            zOffsetRemaining = _z - (-localOffsetNed.z);
-
-            //! See if we need to modify the setpoint
-            if (std::abs(xOffsetRemaining) < speedFactor){
-                xCmd = xOffsetRemaining;
-            }
-            if (std::abs(yOffsetRemaining) < speedFactor){
-                yCmd = yOffsetRemaining;
-            }
-
-            if (std::abs(xOffsetRemaining) < _posThreshold &&
-                    std::abs(yOffsetRemaining) < _posThreshold &&
-                    std::abs(zOffsetRemaining) < zDeadband &&
-                    std::abs(yawInRad - _yawRad) < yawThresholdInRad){
-                    
-                    //! 1. We are within bounds; start incrementing our in-bound counter
-                    withinBoundsCounter += cycleTimeInMs;
-            }else{
-                if (withinBoundsCounter != 0){
-                    //! 2. Start incrementing an out-of-bounds counter
-                    outOfBounds += cycleTimeInMs;
-                }
-            }
-            //! 3. Reset withinBoundsCounter if necessary
-            if (outOfBounds > outOfControlBoundsTimeLimit){
-                withinBoundsCounter = 0;
-                outOfBounds = 0;
-            }
-            //! 4. If within bounds, set flag and break
-            if (withinBoundsCounter >= withinControlBoundsTimeReqmt){
-                break;
-            }
-        }
-
-        //! Set velocity to zero, to prevent any residual velocity from position
-        //! command
-        while (brakeCounter < withinControlBoundsTimeReqmt){
-            secureGuard_.lock();
-            vehicle_->control->emergencyBrake();
-            secureGuard_.unlock();
-            usleep(cycleTimeInMs * 10);
-            brakeCounter += cycleTimeInMs;
-        }
-
-        if (elapsedTimeInMs >= timeoutInMilSec){
-            std::cout << "Task timeout!\n";
-            // unsubscribeToData();     // 666 TODO: Make this better  
-            return false;
-        }
-                
-        return true;
-       
-    }
-
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
 
@@ -575,23 +408,23 @@ namespace dal{
         LogStatus::get()->status("Moving in local position", false);
 
         // Convert position offset from first position to local coordinates
-        DJI::OSDK::Telemetry::Vector3f localOffsetNed, localOffsetEnu;
+        DJI::OSDK::Telemetry::Vector3f localOffset;
 
         secureGuard_.lock();
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
         secureGuard_.unlock();
 
-        localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
+        localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
 
         // Get initial offset. We will update this in a loop later.
-        double xOffset = _x - localOffsetNed.x;
-        double yOffset = _y - localOffsetNed.y;
-        double zOffset = _z - localOffsetNed.z;
+        double xOffset = _x - localOffset.x;
+        double yOffset = _y - localOffset.y;
+        double zOffset = _z - localOffset.z;
 
         // 0.1 m or 10 cms is the minimum error to reach target in x, y and z axes.
         // This error threshold will have to change depending on aircraft / payload / wind conditions
         double xCmd, yCmd, zCmd;
-        if(((std::abs(xOffset)) < 0.1) && ((std::abs(yOffset)) < 0.1) && (localOffsetNed.z > (zOffset - 0.1)) && (localOffsetNed.z < (zOffset + 0.1))){
+        if(((std::abs(xOffset)) < 0.1) && ((std::abs(yOffset)) < 0.1) && (localOffset.z > (zOffset - 0.1)) && (localOffset.z < (zOffset + 0.1))){
             xCmd = 0;
             yCmd = 0;
             zCmd = 0;
@@ -600,17 +433,6 @@ namespace dal{
             yCmd = yOffset;
             zCmd = _z;
         }
-
-        // std::cout << "zOffset: " << std::to_string(zOffset) << std::endl;
-
-        // // Get the broadcast GP since we need the height for zCmd
-        // secureGuard_.lock();
-        // DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = vehicle_->broadcast->getGlobalPosition();
-        // secureGuard_.unlock();
-
-        // double zCmd = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast. 
-
-        // std::cout << "zCmd: " << std::to_string(zCmd) << std::endl;
 
         // 666 TODO: YAW NOT IMPLEMENTED!
 
@@ -641,14 +463,14 @@ namespace dal{
     }    
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::receiveTelemetry(dataTelemetry& _data, bool _printData, bool _saveToFile){
+    bool BackendDJI::receiveTelemetry(dataTelemetry& _data, bool _saveToFile){
         
         // Get all the data once before the loop to initialize vars
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type          flightStatus;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude;
-        DJI::OSDK::Telemetry::Vector3f                                                          localOffsetNed, localOffsetEnu;
+        DJI::OSDK::Telemetry::Vector3f                                                          localOffset;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                     rc;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type               velocity;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion;
@@ -674,7 +496,7 @@ namespace dal{
         altitude     = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
         secureGuard_.unlock();
 
-        localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&latLon), static_cast<void*>(&originGPS_));
+        localOffsetFromGpsOffset(localOffset, static_cast<void*>(&latLon), static_cast<void*>(&originGPS_));
 
         secureGuard_.lock();
         rc           = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
@@ -733,12 +555,9 @@ namespace dal{
         _data.latLon(1) = latLon.longitude; 
         _data.nGPS = latLon.visibleSatelliteNumber; 
         _data.altitude = altitude; 
-        _data.localPositionNED(0) = localOffsetNed.x;
-        _data.localPositionNED(1) = localOffsetNed.y;
-        _data.localPositionNED(2) = localOffsetNed.z;
-        _data.localPositionENU(0) = localOffsetEnu.x;
-        _data.localPositionENU(1) = localOffsetEnu.y;
-        _data.localPositionENU(2) = localOffsetEnu.z;
+        _data.localPosition(0) = localOffset.x;
+        _data.localPosition(1) = localOffset.y;
+        _data.localPosition(2) = localOffset.z;
         _data.rc(0) = rc.roll; 
         _data.rc(1) = rc.pitch; 
         _data.rc(2) = rc.yaw; 
@@ -793,32 +612,11 @@ namespace dal{
             _data.rtk(8) = 0; 
         }
 
-        if(_printData){
-            std::cout << "Flight Status                         = " << (int)flightStatus
-                    << "\n";
-            std::cout << "Position              (LLA)           = " << latLon.latitude
-                    << ", " << latLon.longitude << ", " << altitude << "\n";
-            std::cout << "RC Commands           (r/p/y/thr)     = " << rc.roll << ", "
-                    << rc.pitch << ", " << rc.yaw << ", " << rc.throttle << "\n";
-            std::cout << "Velocity              (vx,vy,vz)      = " << velocity.data.x
-                    << ", " << velocity.data.y << ", " << velocity.data.z << "\n";
-            std::cout << "Attitude Quaternion   (w,x,y,z)       = " << quaternion.q0
-                    << ", " << quaternion.q1 << ", " << quaternion.q2 << ", "
-                    << quaternion.q3 << "\n";
-            if(rtkAvailable_) {
-            std::cout << "RTK if available      (lat/long/alt/velocity_x/velocity_y/velocity_z/yaw/yaw_info/pos_info) ="
-                        << rtk.latitude << "," << rtk.longitude << "," << rtk.HFSL << "," << rtk_velocity.x << ","
-                        << rtk_velocity.y
-                        << "," << rtk_velocity.z << "," << rtk_yaw << "," << rtk_yaw_info << rtk_pos_info << "\n";
-            }
-            std::cout << "-------\n\n";
-        }
-
         if(_saveToFile){
-            // Flight Status / Position Latitude / Position Longitude / Position Altitude / Roll / Pitch / Yaw / Throttle / Vx / Vy / Vz / Qw / Qx / Qy / Qz / RTK Latitude / RTK Longitude / RTK Altitude / RTK Vx / RTK Vy / RTK Vz / RTK Yaw / RTK Yaw info / RTK Position info
-            std::string stringFSPosRCVelQuat = std::to_string((int)flightStatus) + " " + std::to_string(latLon.latitude) + " " + std::to_string(latLon.longitude) + " " + std::to_string(altitude) + " " + std::to_string(rc.roll) + " " + std::to_string(rc.pitch) + " " + std::to_string(rc.yaw) + " " + std::to_string(rc.throttle) + " " + std::to_string(velocity.data.x) + " " + std::to_string(velocity.data.y) + " " + std::to_string(velocity.data.z) + " " + std::to_string(quaternion.q0) + " " + std::to_string(quaternion.q1) + " " + std::to_string(quaternion.q2) + " " + std::to_string(quaternion.q3);
+            // Flight Status / Mode / Position Latitude / Position Longitude / Position Altitude / Satellite number / Local Position x / Local Position y / Local Position z / Roll / Pitch / Yaw / Throttle / Vx / Vy / Vz / Qw / Qx / Qy / Qz / RTK Latitude / RTK Longitude / RTK Altitude / RTK Vx / RTK Vy / RTK Vz / RTK Yaw / RTK Yaw info / RTK Position info
+            std::string stringGeneral = std::to_string((int)flightStatus) + " " + sMode + " " + std::to_string(latLon.latitude) + " " + std::to_string(latLon.longitude) + " " + std::to_string(altitude) + " " + std::to_string((int)latLon.visibleSatelliteNumber) + " " + std::to_string(localOffset.x) + " " + std::to_string(localOffset.y) + " " + std::to_string(localOffset.z) + " " + std::to_string(rc.roll) + " " + std::to_string(rc.pitch) + " " + std::to_string(rc.yaw) + " " + std::to_string(rc.throttle) + " " + std::to_string(velocity.data.x) + " " + std::to_string(velocity.data.y) + " " + std::to_string(velocity.data.z) + " " + std::to_string(quaternion.q0) + " " + std::to_string(quaternion.q1) + " " + std::to_string(quaternion.q2) + " " + std::to_string(quaternion.q3);
             std::string stringRTK = std::to_string(rtk.latitude) + " " + std::to_string(rtk.longitude) + " " + std::to_string(rtk.HFSL) + " " + std::to_string(rtk_velocity.x) + " " + std::to_string(rtk_velocity.y) + " " + std::to_string(rtk_velocity.z) + " " + std::to_string(rtk_yaw) + " " + std::to_string(rtk_yaw_info) + " " + std::to_string(rtk_pos_info);
-            std::string stringTelemetry = stringFSPosRCVelQuat + " " + stringRTK;
+            std::string stringTelemetry = stringGeneral + " " + stringRTK;
             LogTelemetry::get()->message(stringTelemetry, false);
         }
                     
@@ -1095,7 +893,7 @@ namespace dal{
     }
     
     //-----------------------------------------------------------------------------------------------------------------
-    void BackendDJI::localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _deltaNed, DJI::OSDK::Telemetry::Vector3f& _deltaEnu, void* _target, void* _origin){
+    void BackendDJI::localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _delta, void* _target, void* _origin){
     
         DJI::OSDK::Telemetry::GPSFused* subscriptionTarget = (DJI::OSDK::Telemetry::GPSFused*)_target;
         DJI::OSDK::Telemetry::GPSFused*  subscriptionOrigin = (DJI::OSDK::Telemetry::GPSFused*)_origin;
@@ -1110,14 +908,9 @@ namespace dal{
         double deltaLat   = t_lat - r_lat;
 
         // NED ? NEED TO CHECK
-        _deltaNed.y = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
-        _deltaNed.x = DEG2RAD(deltaLat) * C_EARTH;
-        _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
-
-        // ENU ? NEED TO CHECK
-        _deltaEnu.x = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
-        _deltaEnu.y = DEG2RAD(deltaLat) * C_EARTH;
-        _deltaEnu.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
+        _delta.y = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
+        _delta.x = DEG2RAD(deltaLat) * C_EARTH;
+        _delta.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
     }
 

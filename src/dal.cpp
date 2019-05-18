@@ -79,11 +79,6 @@ namespace dal{
     }   
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::movePos(float _x, float _y, float _z, float _yaw){
-        return mBackend->movePosition(_x, _y, _z, _yaw, 0.2, 1.0);
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
     bool DAL::position(float _x, float _y, float _z, float _yaw){
         return mBackend->positionCtrlYaw(_x, _y, _z, _yaw);
     }
@@ -94,8 +89,8 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::telemetry(Backend::dataTelemetry& _data, bool _printData, bool _saveToFile){
-        return mBackend->receiveTelemetry(_data, _printData, _saveToFile);
+    bool DAL::telemetry(Backend::dataTelemetry& _data, bool _saveToFile){
+        return mBackend->receiveTelemetry(_data, _saveToFile);
     }
 
 }
