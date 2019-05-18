@@ -584,14 +584,38 @@ namespace dal{
         localOffsetFromGpsOffset(localOffsetNed, localOffsetEnu, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
 
         // Get initial offset. We will update this in a loop later.
-        double xOffset = _x - localOffsetEnu.x;
-        double yOffset = _y - localOffsetEnu.y;
-        double zOffset = _z - localOffsetEnu.z;
+        double xOffset = _x - localOffsetNed.x;
+        double yOffset = _y - localOffsetNed.y;
+        double zOffset = _z - localOffsetNed.z;
+
+        // 0.1 m or 10 cms is the minimum error to reach target in x, y and z axes.
+        // This error threshold will have to change depending on aircraft / payload / wind conditions
+        double xCmd, yCmd, zCmd;
+        if(((std::abs(xOffset)) < 0.1) && ((std::abs(yOffset)) < 0.1) && (localOffsetNed.z > (zOffset - 0.1)) && (localOffsetNed.z < (zOffset + 0.1))){
+            xCmd = 0;
+            yCmd = 0;
+            zCmd = 0;
+        }else{
+            xCmd = xOffset;
+            yCmd = yOffset;
+            zCmd = _z;
+        }
+
+        // std::cout << "zOffset: " << std::to_string(zOffset) << std::endl;
+
+        // // Get the broadcast GP since we need the height for zCmd
+        // secureGuard_.lock();
+        // DJI::OSDK::Telemetry::GlobalPosition currentBroadcastGP = vehicle_->broadcast->getGlobalPosition();
+        // secureGuard_.unlock();
+
+        // double zCmd = currentBroadcastGP.height + _z; //Since subscription cannot give us a relative height, use broadcast. 
+
+        // std::cout << "zCmd: " << std::to_string(zCmd) << std::endl;
 
         // 666 TODO: YAW NOT IMPLEMENTED!
 
         secureGuard_.lock();
-        vehicle_->control->positionAndYawCtrl(xOffset, yOffset, zOffset, _yaw);
+        vehicle_->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yaw);
         secureGuard_.unlock();
 
         return true;
@@ -1075,16 +1099,23 @@ namespace dal{
     
         DJI::OSDK::Telemetry::GPSFused* subscriptionTarget = (DJI::OSDK::Telemetry::GPSFused*)_target;
         DJI::OSDK::Telemetry::GPSFused*  subscriptionOrigin = (DJI::OSDK::Telemetry::GPSFused*)_origin;
-        double deltaLon   = subscriptionTarget->longitude - subscriptionOrigin->longitude;
-        double deltaLat   = subscriptionTarget->latitude - subscriptionOrigin->latitude;
+        
+        double t_lon = subscriptionTarget->longitude * 180.0 / C_PI;
+        double r_lon = subscriptionOrigin->longitude * 180.0 / C_PI;
+        
+        double t_lat = subscriptionTarget->latitude * 180.0 / C_PI;
+        double r_lat = subscriptionOrigin->latitude * 180.0 / C_PI;
+
+        double deltaLon   = t_lon - r_lon;
+        double deltaLat   = t_lat - r_lat;
 
         // NED ? NEED TO CHECK
-        _deltaNed.x = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(subscriptionTarget->latitude));
-        _deltaNed.y = DEG2RAD(deltaLat) * C_EARTH;
+        _deltaNed.y = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
+        _deltaNed.x = DEG2RAD(deltaLat) * C_EARTH;
         _deltaNed.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
         // ENU ? NEED TO CHECK
-        _deltaEnu.x = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(subscriptionTarget->latitude));
+        _deltaEnu.x = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
         _deltaEnu.y = DEG2RAD(deltaLat) * C_EARTH;
         _deltaEnu.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
 
