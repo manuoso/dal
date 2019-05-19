@@ -59,6 +59,7 @@ namespace dal{
                 double altitude;
                 int nGPS; 
                 float batteryLevel;
+                Eigen::VectorXf imu = Eigen::VectorXf(10);
                 Eigen::Vector3f localPosition;
                 Eigen::Vector4f rc;
                 Eigen::Vector3f velocity;

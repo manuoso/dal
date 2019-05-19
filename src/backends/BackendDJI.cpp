@@ -408,23 +408,23 @@ namespace dal{
         LogStatus::get()->status("Moving in local position", false);
 
         // Convert position offset from first position to local coordinates
-        DJI::OSDK::Telemetry::Vector3f localOffset;
+        DJI::OSDK::Telemetry::Vector3f localPose;
 
         secureGuard_.lock();
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
         secureGuard_.unlock();
 
-        localOffsetFromGpsOffset(localOffset, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
+        localPoseFromGps(localPose, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
 
         // Get initial offset. We will update this in a loop later.
-        double xOffset = _x - localOffset.x;
-        double yOffset = _y - localOffset.y;
-        double zOffset = _z - localOffset.z;
+        double xOffset = _x - localPose.x;
+        double yOffset = _y - localPose.y;
+        double zOffset = _z - localPose.z;
 
         // 0.1 m or 10 cms is the minimum error to reach target in x, y and z axes.
         // This error threshold will have to change depending on aircraft / payload / wind conditions
         double xCmd, yCmd, zCmd;
-        if(((std::abs(xOffset)) < 0.1) && ((std::abs(yOffset)) < 0.1) && (localOffset.z > (zOffset - 0.1)) && (localOffset.z < (zOffset + 0.1))){
+        if(((std::abs(xOffset)) < 0.1) && ((std::abs(yOffset)) < 0.1) && (localPose.z > (zOffset - 0.1)) && (localPose.z < (zOffset + 0.1))){
             xCmd = 0;
             yCmd = 0;
             zCmd = 0;
@@ -470,7 +470,7 @@ namespace dal{
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude;
-        DJI::OSDK::Telemetry::Vector3f                                                          localOffset;
+        DJI::OSDK::Telemetry::Vector3f                                                          localPose;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                     rc;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type               velocity;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion;
@@ -479,6 +479,8 @@ namespace dal{
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_VELOCITY>::type           rtk_velocity;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW>::type                rtk_yaw;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW_INFO>::type           rtk_yaw_info;
+        DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_BATTERY_INFO>::type                      battery_info;
+        DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_HARD_SYNC>::type                         hardSync_FC;
 
         secureGuard_.lock();
         flightStatus = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>();
@@ -496,7 +498,7 @@ namespace dal{
         altitude     = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
         secureGuard_.unlock();
 
-        localOffsetFromGpsOffset(localOffset, static_cast<void*>(&latLon), static_cast<void*>(&originGPS_));
+        localPoseFromGps(localPose, static_cast<void*>(&latLon), static_cast<void*>(&originGPS_));
 
         secureGuard_.lock();
         rc           = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
@@ -509,6 +511,14 @@ namespace dal{
         secureGuard_.lock();
         quaternion   = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
         secureGuard_.unlock();
+
+        secureGuard_.lock();
+        battery_info = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO>();
+        secureGuard_.unlock();   
+
+        secureGuard_.lock();
+        hardSync_FC  = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_HARD_SYNC>();
+        secureGuard_.unlock();        
 
         std::string sFlightStatus, sMode;
         if(flightStatus == 0){
@@ -553,11 +563,23 @@ namespace dal{
         _data.mode = sMode;
         _data.latLon(0) = latLon.latitude;
         _data.latLon(1) = latLon.longitude; 
+        _data.altitude = altitude;
         _data.nGPS = latLon.visibleSatelliteNumber; 
-        _data.altitude = altitude; 
-        _data.localPosition(0) = localOffset.x;
-        _data.localPosition(1) = localOffset.y;
-        _data.localPosition(2) = localOffset.z;
+        _data.batteryLevel = battery_info.percentage;
+        _data.imu(0) = hardSync_FC.w.x;
+        _data.imu(1) = hardSync_FC.w.y;
+        _data.imu(2) = hardSync_FC.w.z;
+        _data.imu(3) = hardSync_FC.a.x;
+        _data.imu(4) = hardSync_FC.a.y;
+        _data.imu(5) = hardSync_FC.a.z;
+        _data.imu(6) = hardSync_FC.q.q0;
+        _data.imu(7) = hardSync_FC.q.q1;
+        _data.imu(8) = hardSync_FC.q.q2;
+        _data.imu(9) = hardSync_FC.q.q3;
+
+        _data.localPosition(0) = localPose.x;
+        _data.localPosition(1) = localPose.y;
+        _data.localPosition(2) = localPose.z;
         _data.rc(0) = rc.roll; 
         _data.rc(1) = rc.pitch; 
         _data.rc(2) = rc.yaw; 
@@ -613,8 +635,8 @@ namespace dal{
         }
 
         if(_saveToFile){
-            // Flight Status / Mode / Position Latitude / Position Longitude / Position Altitude / Satellite number / Local Position x / Local Position y / Local Position z / Roll / Pitch / Yaw / Throttle / Vx / Vy / Vz / Qw / Qx / Qy / Qz / RTK Latitude / RTK Longitude / RTK Altitude / RTK Vx / RTK Vy / RTK Vz / RTK Yaw / RTK Yaw info / RTK Position info
-            std::string stringGeneral = std::to_string((int)flightStatus) + " " + sMode + " " + std::to_string(latLon.latitude) + " " + std::to_string(latLon.longitude) + " " + std::to_string(altitude) + " " + std::to_string((int)latLon.visibleSatelliteNumber) + " " + std::to_string(localOffset.x) + " " + std::to_string(localOffset.y) + " " + std::to_string(localOffset.z) + " " + std::to_string(rc.roll) + " " + std::to_string(rc.pitch) + " " + std::to_string(rc.yaw) + " " + std::to_string(rc.throttle) + " " + std::to_string(velocity.data.x) + " " + std::to_string(velocity.data.y) + " " + std::to_string(velocity.data.z) + " " + std::to_string(quaternion.q0) + " " + std::to_string(quaternion.q1) + " " + std::to_string(quaternion.q2) + " " + std::to_string(quaternion.q3);
+            // Flight Status / Mode / Position Latitude / Position Longitude / Position Altitude / Satellite number / Battery level / Local Position x / Local Position y / Local Position z / Roll / Pitch / Yaw / Throttle / Vx / Vy / Vz / Qw / Qx / Qy / Qz / RTK Latitude / RTK Longitude / RTK Altitude / RTK Vx / RTK Vy / RTK Vz / RTK Yaw / RTK Yaw info / RTK Position info
+            std::string stringGeneral = std::to_string((int)flightStatus) + " " + sMode + " " + std::to_string(latLon.latitude) + " " + std::to_string(latLon.longitude) + " " + std::to_string(altitude) + " " + std::to_string((int)latLon.visibleSatelliteNumber) + " " + std::to_string(battery_info.percentage) + " " + std::to_string(localPose.x) + " " + std::to_string(localPose.y) + " " + std::to_string(localPose.z) + " " + std::to_string(rc.roll) + " " + std::to_string(rc.pitch) + " " + std::to_string(rc.yaw) + " " + std::to_string(rc.throttle) + " " + std::to_string(velocity.data.x) + " " + std::to_string(velocity.data.y) + " " + std::to_string(velocity.data.z) + " " + std::to_string(quaternion.q0) + " " + std::to_string(quaternion.q1) + " " + std::to_string(quaternion.q2) + " " + std::to_string(quaternion.q3);
             std::string stringRTK = std::to_string(rtk.latitude) + " " + std::to_string(rtk.longitude) + " " + std::to_string(rtk.HFSL) + " " + std::to_string(rtk_velocity.x) + " " + std::to_string(rtk_velocity.y) + " " + std::to_string(rtk_velocity.z) + " " + std::to_string(rtk_yaw) + " " + std::to_string(rtk_yaw_info) + " " + std::to_string(rtk_pos_info);
             std::string stringTelemetry = stringGeneral + " " + stringRTK;
             LogTelemetry::get()->message(stringTelemetry, false);
@@ -715,6 +737,8 @@ namespace dal{
         // 6. Velocity at 50 Hz
         // 7. Quaternion at 200 Hz
         // 8. RTK if available at 5 Hz
+        // 9. Battery info at 10 Hz
+        // 10. Imu at 400 Hz
 
         // Please make sure your drone is in simulation mode. You can fly the drone with your RC to get different values.
 	
@@ -730,10 +754,10 @@ namespace dal{
             return false;
         }
 	
-        // Package 0: Subscribe to flight status and mode at freq 10 Hz
+        // Package 0: Subscribe to flight status, battery info and mode at freq 10 Hz
         pkgIndex_ = 0;
         int freq = 10;
-        DJI::OSDK::Telemetry::TopicName topicList10Hz[] = { DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT, DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE};
+        DJI::OSDK::Telemetry::TopicName topicList10Hz[] = { DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT, DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE, DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO};
         int numTopic = sizeof(topicList10Hz) / sizeof(topicList10Hz[0]);
         bool enableTimestamp = false;
 
@@ -841,19 +865,45 @@ namespace dal{
             }
         }
 
-        // Wait for the data to start coming in.
-        sleep(1);
+        // Package 4: Subscribe to Quaternion at freq 200 Hz.
+        pkgIndex_ = 4;
+        freq = 400;
+        DJI::OSDK::Telemetry::TopicName topicList400Hz[] = { DJI::OSDK::Telemetry::TOPIC_HARD_SYNC };
+        numTopic = sizeof(topicList400Hz) / sizeof(topicList400Hz[0]);
+        enableTimestamp = false;
 
-        // Also, since we don't have a source for relative height through subscription,
-        // start using broadcast height
-        if (!startGlobalPositionBroadcast()){
+        secureGuard_.lock();
+        pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList400Hz, enableTimestamp, freq);
+        secureGuard_.unlock();
+        if (!pkgStatus){
+            LogStatus::get()->error("Not init package 4 from topic list, exiting", true);
+            return false;
+        }
+
+        secureGuard_.lock();
+        subscribeStatus = vehicle_->subscribe->startPackage(pkgIndex_, functionTimeout_);
+        secureGuard_.unlock();
+        if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData();     // 666 TODO: Make this better 
+            unsubscribeToData();     // 666 TODO: Make this better  
+            LogStatus::get()->error("Start package 4 error, exiting", true);
             return false;
         }
 
         // Wait for the data to start coming in.
         sleep(1);
+
+        // // Also, since we don't have a source for relative height through subscription,
+        // // start using broadcast height
+        // if (!startGlobalPositionBroadcast()){
+        //     // Cleanup before return
+        //     unsubscribeToData();     // 666 TODO: Make this better 
+        //     return false;
+        // }
+
+        // // Wait for the data to start coming in.
+        // sleep(1);
         
         return setLocalPosition();
 
@@ -883,17 +933,17 @@ namespace dal{
         originGPS_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
         secureGuard_.unlock();
         
-        // Get the broadcast GP since we need the height
-        secureGuard_.lock();
-        broadcastGP_ = vehicle_->broadcast->getGlobalPosition();
-        secureGuard_.unlock();
+        // // Get the broadcast GP since we need the height
+        // secureGuard_.lock();
+        // broadcastGP_ = vehicle_->broadcast->getGlobalPosition();
+        // secureGuard_.unlock();
 
         return true;
 
     }
     
     //-----------------------------------------------------------------------------------------------------------------
-    void BackendDJI::localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _delta, void* _target, void* _origin){
+    void BackendDJI::localPoseFromGps(DJI::OSDK::Telemetry::Vector3f& _delta, void* _target, void* _origin){
     
         DJI::OSDK::Telemetry::GPSFused* subscriptionTarget = (DJI::OSDK::Telemetry::GPSFused*)_target;
         DJI::OSDK::Telemetry::GPSFused*  subscriptionOrigin = (DJI::OSDK::Telemetry::GPSFused*)_origin;
@@ -907,7 +957,7 @@ namespace dal{
         double deltaLon   = t_lon - r_lon;
         double deltaLat   = t_lat - r_lat;
 
-        // NED ? NEED TO CHECK
+        // NEU -> North East Up
         _delta.y = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
         _delta.x = DEG2RAD(deltaLat) * C_EARTH;
         _delta.z = subscriptionTarget->altitude - subscriptionOrigin->altitude;
@@ -925,8 +975,7 @@ namespace dal{
         _wp->actionTimeLimit = 100;
         _wp->actionNumber    = 0;
         _wp->actionRepeat    = 0;
-        for (int i = 0; i < 16; ++i)
-        {
+        for (int i = 0; i < 16; ++i){
             _wp->commandList[i]      = 0;
             _wp->commandParameter[i] = 0;
         }
@@ -956,7 +1005,7 @@ namespace dal{
         // Let's create a vector to store our waypoints in
         std::vector<DJI::OSDK::WayPointSettings> wp_list;
 
-        for (int i = 0; i < _wayPoints.size(); i++){
+        for (unsigned i = 0; i < _wayPoints.size(); i++){
 
             DJI::OSDK::WayPointSettings  wp;
             setWaypointDefaults(&wp);
@@ -1004,7 +1053,7 @@ namespace dal{
     DJI::OSDK::Telemetry::Vector3f BackendDJI::toEulerAngle(void* _quaternionData){
     
         DJI::OSDK::Telemetry::Vector3f    result;
-        DJI::OSDK::Telemetry::Quaternion* quaternion = (Telemetry::Quaternion*)_quaternionData;
+        DJI::OSDK::Telemetry::Quaternion* quaternion = (DJI::OSDK::Telemetry::Quaternion*)_quaternionData;
 
         double q2sqr = quaternion->q2 * quaternion->q2;
         double t0    = -2.0 * (q2sqr + quaternion->q3 * quaternion->q3) + 1.0;

@@ -152,7 +152,7 @@ namespace dal{
             /// \param _delta: offset returned in NED coordinates.
             /// \param _target: target position in GPS coordinates.
             /// \param _origin: origin position in GPS coordinates.
-            void localOffsetFromGpsOffset(DJI::OSDK::Telemetry::Vector3f& _delta, void* _target, void* _origin);
+            void localPoseFromGps(DJI::OSDK::Telemetry::Vector3f& _delta, void* _target, void* _origin);
 
             /// This method defaults the waypoint options.
             /// \param _wp: waypoint to put by default.
