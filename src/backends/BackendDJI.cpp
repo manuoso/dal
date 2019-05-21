@@ -175,7 +175,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType){
+    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, float _radius, std::string _missionType){
 
         if(_missionType == "waypoint"){
 
@@ -228,6 +228,10 @@ namespace dal{
 
             secureGuard_.lock();
             vehicle_->missionManager->hpMission->setHotPoint(_wayPoints[0](1), _wayPoints[0](0), _wayPoints[0](2));
+            secureGuard_.unlock();
+
+            secureGuard_.lock();
+            vehicle_->missionManager->hpMission->setRadius(_radius);
             secureGuard_.unlock();
 
         }else{
@@ -983,19 +987,19 @@ namespace dal{
     }
     
     //-----------------------------------------------------------------------------------------------------------------
-    void BackendDJI::setWaypointInitDefaults(DJI::OSDK::WayPointInitSettings* _wp){
+    void BackendDJI::setWaypointInitDefaults(DJI::OSDK::WayPointInitSettings* _fdata){
 
-        _wp->maxVelocity    = 10;
-        _wp->idleVelocity   = 5;
-        _wp->finishAction   = 0;
-        _wp->executiveTimes = 1;
-        _wp->yawMode        = 0;
-        _wp->traceMode      = 0;
-        _wp->RCLostAction   = 1;
-        _wp->gimbalPitch    = 0;
-        _wp->latitude       = 0;
-        _wp->longitude      = 0;
-        _wp->altitude       = 0;
+        _fdata->maxVelocity    = 2;
+        _fdata->idleVelocity   = 1;
+        _fdata->finishAction   = 0;
+        _fdata->executiveTimes = 0;
+        _fdata->yawMode        = 0;
+        _fdata->traceMode      = 0;
+        _fdata->RCLostAction   = 0;
+        _fdata->gimbalPitch    = 0;
+        _fdata->latitude       = 0;
+        _fdata->longitude      = 0;
+        _fdata->altitude       = 0;
 
     }
 

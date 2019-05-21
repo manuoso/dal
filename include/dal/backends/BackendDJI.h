@@ -76,9 +76,10 @@ namespace dal{
             /// \param _wayPoints: vector with the GPS coordinates of each point, where 0 = lat, 1 = lon, 2 = alt.
             /// \param _missionType: type of mission to configure, there is enable waypoint and hotpoint. 
             /// If you select hotpoint, _wayPoints[0](0) will be the longitude, 
-            /// _wayPoints[0](1) will be the latitude and _wayPoints[0](2) the radius of the hotpoint.
+            /// _wayPoints[0](1) will be the latitude and _wayPoints[0](2) the altitude of the hotpoint.
+            /// \param _radius: radius of the hotpoint 5 min, 500 max.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, std::string _missionType);
+            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, float _radius, std::string _missionType);
 
             /// This method is for start a configured mission.
             /// \return true if params are good or set without errors, false if something failed.
@@ -160,7 +161,7 @@ namespace dal{
 
             /// This method defaults the init waypoint options for DJI function.
             /// \param _wp: waypoint to put by default.
-            void setWaypointInitDefaults(DJI::OSDK::WayPointInitSettings* _wp);
+            void setWaypointInitDefaults(DJI::OSDK::WayPointInitSettings* _fdata);
 
             /// This method generates a list of waypoints for the mission of DJI given a list of waypoints in GPS coordinates.
             /// \param _wayPoints: list of waypoints.
