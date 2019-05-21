@@ -227,7 +227,7 @@ namespace dal{
             secureGuard_.unlock();
 
             secureGuard_.lock();
-            vehicle_->missionManager->hpMission->setHotPoint(_wayPoints[0](0), _wayPoints[0](1), _wayPoints[0](2));
+            vehicle_->missionManager->hpMission->setHotPoint(_wayPoints[0](1), _wayPoints[0](0), _wayPoints[0](2));
             secureGuard_.unlock();
 
         }else{
