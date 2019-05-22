@@ -48,7 +48,7 @@ namespace dal{
         bool recoverFromManual();
         
         /// Method for configure a desired mission given the waypoints
-        bool mission(std::vector<Eigen::Vector3f> _wayPoints, float _radius, std::string _missionType);
+        bool mission(std::vector<Eigen::Vector3f> _wayPoints, Backend::dataMission _config);
 
         /// Method for start a configured mission
         bool start_mission();

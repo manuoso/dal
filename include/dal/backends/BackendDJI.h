@@ -74,12 +74,11 @@ namespace dal{
 
             /// This method is for configure a desired mission given the waypoints in GPS coordinates.
             /// \param _wayPoints: vector with the GPS coordinates of each point, where 0 = lat, 1 = lon, 2 = alt.
-            /// \param _missionType: type of mission to configure, there is enable waypoint and hotpoint. 
             /// If you select hotpoint, _wayPoints[0](0) will be the longitude, 
             /// _wayPoints[0](1) will be the latitude and _wayPoints[0](2) the altitude of the hotpoint.
-            /// \param _radius: radius of the hotpoint 5 min, 500 max.
+            /// \param _config: struct for configure the mission.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, float _radius, std::string _missionType);
+            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config);
 
             /// This method is for start a configured mission.
             /// \return true if params are good or set without errors, false if something failed.
@@ -165,8 +164,9 @@ namespace dal{
 
             /// This method generates a list of waypoints for the mission of DJI given a list of waypoints in GPS coordinates.
             /// \param _wayPoints: list of waypoints.
+            /// \param _config: struct to configure each waypoint
             /// \return the waypoints converted.
-            std::vector<DJI::OSDK::WayPointSettings> createWaypoints(std::vector<Eigen::Vector3f> _wayPoints);
+            std::vector<DJI::OSDK::WayPointSettings> createWaypoints(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config);
 
             /// This method upload a list of waypoints for the mission of DJI given a list of waypoints in DJI type.
             /// \param _wpList: list of waypoints to upload.

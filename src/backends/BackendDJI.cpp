@@ -175,9 +175,9 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, float _radius, std::string _missionType){
+    bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){
 
-        if(_missionType == "waypoint"){
+        if(_config.missionType == "waypoint"){
 
             // WAYPOINTS MISSION
             missionType_ = "waypoint";
@@ -185,6 +185,14 @@ namespace dal{
             // Waypoint Mission : Initialization
             DJI::OSDK::WayPointInitSettings fdata;
             setWaypointInitDefaults(&fdata);
+
+            fdata.maxVelocity = _config.maxVelWP;
+            fdata.idleVelocity = _config.idleVelWP;
+            fdata.finishAction = _config.finishActionWP;
+            fdata.executiveTimes = _config.executiveTimesWP;
+            fdata.yawMode = _config.yawMode;
+            fdata.traceMode = _config.traceModeWP;
+            fdata.RCLostAction = _config.rcLostWP;
 
             int numWaypoints = _wayPoints.size();
             fdata.indexNumber = numWaypoints + 1; // We add 1 to get the aircarft back to the start
@@ -205,14 +213,14 @@ namespace dal{
             LogStatus::get()->status("Initializing Waypoint Mission...", true);
 
             // Waypoint Mission: Create Waypoints
-            std::vector<WayPointSettings> generatedWaypts = createWaypoints(_wayPoints);
+            std::vector<WayPointSettings> generatedWaypts = createWaypoints(_wayPoints, _config);
             LogStatus::get()->status("Creating Waypoints...", true);
 
             // Waypoint Mission: Upload the waypoints
             uploadWaypoints(generatedWaypts);
             LogStatus::get()->status("Uploading Waypoints...", true);
 
-        }else if(_missionType == "hotpoint"){
+        }else if(_config.missionType == "hotpoint"){
 
             // HOTPOINT MISSION
             missionType_ = "hotpoint";
@@ -231,7 +239,7 @@ namespace dal{
             secureGuard_.unlock();
 
             secureGuard_.lock();
-            vehicle_->missionManager->hpMission->setRadius(_radius);
+            vehicle_->missionManager->hpMission->setRadius(_config.radiusHP);
             secureGuard_.unlock();
 
         }else{
@@ -1004,7 +1012,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    std::vector<DJI::OSDK::WayPointSettings> BackendDJI::createWaypoints(std::vector<Eigen::Vector3f> _wayPoints){
+    std::vector<DJI::OSDK::WayPointSettings> BackendDJI::createWaypoints(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){
             
         // Let's create a vector to store our waypoints in
         std::vector<DJI::OSDK::WayPointSettings> wp_list;
@@ -1013,6 +1021,8 @@ namespace dal{
 
             DJI::OSDK::WayPointSettings  wp;
             setWaypointDefaults(&wp);
+
+            wp.turnMode = _config.turnModeWP;
             wp.index     = i;
             wp.latitude  = _wayPoints[i](0);
             wp.longitude = _wayPoints[i](1);
@@ -1025,6 +1035,7 @@ namespace dal{
         DJI::OSDK::WayPointSettings final_wp;
         setWaypointDefaults(&final_wp);
 
+        final_wp.turnMode = _config.turnModeWP;
         final_wp.index = _wayPoints.size();
         final_wp.latitude  = _wayPoints[0](0);
         final_wp.longitude = _wayPoints[0](1);
@@ -1041,7 +1052,7 @@ namespace dal{
 
         for (std::vector<DJI::OSDK::WayPointSettings>::iterator wp = _wpList.begin(); wp != _wpList.end(); ++wp){
             
-            printf("Waypoint created at (LLA): %f \t%f \t%f\n ", wp->latitude, wp->longitude, wp->altitude);
+            std::cout << "Waypoint created at (LLA): " << std::to_string(wp->latitude) << " | " << std::to_string(wp->longitude) << " | " << std::to_string(wp->altitude) << std::endl;
             secureGuard_.lock();
             DJI::OSDK::ACK::WayPointIndex wpDataACK = vehicle_->missionManager->wpMission->uploadIndexData(&(*wp), functionTimeout_);
             secureGuard_.unlock();

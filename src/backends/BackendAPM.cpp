@@ -56,7 +56,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendAPM::mission(std::vector<Eigen::Vector3f> _wayPoints, float _radius, std::string _missionType){
+    bool BackendAPM::mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){
 
         
         return true;        

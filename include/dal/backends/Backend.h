@@ -51,20 +51,40 @@ namespace dal{
 
             };
 
+            /// Structs that we use to configure a Mission
+            struct dataMission{
+                // Hotpoint config
+                float               radiusHP            = 0.0;  // 5 - 500 m
+                float               yawRateHP           = 0.0;  // 0 - 30 /s
+                int                 clockWiseHP         = 0;    // 0 -> counter clockwise, 1-> clockwise
+                int                 startPointHP        = 0;    // 0 -> North, 1 -> South, 2 -> West, 3 -> East, 4 -> Current pos to nearest on the hotpoint
+                // Waypoint config
+                float               maxVelWP            = 2.0;     
+                float               idleVelWP           = 1.0;
+                int                 finishActionWP      = 0;    // 0 -> no act, 1 -> return home, 2 -> landing, 3 -> return to point 0, 4 -> infinite mode
+                int                 executiveTimesWP    = 0;    // 0 -> once, 1 -> twice
+                int                 traceModeWP         = 0;    // 0 -> point by point, 1 -> smooth transition
+                int                 rcLostWP            = 0;    // 0 -> exit, 1 -> continue
+                int                 turnModeWP          = 0;    // 0 -> clockwise, 1 -> counter clockwise
+                // Global config                                // Hotpoint: 0 -> point to velocity direction, 1 -> face inside, 2 -> face outside, 3 -> controlled by RC, 4 -> same starting
+                int                 yawMode             = 0;    // Waypoint: 0 -> auto, 1 -> lock initial, 2 -> by RC, 3 -> waypoints yaw 
+                std::string         missionType         = "";
+            };
+
             /// Structs that we use to receive Telemetry
             struct dataTelemetry{
-                std::string flightStatus;
-                std::string mode;
-                Eigen::Vector2f latLon;
-                double altitude;
-                int nGPS; 
-                float batteryLevel;
-                Eigen::VectorXf imu = Eigen::VectorXf(10);
-                Eigen::Vector3f localPosition;
-                Eigen::Vector4f rc;
-                Eigen::Vector3f velocity;
-                Eigen::Vector4f quaternion;
-                Eigen::VectorXf rtk = Eigen::VectorXf(9);
+                std::string         flightStatus;
+                std::string         mode;
+                Eigen::Vector2f     latLon;
+                double              altitude;
+                int                 nGPS; 
+                float               batteryLevel;
+                Eigen::VectorXf     imu = Eigen::VectorXf(10);
+                Eigen::Vector3f     localPosition;
+                Eigen::Vector4f     rc;
+                Eigen::Vector3f     velocity;
+                Eigen::Vector4f     quaternion;
+                Eigen::VectorXf     rtk = Eigen::VectorXf(9);
             };
 
             static Backend* create(const Config &_config);
@@ -82,7 +102,7 @@ namespace dal{
             virtual bool recoverFromManual() = 0;
 
             /// \brief abstract method for configure a desired mission given the waypoints
-            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, float _radius, std::string _missionType) = 0;
+            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config) = 0;
 
             /// \brief abstract method for start a configured mission
             virtual bool start_mission() = 0;
@@ -117,7 +137,7 @@ namespace dal{
         virtual bool land(){return true;}
         virtual bool emergencyBrake(){return true;}
         virtual bool recoverFromManual(){return true;}
-        virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, float _radius, std::string _missionType){return true;}
+        virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){return true;}
         virtual bool start_mission(){return true;}
         virtual bool pause_mission(){return true;}
         virtual bool stop_mission(){return true;}
