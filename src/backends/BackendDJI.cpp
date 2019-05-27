@@ -279,7 +279,7 @@ namespace dal{
                 // unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
-                LogStatus::get()->status("Starting Waypoint Mission...", true);
+                LogStatus::get()->status("Starting Hotpoint Mission...", true);
             }
 
         }else{
@@ -318,7 +318,7 @@ namespace dal{
                 unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
-                LogStatus::get()->status("Pause Waypoint Mission...", true);
+                LogStatus::get()->status("Pause Hotpoint Mission...", true);
             }
 
         }else{
@@ -357,7 +357,7 @@ namespace dal{
                 unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
-                LogStatus::get()->status("Stop Waypoint Mission...", true);
+                LogStatus::get()->status("Stop Hotpoint Mission...", true);
             }
 
         }else{
@@ -396,7 +396,7 @@ namespace dal{
                 unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
-                LogStatus::get()->status("Resume Waypoint Mission...", true);
+                LogStatus::get()->status("Resume Hotpoint Mission...", true);
             }
 
         }else{
@@ -577,7 +577,7 @@ namespace dal{
         _data.latLon(1) = latLon.longitude; 
         _data.altitude = altitude;
         _data.nGPS = latLon.visibleSatelliteNumber; 
-        _data.batteryLevel = battery_info.percentage;
+        _data.batteryVoltage = battery_info.voltage;
         _data.imu(0) = hardSync_FC.w.x;
         _data.imu(1) = hardSync_FC.w.y;
         _data.imu(2) = hardSync_FC.w.z;

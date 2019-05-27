@@ -78,7 +78,7 @@ namespace dal{
                 Eigen::Vector2f     latLon;
                 double              altitude;
                 int                 nGPS; 
-                float               batteryLevel;
+                int                 batteryVoltage;
                 Eigen::VectorXf     imu = Eigen::VectorXf(10);
                 Eigen::Vector3f     localPosition;
                 Eigen::Vector4f     rc;
