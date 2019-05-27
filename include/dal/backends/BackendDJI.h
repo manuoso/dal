@@ -52,8 +52,11 @@
 namespace dal{
     class BackendDJI: public Backend{
         public:
-            /// Default constructor
-            BackendDJI():Backend(){}
+            /// Constructor
+            BackendDJI();
+
+            /// Destructor
+            ~BackendDJI();
 
             /// This method is the implementation of takeoff using DJI SDK, this will block the main thread.
             /// \param _height: desired height to takeoff.

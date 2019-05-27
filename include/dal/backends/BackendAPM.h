@@ -32,8 +32,11 @@
 namespace dal{
     class BackendAPM: public Backend{
         public:
-            /// Default constructor
-            BackendAPM():Backend(){}
+            /// Constructor
+            BackendAPM();
+
+            /// Destructor
+            ~BackendAPM();
 
             /// This method is the implementation of takeoff.
             /// \param _height: desired height to takeoff.

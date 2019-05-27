@@ -32,8 +32,11 @@
 namespace dal{
     class DAL {
     public:
-        /// Construct with given configuration for backend
+        /// Constructor with given configuration for backend
         DAL(const Backend::Config &_config);
+
+        /// Destructor
+        ~DAL(); 
 
         /// Method for take off
         bool takeOff(const float _height);
@@ -71,9 +74,9 @@ namespace dal{
         /// Method for get telemetry
         bool telemetry(Backend::dataTelemetry& _data, bool _saveToFile);
 
-        Backend * backend(){return mBackend;};
+        Backend * backend(){return backend_;};
     private:
-        Backend *mBackend;
+        Backend *backend_;
         
     };
 }

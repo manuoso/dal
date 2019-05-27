@@ -32,8 +32,11 @@
 namespace dal{
     class BackendPX4: public Backend{
         public:
-            /// Default constructor
-            BackendPX4():Backend(){}
+            /// Constructor
+            BackendPX4();
+
+            /// Destructor
+            ~BackendPX4();
 
             /// This method is the implementation of takeoff.
             /// \param _height: desired height to takeoff.

@@ -19,6 +19,7 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
+
 #include <iostream>
 #include <string>
 #include <thread>
@@ -30,67 +31,72 @@
 namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     DAL::DAL(const Backend::Config &_config) {
-        mBackend = Backend::create(_config);
+        backend_ = Backend::create(_config);
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    DAL::~DAL() {
+        delete backend_;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::takeOff(const float _height){
-        return mBackend->takeOff(_height);
+        return backend_->takeOff(_height);
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::land(){
-        return mBackend->land();
+        return backend_->land();
     }   
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::emergencyBrake(){
-        return mBackend->emergencyBrake();
+        return backend_->emergencyBrake();
     }   
 
     //-----------------------------------------------------------------------------------------------------------------
     bool DAL::recoverFromManual(){
-        return mBackend->recoverFromManual();
+        return backend_->recoverFromManual();
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::mission(std::vector<Eigen::Vector3f> _wayPoints, Backend::dataMission _config){
-        return mBackend->mission(_wayPoints, _config);
+        return backend_->mission(_wayPoints, _config);
     }  
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::start_mission(){
-        return mBackend->start_mission();
+        return backend_->start_mission();
     }    
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::pause_mission(){
-        return mBackend->pause_mission();
+        return backend_->pause_mission();
     } 
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::stop_mission(){
-        return mBackend->stop_mission();
+        return backend_->stop_mission();
     }     
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::resume_mission(){
-        return mBackend->resume_mission();
+        return backend_->resume_mission();
     }   
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::position(float _x, float _y, float _z, float _yaw){
-        return mBackend->positionCtrlYaw(_x, _y, _z, _yaw);
+        return backend_->positionCtrlYaw(_x, _y, _z, _yaw);
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::velocity(float _vx, float _vy, float _vz, float _yawRate){
-        return mBackend->velocityCtrlYaw(_vx, _vy, _vz, _yawRate);
+        return backend_->velocityCtrlYaw(_vx, _vy, _vz, _yawRate);
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::telemetry(Backend::dataTelemetry& _data, bool _saveToFile){
-        return mBackend->receiveTelemetry(_data, _saveToFile);
+        return backend_->receiveTelemetry(_data, _saveToFile);
     }
 
 }

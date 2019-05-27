@@ -26,6 +26,10 @@
 #include <dal/backends/BackendPX4.h>
 
 namespace dal{
+    Backend::Backend() {}
+
+    Backend::~Backend() {}
+    
     Backend * Backend::create(const Backend::Config &_config){
         Backend *bd = nullptr;
         switch(_config.type){
