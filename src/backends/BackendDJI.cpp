@@ -63,8 +63,6 @@ namespace dal{
 
         if(motorsNotStarted == timeoutCycles){
             LogStatus::get()->error("Takeoff failed. Motors are not spinning, exiting", true);
-            // Cleanup
-            unsubscribeToData();     // 666 TODO: Make this better  
             return false; 
         }else{
             LogStatus::get()->status("Motors spinning...", true);     
@@ -85,8 +83,6 @@ namespace dal{
 
         if(stillOnGround == timeoutCycles){
             LogStatus::get()->error("Takeoff failed. Aircraft is still on the ground, but the motors are spinning, exiting", true);
-            // Cleanup
-            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }else{
             LogStatus::get()->status("Ascending...", true);
@@ -105,7 +101,6 @@ namespace dal{
                 LogStatus::get()->status("Successful takeoff!", true);
         }else{
             LogStatus::get()->error("Takeoff finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }
 
@@ -139,8 +134,6 @@ namespace dal{
 
         if(landingNotStarted == timeoutCycles){
             LogStatus::get()->error("Landing failed. Aircraft is still in the air, exiting", true);
-            // Cleanup before return
-            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }else{
             LogStatus::get()->status("Landing...", true);
@@ -159,7 +152,6 @@ namespace dal{
                 LogStatus::get()->status("Successful landing!", true);
         }else{
             LogStatus::get()->error("Landing finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting", true);
-            unsubscribeToData();     // 666 TODO: Make this better  
             return false;
         }
         
@@ -212,7 +204,6 @@ namespace dal{
             if (DJI::OSDK::ACK::getError(initAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
                 LogStatus::get()->error("Error at init mission manager, exiting", true);
-                // unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }
 
@@ -271,7 +262,6 @@ namespace dal{
             if (DJI::OSDK::ACK::getError(startAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
                 LogStatus::get()->error("Error at start mission, exiting", true);
-                // unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
                 LogStatus::get()->status("Starting Waypoint Mission...", true);
@@ -285,7 +275,6 @@ namespace dal{
             if (DJI::OSDK::ACK::getError(startAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
                 LogStatus::get()->error("Error at start mission, exiting", true);
-                // unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
                 LogStatus::get()->status("Starting Hotpoint Mission...", true);
@@ -310,7 +299,6 @@ namespace dal{
             if (DJI::OSDK::ACK::getError(pauseAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
                 LogStatus::get()->error("Error at pause mission, exiting", true);
-                unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
                 LogStatus::get()->status("Pause Waypoint Mission...", true);
@@ -323,8 +311,7 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(pauseAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
-                LogStatus::get()->error("Error at pause mission, exiting", true);
-                unsubscribeToData();     // 666 TODO: Make this better  
+                LogStatus::get()->error("Error at pause mission, exiting", true); 
                 return false;
             }else{
                 LogStatus::get()->status("Pause Hotpoint Mission...", true);
@@ -349,7 +336,6 @@ namespace dal{
             if (DJI::OSDK::ACK::getError(stopAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
                 LogStatus::get()->error("Error at stop mission, exiting", true);
-                unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
                 LogStatus::get()->status("Stop Waypoint Mission...", true);
@@ -363,7 +349,6 @@ namespace dal{
             if (DJI::OSDK::ACK::getError(stopAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
                 LogStatus::get()->error("Error at stop mission, exiting", true);
-                unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
                 LogStatus::get()->status("Stop Hotpoint Mission...", true);
@@ -388,7 +373,6 @@ namespace dal{
             if (DJI::OSDK::ACK::getError(resumeAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
                 LogStatus::get()->error("Error at resume mission, exiting", true);
-                unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
                 LogStatus::get()->status("Resume Waypoint Mission...", true);
@@ -402,7 +386,6 @@ namespace dal{
             if (DJI::OSDK::ACK::getError(resumeAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
                 LogStatus::get()->error("Error at resume mission, exiting", true);
-                unsubscribeToData();     // 666 TODO: Make this better  
                 return false;
             }else{
                 LogStatus::get()->status("Resume Hotpoint Mission...", true);
@@ -796,7 +779,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData();     // 666 TODO: Make this better  
+            unsubscribeToData(); 
             LogStatus::get()->error("Start package 0 error, exiting", true);
             return false;
         }
@@ -822,7 +805,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData();     // 666 TODO: Make this better  
+            unsubscribeToData(); 
             LogStatus::get()->error("Start package 1 error, exiting", true);
             return false;
         }
@@ -848,7 +831,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData();     // 666 TODO: Make this better  
+            unsubscribeToData();
             LogStatus::get()->error("Start package 2 error, exiting", true);
             return false;
         }
@@ -879,7 +862,7 @@ namespace dal{
                 if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS) {
                     DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
                     // Cleanup before return
-                    unsubscribeToData();     // 666 TODO: Make this better  
+                    unsubscribeToData();
                     LogStatus::get()->error("Start package 3 error, exiting", true);
                     return false;
                 }
@@ -907,7 +890,7 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData();     // 666 TODO: Make this better  
+            unsubscribeToData(); 
             LogStatus::get()->error("Start package 4 error, exiting", true);
             return false;
         }
@@ -919,7 +902,7 @@ namespace dal{
         // // start using broadcast height
         // if (!startGlobalPositionBroadcast()){
         //     // Cleanup before return
-        //     unsubscribeToData();     // 666 TODO: Make this better 
+        //     unsubscribeToData();
         //     return false;
         // }
 
