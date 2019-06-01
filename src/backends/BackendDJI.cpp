@@ -475,6 +475,7 @@ namespace dal{
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude;
         DJI::OSDK::Telemetry::Vector3f                                                          localPose;
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>::type            position_vo;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                     rc;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type               velocity;
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion;
@@ -503,6 +504,10 @@ namespace dal{
         secureGuard_.unlock();
 
         localPoseFromGps(localPose, static_cast<void*>(&latLon), static_cast<void*>(&originGPS_));
+
+        secureGuard_.lock();
+        position_vo = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>();
+        secureGuard_.unlock();
 
         secureGuard_.lock();
         rc           = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
@@ -584,6 +589,12 @@ namespace dal{
         _data.localPosition(0) = localPose.x;
         _data.localPosition(1) = localPose.y;
         _data.localPosition(2) = localPose.z;
+        _data.positionVO(0) = position_vo.x;
+        _data.positionVO(1) = position_vo.y;
+        _data.positionVO(2) = position_vo.z;
+        _data.positionVO(3) = position_vo.xHealth;
+        _data.positionVO(4) = position_vo.yHealth;
+        _data.positionVO(5) = position_vo.zHealth;
         _data.rc(0) = rc.roll; 
         _data.rc(1) = rc.pitch; 
         _data.rc(2) = rc.yaw; 
@@ -639,10 +650,15 @@ namespace dal{
         }
 
         if(_saveToFile){
-            // Flight Status / Mode / Position Latitude / Position Longitude / Position Altitude / Satellite number / Battery level / Local Position x / Local Position y / Local Position z / Roll / Pitch / Yaw / Throttle / Vx / Vy / Vz / Qw / Qx / Qy / Qz / RTK Latitude / RTK Longitude / RTK Altitude / RTK Vx / RTK Vy / RTK Vz / RTK Yaw / RTK Yaw info / RTK Position info
-            std::string stringGeneral = std::to_string((int)flightStatus) + " " + sMode + " " + std::to_string(latLon.latitude) + " " + std::to_string(latLon.longitude) + " " + std::to_string(altitude) + " " + std::to_string((int)latLon.visibleSatelliteNumber) + " " + std::to_string(battery_info.percentage) + " " + std::to_string(localPose.x) + " " + std::to_string(localPose.y) + " " + std::to_string(localPose.z) + " " + std::to_string(rc.roll) + " " + std::to_string(rc.pitch) + " " + std::to_string(rc.yaw) + " " + std::to_string(rc.throttle) + " " + std::to_string(velocity.data.x) + " " + std::to_string(velocity.data.y) + " " + std::to_string(velocity.data.z) + " " + std::to_string(quaternion.q0) + " " + std::to_string(quaternion.q1) + " " + std::to_string(quaternion.q2) + " " + std::to_string(quaternion.q3);
+            // Flight Status / Mode / Battery level / Roll / Pitch / Yaw / Throttle
+            // Position Latitude / Position Longitude / Position Altitude / Satellite number / Local Position x / Local Position y / Local Position z / Position VO x / Position VO y / Position VO z
+            // Vx / Vy / Vz / Qw / Qx / Qy / Qz 
+            // RTK Latitude / RTK Longitude / RTK Altitude / RTK Vx / RTK Vy / RTK Vz / RTK Yaw / RTK Yaw info / RTK Position info
+            std::string stringGeneral = std::to_string((int)flightStatus) + " " + sMode + " " + std::to_string(battery_info.percentage) + " " + std::to_string(rc.roll) + " " + std::to_string(rc.pitch) + " " + std::to_string(rc.yaw) + " " + std::to_string(rc.throttle);
+            std::string stringPosition = std::to_string(latLon.latitude) + " " + std::to_string(latLon.longitude) + " " + std::to_string(altitude) + " " + std::to_string((int)latLon.visibleSatelliteNumber) + " " + std::to_string(localPose.x) + " " + std::to_string(localPose.y) + " " + std::to_string(localPose.z) + " " + std::to_string(position_vo.x) + " " + std::to_string(position_vo.y) + " " + std::to_string(position_vo.z);
+            std::string stringVelocity = std::to_string(velocity.data.x) + " " + std::to_string(velocity.data.y) + " " + std::to_string(velocity.data.z) + " " + std::to_string(quaternion.q0) + " " + std::to_string(quaternion.q1) + " " + std::to_string(quaternion.q2) + " " + std::to_string(quaternion.q3);
             std::string stringRTK = std::to_string(rtk.latitude) + " " + std::to_string(rtk.longitude) + " " + std::to_string(rtk.HFSL) + " " + std::to_string(rtk_velocity.x) + " " + std::to_string(rtk_velocity.y) + " " + std::to_string(rtk_velocity.z) + " " + std::to_string(rtk_yaw) + " " + std::to_string(rtk_yaw_info) + " " + std::to_string(rtk_pos_info);
-            std::string stringTelemetry = stringGeneral + " " + stringRTK;
+            std::string stringTelemetry = stringGeneral + " " + stringPosition + " " + stringVelocity + " " + stringRTK;
             LogTelemetry::get()->message(stringTelemetry, false);
         }
                     
@@ -735,14 +751,15 @@ namespace dal{
         // We will subscribe to six kinds of data:
         // 1. Flight Status at 10 Hz
         // 2. Mode at 10 Hz
-        // 3. Fused Lat/Lon at 50Hz
-        // 4. Fused Altitude at 50Hz
+        // 3. Fused Lat/Lon at 50 Hz
+        // 4. Fused Altitude at 50 Hz
         // 5. RC Channels at 50 Hz
         // 6. Velocity at 50 Hz
         // 7. Quaternion at 200 Hz
         // 8. RTK if available at 5 Hz
         // 9. Battery info at 10 Hz
         // 10. Imu at 400 Hz
+        // 11. Position VO at 50 Hz
 
         // Please make sure your drone is in simulation mode. You can fly the drone with your RC to get different values.
 	
@@ -787,7 +804,7 @@ namespace dal{
         // Package 1: Subscribe to Lat/Lon, Alt, RC Channel and Velocity at freq 50 Hz
         pkgIndex_ = 1;
         freq = 50;
-        DJI::OSDK::Telemetry::TopicName topicList50Hz[] = { DJI::OSDK::Telemetry::TOPIC_GPS_FUSED, DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED, DJI::OSDK::Telemetry::TOPIC_RC, DJI::OSDK::Telemetry::TOPIC_VELOCITY};
+        DJI::OSDK::Telemetry::TopicName topicList50Hz[] = { DJI::OSDK::Telemetry::TOPIC_GPS_FUSED, DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED, DJI::OSDK::Telemetry::TOPIC_RC, DJI::OSDK::Telemetry::TOPIC_VELOCITY, DJI::OSDK::Telemetry::TOPIC_POSITION_VO};
         numTopic = sizeof(topicList50Hz) / sizeof(topicList50Hz[0]);
         enableTimestamp = false;
 

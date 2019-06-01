@@ -81,6 +81,7 @@ namespace dal{
                 int                 batteryVoltage;
                 Eigen::VectorXf     imu = Eigen::VectorXf(10);
                 Eigen::Vector3f     localPosition;
+                Eigen::VectorXf     positionVO = Eigen::VectorXf(6);
                 Eigen::Vector4f     rc;
                 Eigen::Vector3f     velocity;
                 Eigen::Vector4f     quaternion;
