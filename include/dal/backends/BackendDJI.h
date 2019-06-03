@@ -206,6 +206,8 @@ namespace dal{
             // RTK can be detected as unavailable only for Flight controllers that don't support RTK
             bool rtkAvailable_ = false;
 
+            bool usePositionVO_ = false;
+
             int pkgIndex_ = 0;
             std::string missionType_ = "";
 

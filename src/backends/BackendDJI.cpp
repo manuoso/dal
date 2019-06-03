@@ -403,6 +403,7 @@ namespace dal{
     bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
 
         if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
         vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
             int mode = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
             LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
@@ -451,6 +452,7 @@ namespace dal{
     bool BackendDJI::velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){
 
         if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
         vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
             int mode = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
             LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
@@ -504,10 +506,12 @@ namespace dal{
         secureGuard_.unlock();
 
         localPoseFromGps(localPose, static_cast<void*>(&latLon), static_cast<void*>(&originGPS_));
-
-        secureGuard_.lock();
-        position_vo = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>();
-        secureGuard_.unlock();
+        
+        if(usePositionVO_){
+            secureGuard_.lock();
+            position_vo = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>();
+            secureGuard_.unlock();
+        }
 
         secureGuard_.lock();
         rc           = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
@@ -589,12 +593,21 @@ namespace dal{
         _data.localPosition(0) = localPose.x;
         _data.localPosition(1) = localPose.y;
         _data.localPosition(2) = localPose.z;
-        _data.positionVO(0) = position_vo.x;
-        _data.positionVO(1) = position_vo.y;
-        _data.positionVO(2) = position_vo.z;
-        _data.positionVO(3) = position_vo.xHealth;
-        _data.positionVO(4) = position_vo.yHealth;
-        _data.positionVO(5) = position_vo.zHealth;
+        if(usePositionVO_){
+            _data.positionVO(0) = position_vo.x;
+            _data.positionVO(1) = position_vo.y;
+            _data.positionVO(2) = position_vo.z;
+            _data.positionVO(3) = position_vo.xHealth;
+            _data.positionVO(4) = position_vo.yHealth;
+            _data.positionVO(5) = position_vo.zHealth;
+        }else{
+            _data.positionVO(0) = 0.0;
+            _data.positionVO(1) = 0.0;
+            _data.positionVO(2) = 0.0;
+            _data.positionVO(3) = 0.0;
+            _data.positionVO(4) = 0.0;
+            _data.positionVO(5) = 0.0;
+        }
         _data.rc(0) = rc.roll; 
         _data.rc(1) = rc.pitch; 
         _data.rc(2) = rc.yaw; 
@@ -674,6 +687,8 @@ namespace dal{
 
         LogStatus::init("DJIStatus_" + std::to_string(time(NULL)));
         LogTelemetry::init("DJITelemetry_" + std::to_string(time(NULL)));
+
+        usePositionVO_ = _config.usePositionVO;
 
         // Setup Vehicle
         secureGuard_.lock();
@@ -801,21 +816,34 @@ namespace dal{
             return false;
         }
 
-        // Package 1: Subscribe to Lat/Lon, Alt, RC Channel and Velocity at freq 50 Hz
+        // Package 1: Subscribe to Lat/Lon, Alt, RC Channel, Velocity and Position VO at freq 50 Hz
         pkgIndex_ = 1;
         freq = 50;
-        DJI::OSDK::Telemetry::TopicName topicList50Hz[] = { DJI::OSDK::Telemetry::TOPIC_GPS_FUSED, DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED, DJI::OSDK::Telemetry::TOPIC_RC, DJI::OSDK::Telemetry::TOPIC_VELOCITY, DJI::OSDK::Telemetry::TOPIC_POSITION_VO};
-        numTopic = sizeof(topicList50Hz) / sizeof(topicList50Hz[0]);
         enableTimestamp = false;
-
-        secureGuard_.lock();
-        pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList50Hz, enableTimestamp, freq);
-        secureGuard_.unlock();
-        if (!pkgStatus){
-            LogStatus::get()->error("Not init package 1 from topic list, exiting", true);
-            return false;
+        if(usePositionVO_){
+            DJI::OSDK::Telemetry::TopicName topicList50Hz[] = { DJI::OSDK::Telemetry::TOPIC_GPS_FUSED, DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED, DJI::OSDK::Telemetry::TOPIC_RC, DJI::OSDK::Telemetry::TOPIC_VELOCITY, DJI::OSDK::Telemetry::TOPIC_POSITION_VO};
+            numTopic = sizeof(topicList50Hz) / sizeof(topicList50Hz[0]);
+            
+            secureGuard_.lock();
+            pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList50Hz, enableTimestamp, freq);
+            secureGuard_.unlock();
+            if (!pkgStatus){
+                LogStatus::get()->error("Not init package 1 from topic list, exiting", true);
+                return false;
+            }
+        }else{
+            DJI::OSDK::Telemetry::TopicName topicList50Hz[] = { DJI::OSDK::Telemetry::TOPIC_GPS_FUSED, DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED, DJI::OSDK::Telemetry::TOPIC_RC, DJI::OSDK::Telemetry::TOPIC_VELOCITY};
+            numTopic = sizeof(topicList50Hz) / sizeof(topicList50Hz[0]);
+            
+            secureGuard_.lock();
+            pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList50Hz, enableTimestamp, freq);
+            secureGuard_.unlock();
+            if (!pkgStatus){
+                LogStatus::get()->error("Not init package 1 from topic list, exiting", true);
+                return false;
+            }
         }
-
+        
         secureGuard_.lock();
         subscribeStatus = vehicle_->subscribe->startPackage(pkgIndex_, functionTimeout_);
         secureGuard_.unlock();

@@ -43,6 +43,9 @@ namespace dal{
                 /// Use or not advance sensing for DJI
                 bool useAdvancedSensing = false;
 
+                /// Use or not Topic Position VO
+                bool usePositionVO = false;
+
                 /// Device port of the controller
                 std::string device = "";
 
