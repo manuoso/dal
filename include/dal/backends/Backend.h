@@ -137,6 +137,8 @@ namespace dal{
             /// \brief abstract method for initialization of the class
             virtual bool init(const Config &_config) = 0;
 
+        protected:
+            static Backend *bd_;
     };
 
     class BackendDummy: public Backend{

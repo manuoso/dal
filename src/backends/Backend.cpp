@@ -31,29 +31,31 @@ namespace dal{
     Backend::~Backend() {}
     
     Backend * Backend::create(const Backend::Config &_config){
-        Backend *bd = nullptr;
+        bd_ = nullptr;
         switch(_config.type){
         case Backend::Config::eType::DJI:
-            bd = new BackendDJI();
+            bd_ = new BackendDJI();
             break;
         case Backend::Config::eType::APM:
-            bd = new BackendAPM();
+            bd_ = new BackendAPM();
             break;
         case Backend::Config::eType::PX4:
-            bd = new BackendPX4();
+            bd_ = new BackendPX4();
             break;
         case Backend::Config::eType::Dummy:
-            bd = new BackendDummy();
+            bd_ = new BackendDummy();
             break;
         default:
             return nullptr;
         }
 
-        if(bd->init(_config)){
-            return bd;
+        if(bd_->init(_config)){
+            return bd_;
         }else{
             return nullptr;
         }
     }
 
 }
+
+dal::Backend *dal::Backend::bd_;

@@ -194,9 +194,7 @@ namespace dal{
             fdata.yawMode = _config.yawMode;
             fdata.traceMode = _config.traceModeWP;
             fdata.RCLostAction = _config.rcLostWP;
-
-            int numWaypoints = _wayPoints.size();
-            fdata.indexNumber = numWaypoints + 1; // We add 1 to get the aircarft back to the start
+            fdata.indexNumber = _wayPoints.size() + 1; // We add 1 to get the aircarft back to the start
 
             secureGuard_.lock();
             DJI::OSDK::ACK::ErrorCode initAck = vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, functionTimeout_, &fdata);
@@ -1089,7 +1087,7 @@ namespace dal{
 
         for (std::vector<DJI::OSDK::WayPointSettings>::iterator wp = _wpList.begin(); wp != _wpList.end(); ++wp){
             
-            std::cout << "Waypoint created at (LLA): " << std::to_string(wp->latitude) << " | " << std::to_string(wp->longitude) << " | " << std::to_string(wp->altitude) << std::endl;
+            LogStatus::get()->status("Waypoint created at (LLA): " + std::to_string(wp->latitude) + " | " + std::to_string(wp->longitude) + " | " + std::to_string(wp->altitude), true);
             secureGuard_.lock();
             DJI::OSDK::ACK::WayPointIndex wpDataACK = vehicle_->missionManager->wpMission->uploadIndexData(&(*wp), functionTimeout_);
             secureGuard_.unlock();
