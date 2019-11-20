@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
-//  DRONE ABSTRACTION LAYER
+//  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2019 ViGUS University of Seville
+//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -24,14 +24,31 @@
 #define DAL_BACKENDS_BACKEND_H_
 
 #include <string>
+#include <map>
 #include <Eigen/Eigen>
+
+#include <djiosdk/dji_telemetry.hpp>
 
 namespace dal{
     class Backend{
         public:
+            /// Especials Typedefs
+            typedef Eigen::Matrix<float, 6, 1> VectorPositionVO;
+            typedef Eigen::Matrix<float, 2, 1> VectorGPS;
+            typedef Eigen::Matrix<float, 7, 1> VectorGPSDetail;
+            typedef Eigen::Matrix<float, 3, 1> VectorAngularRate;
+            typedef Eigen::Matrix<float, 10, 1> VectorHardSync;
+            typedef Eigen::Matrix<float, 8, 1> VectorRC;
+            typedef Eigen::Matrix<float, 3, 1> VectorCompass;
+            typedef Eigen::Matrix<float, 4, 1> VectorQuaternion;
+            typedef Eigen::Matrix<float, 3, 1> VectorVelocity;
+            typedef Eigen::Matrix<int, 3, 1> VectorControlDevice;
+            typedef Eigen::Matrix<float, 3, 1> VectorLocalPosition;
+
+            /// Struct for configure the backend
             struct Config{
                 /// Type of backend
-                enum class eType {DJI, APM, PX4, Dummy};
+                enum class eType {DJI, Dummy};
                 eType type;
 
                 /// ID of DJI APP
@@ -40,17 +57,36 @@ namespace dal{
                 /// KEY of DJI APP
                 std::string app_key = "";
 
-                /// Use or not advance sensing for DJI
-                bool useAdvancedSensing = false;
+                /// Use logging
+                bool useLogStatus = false;
 
-                /// Use or not Topic Position VO
-                bool usePositionVO = false;
+                /// Use advance sensing for DJI
+                bool useAdvancedSensing = false;
 
                 /// Device port of the controller
                 std::string device = "";
 
                 /// Baudrate to connect to the controller
                 unsigned int baudrate;
+
+                /// Map that contains Topics of Telemetry to use
+                std::map<DJI::OSDK::Telemetry::TopicName, int> topics;
+                // TopicName element of topics must be equal to:
+                // DJI::OSDK::Telemetry::TOPIC_POSITION_VO
+                // DJI::OSDK::Telemetry::TOPIC_GPS_FUSED
+                // DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS
+                // DJI::OSDK::Telemetry::TOPIC_GPS_SIGNAL_LEVEL
+                // DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED
+                // DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_FUSIONED
+                // DJI::OSDK::Telemetry::TOPIC_HARD_SYNC
+                // DJI::OSDK::Telemetry::TOPIC_COMPASS
+                // DJI::OSDK::Telemetry::TOPIC_QUATERNION
+                // DJI::OSDK::Telemetry::TOPIC_VELOCITY
+                // DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT
+                // DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE
+                // DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO
+                // DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA
+                // DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE
 
             };
 
@@ -74,28 +110,27 @@ namespace dal{
                 std::string         missionType         = "";
             };
 
-            /// Structs that we use to receive Telemetry
-            struct dataTelemetry{
-                std::string         flightStatus;
-                std::string         mode;
-                Eigen::Vector2f     latLon;
-                double              altitude;
-                int                 nGPS; 
-                int                 batteryVoltage;
-                Eigen::VectorXf     imu = Eigen::VectorXf(10);
-                Eigen::Vector3f     localPosition;
-                Eigen::VectorXf     positionVO = Eigen::VectorXf(6);
-                Eigen::Vector4f     rc;
-                Eigen::Vector3f     velocity;
-                Eigen::Vector4f     quaternion;
-                Eigen::VectorXf     rtk = Eigen::VectorXf(9);
-            };
-
+        public:
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR INITIALIZATION
+	        //---------------------------------------------------------------------------------------------------------------------
+            
             Backend();
 
             virtual ~Backend();
 
             static Backend* create(const Config &_config);
+
+        public:
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR CONTROL
+	        //---------------------------------------------------------------------------------------------------------------------
+
+            /// \brief abstract method for emergency brake
+            virtual bool emergencyBrake() = 0;
+
+            /// \brief abstract method for recover control
+            virtual bool recoverFromManual() = 0;
 
             /// \brief abstract method for take off
             virtual bool takeOff(const float _height) = 0;
@@ -103,11 +138,24 @@ namespace dal{
             /// \brief abstract method for land
             virtual bool land() = 0;
 
-            /// \brief abstract method for emergency brake
-            virtual bool emergencyBrake() = 0;
+            /// \brief abstract method for position control and yaw
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw) = 0;
+	    
+            /// \brief abstract method for velocity control and yaw
+            virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate) = 0;
 
-            /// \brief abstract method for recover control
-            virtual bool recoverFromManual() = 0;
+            /// \brief abstract method for attitude control and vertical position
+            virtual bool attitudeCtrlVer(float _roll, float _pitch, float _yaw, float _z) = 0;
+
+            /// \brief abstract method for attitude rate control and vertical position
+            virtual bool angularRateCtrlVer(float _rollRate, float _pitchRate, float _yawRate, float _z) = 0;
+
+            /// \brief abstract method for position GPS
+            virtual bool positionCtrlGPS(Eigen::Vector3f _wayPoint, dataMission _config) = 0;
+
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR MISSIONS
+	        //---------------------------------------------------------------------------------------------------------------------
 
             /// \brief abstract method for configure a desired mission given the waypoints
             virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config) = 0;
@@ -123,15 +171,67 @@ namespace dal{
 
             /// \brief abstract method for resume a configured mission
             virtual bool resume_mission() = 0;
-	
-            /// \brief abstract method for position control and yaw
-            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw) = 0;
-	    
-            /// \brief abstract method for velocity control and yaw
-            virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate) = 0;
+
+	        //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR TELEMETRY
+	        //---------------------------------------------------------------------------------------------------------------------
             
-            /// \brief abstract method for receive telemetry of the uav
-            virtual bool receiveTelemetry(dataTelemetry& _data, bool _saveToFile) = 0;
+            //---------------------------------------------------------------------------------------------------------------------
+            // INITS
+
+            /// \brief abstract method for init Local Position
+            virtual bool initLocalPosition() = 0;
+
+            //---------------------------------------------------------------------------------------------------------------------
+            // GETTERS
+
+            /// \brief abstract method for receive local position VO
+            virtual bool getPositionVO(VectorPositionVO& _data) = 0;
+
+            /// \brief abstract method for receive GPS
+            virtual bool getGPS(Eigen::Vector2f& _data) = 0;
+
+            /// \brief abstract method for receive GPS Detail
+            virtual bool getGPSDetail(VectorGPSDetail& _data) = 0;
+
+            /// \brief abstract method for receive GPS Signal Level
+            virtual bool getGPSSignal(int& _data) = 0;
+
+            /// \brief abstract method for receive Altitude fusioned
+            virtual bool getAltitude(float& _data) = 0;
+
+            /// \brief abstract method for receive Angular Rate fusioned
+            virtual bool getAngularRate(Eigen::Vector3f& _data) = 0;
+
+            /// \brief abstract method for receive Hard Sync
+            virtual bool getHardSync(VectorHardSync& _data) = 0;
+
+            /// \brief abstract method for receive Compass
+            virtual bool getCompass(Eigen::Vector3f& _data) = 0;
+
+            /// \brief abstract method for receive Quaternion
+            virtual bool getQuaternion(Eigen::Vector4f& _data) = 0;
+
+            /// \brief abstract method for receive Velocity
+            virtual bool getVelocity(Eigen::Vector3f& _data) = 0;
+
+            /// \brief abstract method for receive Status Flight
+            virtual bool getStatusFlight(std::string& _data) = 0;
+
+            /// \brief abstract method for receive Display Mode
+            virtual bool getDisplayMode(std::string& _data) = 0;
+
+            /// \brief abstract method for receive Batery Info
+            virtual bool getBatery(int& _data) = 0;
+
+            /// \brief abstract method for RC with Flag Data
+            virtual bool getRC(VectorRC& _data) = 0;
+
+            /// \brief abstract method for receive Control Device Info
+            virtual bool getControlDevice(Eigen::Vector3i& _data) = 0;
+
+            /// \brief abstract method for receive local position
+            virtual bool getLocalPosition(Eigen::Vector3f& _data) = 0;
 
         protected:
             /// \brief abstract method for initialization of the class
@@ -139,21 +239,64 @@ namespace dal{
 
         protected:
             static Backend *bd_;
+
     };
 
+	//---------------------------------------------------------------------------------------------------------------------
     class BackendDummy: public Backend{
-        virtual bool takeOff(const float _height){return true;}
-        virtual bool land(){return true;}
-        virtual bool emergencyBrake(){return true;}
-        virtual bool recoverFromManual(){return true;}
-        virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){return true;}
-        virtual bool start_mission(){return true;}
-        virtual bool pause_mission(){return true;}
-        virtual bool stop_mission(){return true;}
-        virtual bool resume_mission(){return true;}
-        virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw){return true;}
-        virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){return true;}
-        virtual bool receiveTelemetry(dataTelemetry& _data, bool _saveToFile){return true;}
+        public:
+            BackendDummy(){}
+            ~BackendDummy(){}
+
+            virtual bool emergencyBrake(){return true;}
+            virtual bool recoverFromManual(){return true;}
+            virtual bool takeOff(const float _height){return true;}
+            virtual bool land(){return true;}
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw){return true;}
+            virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){return true;}
+            virtual bool attitudeCtrlVer(float _roll, float _pitch, float _yaw, float _z){return true;}
+            virtual bool angularRateCtrlVer(float _rollRate, float _pitchRate, float _yawRate, float _z){return true;}
+            virtual bool positionCtrlGPS(Eigen::Vector3f _wayPoint, dataMission _config){return true;}
+            
+            virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){return true;}
+            virtual bool start_mission(){return true;}
+            virtual bool pause_mission(){return true;}
+            virtual bool stop_mission(){return true;}
+            virtual bool resume_mission(){return true;}
+
+            virtual bool initPositionVO(int _freq){return true;}
+            virtual bool initGPS(int _freq){return true;}
+            virtual bool initGPSDetail(int _freq){return true;}
+            virtual bool initGPSSignal(int _freq){return true;}
+            virtual bool initAltitude(int _freq){return true;}
+            virtual bool initAngularRate(int _freq){return true;}
+            virtual bool initHardSync(int _freq){return true;}
+            virtual bool initCompass(int _freq){return true;}
+            virtual bool initQuaternion(int _freq){return true;}
+            virtual bool initVelocity(int _freq){return true;}
+            virtual bool initStatusFlight(int _freq){return true;}
+            virtual bool initDisplayMode(int _freq){return true;}
+            virtual bool initBatery(int _freq){return true;}
+            virtual bool initRC(int _freq){return true;}
+            virtual bool initControlDevice(int _freq){return true;}
+            virtual bool initLocalPosition(){return true;}
+
+            virtual bool getPositionVO(VectorPositionVO& _data){return true;}
+            virtual bool getGPS(Eigen::Vector2f& _data){return true;}
+            virtual bool getGPSDetail(VectorGPSDetail& _data){return true;}
+            virtual bool getGPSSignal(int& _data){return true;}
+            virtual bool getAltitude(float& _data){return true;}
+            virtual bool getAngularRate(Eigen::Vector3f& _data){return true;}
+            virtual bool getHardSync(VectorHardSync& _data){return true;}
+            virtual bool getCompass(Eigen::Vector3f& _data){return true;}
+            virtual bool getQuaternion(Eigen::Vector4f& _data){return true;}
+            virtual bool getVelocity(Eigen::Vector3f& _data){return true;}
+            virtual bool getStatusFlight(std::string& _data){return true;}
+            virtual bool getDisplayMode(std::string& _data){return true;}
+            virtual bool getBatery(int& _data){return true;}
+            virtual bool getRC(VectorRC& _data){return true;}
+            virtual bool getControlDevice(Eigen::Vector3i& _data){return true;}
+            virtual bool getLocalPosition(Eigen::Vector3f& _data){return true;}
 
     private:
         virtual bool init(const Config &_config){return true;}

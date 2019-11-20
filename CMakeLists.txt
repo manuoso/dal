@@ -1,7 +1,7 @@
 ##---------------------------------------------------------------------------------------------------------------------
-##  DRONE ABSTRACTION LAYER
+##  DJI ABSTRACTION LAYER
 ##---------------------------------------------------------------------------------------------------------------------
-##  Copyright 2019 ViGUS University of Seville
+##  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 ##---------------------------------------------------------------------------------------------------------------------
 ##  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 ##  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -27,8 +27,8 @@ project(dal VERSION 0.1 LANGUAGES C CXX)
 ##########################################
 
 # Others
-set(BUILD_TOOLS OFF)
-set(BUILD_EXAMPLES OFF)
+set(BUILD_TOOLS ON)
+set(BUILD_EXAMPLES ON)
 
 #########################################
 ###### Loading 3rd party libraries ######
@@ -68,7 +68,6 @@ endif()
 # Collect all sources
 file(GLOB_RECURSE DAL_SOURCE_FILES "src/*.c" "src/*.cpp")
 file(GLOB_RECURSE DAL_HEADER_FILES "include/*.inl" "include/*.h")
-
 
 add_library(${PROJECT_NAME} SHARED ${DAL_SOURCE_FILES} ${DAL_HEADER_FILES})
 

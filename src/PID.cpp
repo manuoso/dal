@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
-//  DRONE ABSTRACTION LAYER
+//  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2019 ViGUS University of Seville
+//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -20,46 +20,43 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#ifndef DAL_LOGTELEMETRY_H_
-#define DAL_LOGTELEMETRY_H_
-
-#include <string>
-#include <fstream>
-#include <mutex>
-#include <chrono>
+#include <dal/PID.h>
 
 namespace dal{
+    //---------------------------------------------------------------------------------------------------------------------
+    PID::PID(float _kp, float _ki, float _kd, float _minSat, float _maxSat, float _minWind, float _maxWind) {
+        kp_ = _kp;
+        ki_ = _ki;
+        kd_ = _kd;
+        minSat_ = _minSat;
+        maxSat_ = _maxSat;
+        windupMin_ = _minWind;
+        windupMax_ = _maxWind;
+        
+    }
 
-	/// Thread safe class used as logging system. 
-	class LogTelemetry {
-	public:	//	Static interface.
-		/// Initialize the logging system. 
-		/// \param _appName: Base name used for the log file.
-		/// \param _useCout: Write to cout too.
-		static void init(const std::string _appName);
+    //---------------------------------------------------------------------------------------------------------------------
+    float PID::update(float & _val, float _incT) {
+        float dt = _incT; // TODO 666 input arg?
 
-		/// Close the logging system. It makes sure that the log is closed properly.
-		static void close();
+        // Calculate error
+        float err = reference_ - _val;
 
-		/// Get current instance of the logging system.
-		static LogTelemetry* get();
+        accumErr_ += err*dt;
+        // Apply anti wind-up 777 Analyze other options
+        accumErr_ = std::min(std::max(accumErr_, windupMin_), windupMax_);
 
-	public:	// Public interface.
-		/// Write message to the log system
-		void message(const std::string &_msg, bool _useCout = false);
+        // Compute PID
+        lastResult_ = kp_*err + ki_*accumErr_ + kd_*(err- lastError_)/dt;
+        lastError_ = err;
 
-	private:	// Private interface.
-		LogTelemetry(const std::string _appName);
-		~LogTelemetry();
+        // Saturate signal
+        lastResult_ = std::min(std::max(lastResult_, minSat_), maxSat_);
+        lastResult_ *= bouncingFactor_;
 
-		static LogTelemetry *mSingleton;
+        bouncingFactor_ *= 2.0;
+        bouncingFactor_ = bouncingFactor_ > 1.0 ? 1.0 : bouncingFactor_;
 
-		bool mUseCout = false;
-
-		std::chrono::high_resolution_clock::time_point  mInitTime;
-		std::ofstream mLogFile;
-		std::mutex mSecureGuard;
-	};
+        return lastResult_;
+    }
 }
-
-#endif

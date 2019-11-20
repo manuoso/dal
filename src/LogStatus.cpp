@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
-//  DRONE ABSTRACTION LAYER
+//  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2019 ViGUS University of Seville
+//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -77,7 +77,9 @@ namespace dal{
 
 	//---------------------------------------------------------------------------------------------------------------------
 	LogStatus::LogStatus(const std::string _appName) {
-		mLogFile.open(_appName + to_string(time(NULL))+".txt");
+		time_t now = time(NULL);
+		struct tm* actualTime = localtime(&now);
+		mLogFile.open(_appName + "_" + to_string(actualTime->tm_hour) + "_" + to_string(actualTime->tm_min) + "_" + to_string(actualTime->tm_sec) + ".txt");
 		mInitTime = chrono::high_resolution_clock::now();
 		status("Initialized Log Status", false);
 	}

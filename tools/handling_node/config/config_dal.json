@@ -1,0 +1,20 @@
+{	
+	"id":1068446,
+	"key":"96bf3d26a418e2afed52776275e6c111dcf7ee84de5fa5da2c94d8d6b3719505",
+	"port":"/dev/ttyUSB0",
+	"baudrate":230400,
+	"useLogStatus": true,
+	"ip_to_GCS": "0.0.0.0",
+	"port_state": 9000,
+	"port_pose": 9001,
+	"port_vel": 9002,
+	"port_att": 9002,
+	"port_att_r": 9002,
+	"port_server_handler": 9010,
+	"port_pub_mode": 9020,
+	"port_pub_fs": 9021,
+	"port_pub_rc": 9022,
+	"port_pub_gps": 9023,
+	"port_pub_vel": 9024,
+	"port_pub_bat": 9025
+}

@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
-//  DRONE ABSTRACTION LAYER
+//  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2019 ViGUS University of Seville
+//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -27,136 +27,28 @@ namespace dal{
     // PUBLIC FUNCTIONS
     //-----------------------------------------------------------------------------------------------------------------
     
+    //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR INITIALIZATION
+    //---------------------------------------------------------------------------------------------------------------------
+
     //-----------------------------------------------------------------------------------------------------------------
     BackendDJI::BackendDJI(){}
 
     //-----------------------------------------------------------------------------------------------------------------
     BackendDJI::~BackendDJI(){
-        unsubscribeToData();
+
+        unsubscribeAllTopics();
+
+        if(useLogStatus_){
+            LogStatus::get()->close();
+        }
+
         delete vehicle_;
     }
 
-    //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::takeOff(const float _height){
-
-        // Start takeoff
-        secureGuard_.lock();
-        DJI::OSDK::ACK::ErrorCode takeoffStatus = vehicle_->control->takeoff(functionTimeout_);
-        secureGuard_.unlock();
-        if(DJI::OSDK::ACK::getError(takeoffStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(takeoffStatus, __func__);
-            LogStatus::get()->error("Error at start takeoff, exiting", true);
-            return false;
-        }
-
-        // First check: Motors started
-        int motorsNotStarted = 0;
-        int timeoutCycles    = 20;
-
-        while(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND &&
-            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ENGINE_START &&
-            motorsNotStarted < timeoutCycles){
-                
-                motorsNotStarted++;
-                usleep(100000);
-        }
-
-        if(motorsNotStarted == timeoutCycles){
-            LogStatus::get()->error("Takeoff failed. Motors are not spinning, exiting", true);
-            return false; 
-        }else{
-            LogStatus::get()->status("Motors spinning...", true);     
-        }
-      
-        // Second check: In air
-        int stillOnGround = 0;
-        timeoutCycles     = 110;
-
-        while(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() != DJI::OSDK::VehicleStatus::FlightStatus::IN_AIR &&
-            (vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
-            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF) &&
-            stillOnGround < timeoutCycles){
-            
-            stillOnGround++;
-            usleep(100000);
-        }
-
-        if(stillOnGround == timeoutCycles){
-            LogStatus::get()->error("Takeoff failed. Aircraft is still on the ground, but the motors are spinning, exiting", true);
-            return false;
-        }else{
-            LogStatus::get()->status("Ascending...", true);
-        }
-
-        // Final check: Finished takeoff
-        while(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
-            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF){
-                
-                sleep(1);
-        }
-
-        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS ||
-            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE){
-            
-                LogStatus::get()->status("Successful takeoff!", true);
-        }else{
-            LogStatus::get()->error("Takeoff finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting", true);
-            return false;
-        }
-
-        
-        return true;        
-    }
-
-    //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::land(){
-
-        // Start landing
-        secureGuard_.lock();
-        DJI::OSDK::ACK::ErrorCode landingStatus = vehicle_->control->land(functionTimeout_);
-        secureGuard_.unlock();
-        if(DJI::OSDK::ACK::getError(landingStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(landingStatus, __func__);
-            LogStatus::get()->error("Error at land, exiting", true);
-            return false;
-        }
-
-        // First check: Landing started
-        int landingNotStarted = 0;
-        int timeoutCycles     = 20;
-
-        while (vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
-            landingNotStarted < timeoutCycles){
-                
-                landingNotStarted++;
-                usleep(100000);
-        }
-
-        if(landingNotStarted == timeoutCycles){
-            LogStatus::get()->error("Landing failed. Aircraft is still in the air, exiting", true);
-            return false;
-        }else{
-            LogStatus::get()->status("Landing...", true);
-        }
-
-        // Second check: Finished landing
-        while (vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
-            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() == DJI::OSDK::VehicleStatus::FlightStatus::IN_AIR){
-                
-                sleep(1);
-        }
-
-        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS ||
-            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE){
-                
-                LogStatus::get()->status("Successful landing!", true);
-        }else{
-            LogStatus::get()->error("Landing finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting", true);
-            return false;
-        }
-        
-        return true;        
-    }
+    //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR CONTROL
+    //---------------------------------------------------------------------------------------------------------------------
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::emergencyBrake(){
@@ -174,6 +66,361 @@ namespace dal{
         // Obtain Control Authority
         return obtainControlAuthority(true);
     }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::takeOff(const float _height){
+
+        // Start takeoff
+        secureGuard_.lock();
+        DJI::OSDK::ACK::ErrorCode takeoffStatus = vehicle_->control->takeoff(functionTimeout_);
+        secureGuard_.unlock();
+        if(DJI::OSDK::ACK::getError(takeoffStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(takeoffStatus, __func__);
+            if(useLogStatus_){
+                LogStatus::get()->error("Error at start takeoff, exiting", true);
+            }
+            return false;
+        }
+
+        // First check: Motors started
+        int motorsNotStarted = 0;
+        int timeoutCycles    = 20;
+
+        while(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND &&
+            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ENGINE_START &&
+            motorsNotStarted < timeoutCycles){
+                
+                motorsNotStarted++;
+                usleep(100000);
+        }
+
+        if(motorsNotStarted == timeoutCycles){
+            if(useLogStatus_){
+                LogStatus::get()->error("Takeoff failed. Motors are not spinning, exiting", true);
+            }
+            return false; 
+        }else{
+            if(useLogStatus_){
+                LogStatus::get()->status("Motors spinning...", true);     
+            }
+        }
+      
+        // Second check: In air
+        int stillOnGround = 0;
+        timeoutCycles     = 110;
+
+        while(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() != DJI::OSDK::VehicleStatus::FlightStatus::IN_AIR &&
+            (vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
+            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF) &&
+            stillOnGround < timeoutCycles){
+            
+            stillOnGround++;
+            usleep(100000);
+        }
+
+        if(stillOnGround == timeoutCycles){
+            if(useLogStatus_){
+                LogStatus::get()->error("Takeoff failed. Aircraft is still on the ground, but the motors are spinning, exiting", true);
+            }
+            return false;
+        }else{
+            if(useLogStatus_){
+                LogStatus::get()->status("Ascending...", true);
+            }        
+        }
+
+        // Final check: Finished takeoff
+        while(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
+            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF){
+                
+                sleep(1);
+        }
+
+        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS ||
+            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE){
+                
+                if(useLogStatus_){
+                    LogStatus::get()->status("Successful takeoff!", true);
+                }
+        }else{
+            if(useLogStatus_){
+                LogStatus::get()->error("Takeoff finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting", true);
+            }
+            return false;
+        }
+
+        
+        return true;        
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::land(){
+
+        // Start landing
+        secureGuard_.lock();
+        DJI::OSDK::ACK::ErrorCode landingStatus = vehicle_->control->land(functionTimeout_);
+        secureGuard_.unlock();
+        if(DJI::OSDK::ACK::getError(landingStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(landingStatus, __func__);
+            if(useLogStatus_){
+                LogStatus::get()->error("Error at land, exiting", true);
+            }
+            return false;
+        }
+
+        // First check: Landing started
+        int landingNotStarted = 0;
+        int timeoutCycles     = 20;
+
+        while (vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
+            landingNotStarted < timeoutCycles){
+                
+                landingNotStarted++;
+                usleep(100000);
+        }
+
+        if(landingNotStarted == timeoutCycles){
+            if(useLogStatus_){
+                LogStatus::get()->error("Landing failed. Aircraft is still in the air, exiting", true);
+            }
+            return false;
+        }else{
+            if(useLogStatus_){
+                LogStatus::get()->status("Landing...", true);
+            }
+        }
+
+        // Second check: Finished landing
+        while (vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
+            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() == DJI::OSDK::VehicleStatus::FlightStatus::IN_AIR){
+                
+                sleep(1);
+        }
+
+        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS ||
+            vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE){
+                
+                if(useLogStatus_){
+                    LogStatus::get()->status("Successful landing!", true);
+                }
+        }else{
+            if(useLogStatus_){
+                LogStatus::get()->error("Landing finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting", true);
+            }
+            return false;
+        }
+        
+        return true;        
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
+
+        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
+            
+            int mode = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
+            if(useLogStatus_){
+                LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
+            }
+            return false;
+        }
+
+        if(useLogStatus_){
+            LogStatus::get()->status("Moving in local position", false);
+        }
+        
+        // Get local position
+        VectorLocalPosition localPose;
+        getLocalPosition(localPose);
+        
+        // Get initial offset. We will update this in a loop later.
+        double xOffset = _x - localPose(0);
+        double yOffset = _y - localPose(1);
+        double zOffset = _z - localPose(2);
+
+        // 0.1 m or 10 cms is the minimum error to reach target in x, y and z axes.
+        // This error threshold will have to change depending on aircraft / payload / wind conditions
+        double xCmd, yCmd, zCmd;
+        if(((std::abs(xOffset)) < 0.1) && ((std::abs(yOffset)) < 0.1) && (localPose(2) > (zOffset - 0.1)) && (localPose(2) < (zOffset + 0.1))){
+            xCmd = 0;
+            yCmd = 0;
+            zCmd = 0;
+        }else{
+            xCmd = xOffset;
+            yCmd = yOffset;
+            zCmd = _z;
+        }
+
+        // 666 TODO: YAW NOT IMPLEMENTED!
+
+        secureGuard_.lock();
+        vehicle_->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yaw);
+        secureGuard_.unlock();
+
+        return true;
+    }
+    
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){
+
+        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
+            
+            int mode = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
+            if(useLogStatus_){
+                LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
+            }
+            return false;
+        }
+        
+        if(useLogStatus_){
+            LogStatus::get()->status("Moving in velocity", false);
+        }
+
+        secureGuard_.lock();
+        vehicle_->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+        secureGuard_.unlock();
+        
+        return true;
+    }    
+
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::attitudeCtrlVer(float _roll, float _pitch, float _yaw, float _z){
+
+        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
+            
+            int mode = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
+            if(useLogStatus_){
+                LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
+            }
+            return false;
+        }
+        
+        if(useLogStatus_){
+            LogStatus::get()->status("Moving in attitude and vertical position", false);
+        }
+
+        secureGuard_.lock();
+        vehicle_->control->attitudeAndVertPosCtrl(_roll, _pitch, _yaw, _z);
+        secureGuard_.unlock();
+        
+        return true;
+
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::angularRateCtrlVer(float _rollRate, float _pitchRate, float _yawRate, float _z){
+
+        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
+        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
+            
+            int mode = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
+            if(useLogStatus_){
+                LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
+            }
+            return false;
+        }
+        
+        if(useLogStatus_){
+            LogStatus::get()->status("Moving in attitude rate and vertical position", false);
+        }
+
+        secureGuard_.lock();
+        vehicle_->control->angularRateAndVertPosCtrl(_rollRate, _pitchRate, _yawRate, _z);
+        secureGuard_.unlock();
+        
+        return true;
+
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::positionCtrlGPS(Eigen::Vector3f _wayPoint, dataMission _config){
+
+        DJI::OSDK::WayPointInitSettings fdata;
+        setWaypointInitDefaults(&fdata);
+
+        fdata.maxVelocity = _config.maxVelWP;
+        fdata.idleVelocity = _config.idleVelWP;
+        fdata.finishAction = _config.finishActionWP;
+        fdata.executiveTimes = _config.executiveTimesWP;
+        fdata.yawMode = _config.yawMode;
+        fdata.traceMode = _config.traceModeWP;
+        fdata.RCLostAction = _config.rcLostWP;
+        fdata.indexNumber = 2;
+
+        secureGuard_.lock();
+        DJI::OSDK::ACK::ErrorCode initAck = vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, functionTimeout_, &fdata);
+        secureGuard_.unlock();
+        if (DJI::OSDK::ACK::getError(initAck)){
+            DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
+            if(useLogStatus_){
+                LogStatus::get()->error("Error at init waypoint GPS, exiting", true);
+            }
+            return false;
+        }
+
+        // Create Waypoints
+        std::vector<DJI::OSDK::WayPointSettings> generatedWaypts;
+
+        DJI::OSDK::WayPointSettings  wp1;
+        setWaypointDefaults(&wp1);
+
+        // Get actual Lat and Lon
+        Eigen::Vector2f gps;
+        getGPS(gps);
+
+        float altitude = 0;
+        getAltitude(altitude);
+
+        wp1.turnMode = _config.turnModeWP;
+        wp1.index     = 0;
+        wp1.latitude  = gps(0);
+        wp1.longitude = gps(1);
+        wp1.altitude  = altitude;
+        generatedWaypts.push_back(wp1);
+        
+        DJI::OSDK::WayPointSettings  wp2;
+        setWaypointDefaults(&wp2);
+
+        wp2.turnMode = _config.turnModeWP;
+        wp2.index     = 1;
+        wp2.latitude  = _wayPoint(0);
+        wp2.longitude = _wayPoint(1);
+        wp2.altitude  = _wayPoint(2);
+        generatedWaypts.push_back(wp2);
+
+        // Upload Waypoints
+        uploadWaypoints(generatedWaypts);
+
+        secureGuard_.lock();
+        DJI::OSDK::ACK::ErrorCode startAck = vehicle_->missionManager->wpMission->start(functionTimeout_);
+        secureGuard_.unlock();
+        if (DJI::OSDK::ACK::getError(startAck)){
+            DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
+            if(useLogStatus_){
+                LogStatus::get()->error("Error at start waypoint GPS, exiting", true);
+            }
+            return false;
+        }else{
+            if(useLogStatus_){
+                LogStatus::get()->status("Going to waypoint GPS", true);
+            }
+        }
+
+        return true;
+
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR MISSIONS
+    //---------------------------------------------------------------------------------------------------------------------
 
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){
@@ -201,22 +448,30 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(initAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
-                LogStatus::get()->error("Error at init mission manager, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at init mission manager, exiting", true);
+                }
                 return false;
             }
 
             secureGuard_.lock();
             vehicle_->missionManager->printInfo();
             secureGuard_.unlock();
-            LogStatus::get()->status("Initializing Waypoint Mission...", true);
+            if(useLogStatus_){
+                LogStatus::get()->status("Initializing Waypoint Mission...", true);
+            }
 
             // Waypoint Mission: Create Waypoints
             std::vector<WayPointSettings> generatedWaypts = createWaypoints(_wayPoints, _config);
-            LogStatus::get()->status("Creating Waypoints...", true);
+            if(useLogStatus_){
+                LogStatus::get()->status("Creating Waypoints...", true);
+            }
 
             // Waypoint Mission: Upload the waypoints
             uploadWaypoints(generatedWaypts);
-            LogStatus::get()->status("Uploading Waypoints...", true);
+            if(useLogStatus_){
+                LogStatus::get()->status("Uploading Waypoints...", true);
+            }
 
         }else if(_config.missionType == "hotpoint"){
 
@@ -241,7 +496,9 @@ namespace dal{
             secureGuard_.unlock();
 
         }else{
-            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            if(useLogStatus_){
+                LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            }
             return false;
         }
         
@@ -259,10 +516,14 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(startAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
-                LogStatus::get()->error("Error at start mission, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at start mission, exiting", true);
+                }
                 return false;
             }else{
-                LogStatus::get()->status("Starting Waypoint Mission...", true);
+                if(useLogStatus_){
+                    LogStatus::get()->status("Starting Waypoint Mission...", true);
+                }
             }
 
         }else if(missionType_ == "hotpoint"){
@@ -272,14 +533,20 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(startAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
-                LogStatus::get()->error("Error at start mission, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at start mission, exiting", true);
+                }
                 return false;
             }else{
-                LogStatus::get()->status("Starting Hotpoint Mission...", true);
+                if(useLogStatus_){
+                    LogStatus::get()->status("Starting Hotpoint Mission...", true);
+                }
             }
 
         }else{
-            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            if(useLogStatus_){
+                LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            }
             return false;
         }
 
@@ -296,10 +563,14 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(pauseAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
-                LogStatus::get()->error("Error at pause mission, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at pause mission, exiting", true);
+                }
                 return false;
             }else{
-                LogStatus::get()->status("Pause Waypoint Mission...", true);
+                if(useLogStatus_){
+                    LogStatus::get()->status("Pause Waypoint Mission...", true);
+                }
             }
 
         }else if(missionType_ == "hotpoint"){
@@ -309,14 +580,20 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(pauseAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
-                LogStatus::get()->error("Error at pause mission, exiting", true); 
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at pause mission, exiting", true); 
+                }
                 return false;
             }else{
-                LogStatus::get()->status("Pause Hotpoint Mission...", true);
+                if(useLogStatus_){
+                    LogStatus::get()->status("Pause Hotpoint Mission...", true);
+                }
             }
 
         }else{
-            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            if(useLogStatus_){
+                LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            }
             return false;
         }
 
@@ -333,10 +610,14 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(stopAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
-                LogStatus::get()->error("Error at stop mission, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at stop mission, exiting", true);
+                }
                 return false;
             }else{
-                LogStatus::get()->status("Stop Waypoint Mission...", true);
+                if(useLogStatus_){
+                    LogStatus::get()->status("Stop Waypoint Mission...", true);
+                }
             }
 
         }else if(missionType_ == "hotpoint"){
@@ -346,14 +627,20 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(stopAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
-                LogStatus::get()->error("Error at stop mission, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at stop mission, exiting", true);
+                }
                 return false;
             }else{
-                LogStatus::get()->status("Stop Hotpoint Mission...", true);
+                if(useLogStatus_){
+                    LogStatus::get()->status("Stop Hotpoint Mission...", true);
+                }
             }
 
         }else{
-            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            if(useLogStatus_){
+                LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            }
             return false;
         }
 
@@ -370,10 +657,14 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(resumeAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
-                LogStatus::get()->error("Error at resume mission, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at resume mission, exiting", true);
+                }
                 return false;
             }else{
-                LogStatus::get()->status("Resume Waypoint Mission...", true);
+                if(useLogStatus_){
+                    LogStatus::get()->status("Resume Waypoint Mission...", true);
+                }
             }
 
         }else if(missionType_ == "hotpoint"){
@@ -383,297 +674,316 @@ namespace dal{
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(resumeAck)){
                 DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
-                LogStatus::get()->error("Error at resume mission, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error at resume mission, exiting", true);
+                }
                 return false;
             }else{
-                LogStatus::get()->status("Resume Hotpoint Mission...", true);
+                if(useLogStatus_){
+                    LogStatus::get()->status("Resume Hotpoint Mission...", true);
+                }
             }
 
         }else{
-            LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            if(useLogStatus_){
+                LogStatus::get()->error("Unrecognised mission type, exiting", true);
+            }
             return false;
         }
 
         return true;        
     }
 
+    //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR TELEMETRY
+    //---------------------------------------------------------------------------------------------------------------------
+
+    //---------------------------------------------------------------------------------------------------------------------
+    // INITS
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::initLocalPosition(){
+        return setLocalPosition();
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    // GETTERS
+
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::positionCtrlYaw(float _x, float _y, float _z, float _yaw){
-
-        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
-        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
-        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
-            int mode = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
-            LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
-            return false;
-        }
-
-        LogStatus::get()->status("Moving in local position", false);
-
-        // Convert position offset from first position to local coordinates
-        DJI::OSDK::Telemetry::Vector3f localPose;
-
+    bool BackendDJI::getPositionVO(VectorPositionVO& _data){
+        
         secureGuard_.lock();
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+        position_vo_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>();
         secureGuard_.unlock();
 
-        localPoseFromGps(localPose, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
-
-        // Get initial offset. We will update this in a loop later.
-        double xOffset = _x - localPose.x;
-        double yOffset = _y - localPose.y;
-        double zOffset = _z - localPose.z;
-
-        // 0.1 m or 10 cms is the minimum error to reach target in x, y and z axes.
-        // This error threshold will have to change depending on aircraft / payload / wind conditions
-        double xCmd, yCmd, zCmd;
-        if(((std::abs(xOffset)) < 0.1) && ((std::abs(yOffset)) < 0.1) && (localPose.z > (zOffset - 0.1)) && (localPose.z < (zOffset + 0.1))){
-            xCmd = 0;
-            yCmd = 0;
-            zCmd = 0;
-        }else{
-            xCmd = xOffset;
-            yCmd = yOffset;
-            zCmd = _z;
-        }
-
-        // 666 TODO: YAW NOT IMPLEMENTED!
-
-        secureGuard_.lock();
-        vehicle_->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yaw);
-        secureGuard_.unlock();
+        _data(0) = position_vo_.x;
+        _data(1) = position_vo_.y;
+        _data(2) = position_vo_.z;
+        _data(3) = position_vo_.xHealth;
+        _data(4) = position_vo_.yHealth;
+        _data(5) = position_vo_.zHealth;
 
         return true;
     }
-    
-    //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){
 
-        if(vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
-        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
-        vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
-            int mode = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
-            LogStatus::get()->error("Error vehicle not in mode to control with API SDK, mode: " + std::to_string(mode) + " exiting", true);
-            return false;
-        }
-        
-        LogStatus::get()->status("Moving in velocity", false);
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getGPS(Eigen::Vector2f& _data){
         
         secureGuard_.lock();
-        vehicle_->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
+        latLon_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
         secureGuard_.unlock();
-        
+
+        _data(0) = latLon_.latitude;
+        _data(1) = latLon_.longitude; 
+
         return true;
-    }    
+    }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::receiveTelemetry(dataTelemetry& _data, bool _saveToFile){
+    bool BackendDJI::getGPSDetail(VectorGPSDetail& _data){
+
+        secureGuard_.lock();
+        GPSDetail_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS>();
+        secureGuard_.unlock();
+
+        _data(0) = GPSDetail_.fix;
+        _data(1) = GPSDetail_.gnssStatus;
+        _data(2) = GPSDetail_.hacc;
+        _data(3) = GPSDetail_.sacc;
+        _data(4) = GPSDetail_.usedGPS;
+        _data(5) = GPSDetail_.usedGLN; 
+        _data(6) = GPSDetail_.NSV;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getGPSSignal(int& _data){
+
+        secureGuard_.lock();
+        GPSSignal_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_SIGNAL_LEVEL>();
+        secureGuard_.unlock();
+
+        _data = GPSSignal_;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getAltitude(float& _data){
         
-        // Get all the data once before the loop to initialize vars
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type          flightStatus;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude;
-        DJI::OSDK::Telemetry::Vector3f                                                          localPose;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>::type            position_vo;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                     rc;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type               velocity;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_POSITION>::type           rtk;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_POSITION_INFO>::type      rtk_pos_info;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_VELOCITY>::type           rtk_velocity;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW>::type                rtk_yaw;
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RTK_YAW_INFO>::type           rtk_yaw_info;
-        DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_BATTERY_INFO>::type                      battery_info;
-        DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_HARD_SYNC>::type                         hardSync_FC;
-
         secureGuard_.lock();
-        flightStatus = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>();
+        altitude_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
         secureGuard_.unlock();
 
-        secureGuard_.lock();
-        mode        = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
-        secureGuard_.unlock();
+        actualAltitude_ = altitude_ - originAltitude_;
 
-        secureGuard_.lock();
-        latLon       = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-        secureGuard_.unlock();
+        _data = actualAltitude_;
 
-        secureGuard_.lock();
-        altitude     = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
-        secureGuard_.unlock();
+        return true;
+    }
 
-        localPoseFromGps(localPose, static_cast<void*>(&latLon), static_cast<void*>(&originGPS_));
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getAngularRate(Eigen::Vector3f& _data){
         
-        if(usePositionVO_){
-            secureGuard_.lock();
-            position_vo = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>();
-            secureGuard_.unlock();
-        }
-
         secureGuard_.lock();
-        rc           = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
+        angularRate_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_FUSIONED>();
         secureGuard_.unlock();
 
+        _data(0) = angularRate_.x;
+        _data(1) = angularRate_.y;
+        _data(2) = angularRate_.z;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getHardSync(VectorHardSync& _data){
+        
         secureGuard_.lock();
-        velocity     = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_VELOCITY>();
+        hardSync_FC_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_HARD_SYNC>();
+        secureGuard_.unlock();    
+
+        _data(0) = hardSync_FC_.w.x;
+        _data(1) = hardSync_FC_.w.y;
+        _data(2) = hardSync_FC_.w.z;
+        _data(3) = hardSync_FC_.a.x;
+        _data(4) = hardSync_FC_.a.y;
+        _data(5) = hardSync_FC_.a.z;
+        _data(6) = hardSync_FC_.q.q0;
+        _data(7) = hardSync_FC_.q.q1;
+        _data(8) = hardSync_FC_.q.q2;
+        _data(9) = hardSync_FC_.q.q3;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getCompass(Eigen::Vector3f& _data){
+
+        secureGuard_.lock();
+        compass_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_COMPASS>();
         secureGuard_.unlock();
 
+        _data(0) = compass_.x;
+        _data(1) = compass_.y;
+        _data(2) = compass_.z;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getQuaternion(Eigen::Vector4f& _data){
+
         secureGuard_.lock();
-        quaternion   = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
+        quaternion_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
         secureGuard_.unlock();
 
-        secureGuard_.lock();
-        battery_info = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO>();
-        secureGuard_.unlock();   
+        _data(0) = quaternion_.q0; 
+        _data(1) = quaternion_.q1; 
+        _data(2) = quaternion_.q2; 
+        _data(3) = quaternion_.q3; 
 
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getVelocity(Eigen::Vector3f& _data){
+        
         secureGuard_.lock();
-        hardSync_FC  = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_HARD_SYNC>();
-        secureGuard_.unlock();        
+        velocity_  = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_VELOCITY>();
+        secureGuard_.unlock();
+
+        _data(0) = velocity_.data.x; 
+        _data(1) = velocity_.data.y; 
+        _data(2) = velocity_.data.z;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getStatusFlight(std::string& _data){
+        
+        secureGuard_.lock();
+        flightStatus_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>();
+        secureGuard_.unlock();
 
         std::string sFlightStatus, sMode;
-        if(flightStatus == 0){
+        if(flightStatus_ == 0){
             sFlightStatus = "STOPED";
-        }else if(flightStatus == 1){
+        }else if(flightStatus_ == 1){
             sFlightStatus = "ON_GROUND";
-        }else if(flightStatus == 2){
+        }else if(flightStatus_ == 2){
             sFlightStatus = "IN_AIR";
         }else{
             sFlightStatus = "UNRECOGNIZED";
         }
 
-        if(mode == 0){
+        _data = sFlightStatus; 
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getDisplayMode(std::string& _data){
+        
+        secureGuard_.lock();
+        mode_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
+        secureGuard_.unlock();
+
+        std::string sMode;
+        if(mode_ == 0){
             sMode = "MANUAL";
-        }else if(mode == 1){
+        }else if(mode_ == 1){
             sMode = "ATTITUDE";
-        }else if(mode == 6){
+        }else if(mode_ == 6){
             sMode = "P_GPS";
-        }else if(mode == 9){
+        }else if(mode_ == 9){
             sMode = "HOT_POINT";
-        }else if(mode == 10){
+        }else if(mode_ == 10){
             sMode = "ASSISTED_TAKEOFF";
-        }else if(mode == 11){
+        }else if(mode_ == 11){
             sMode = "AUTO_TAKEOFF";
-        }else if(mode == 12){
+        }else if(mode_ == 12){
             sMode = "ASSISTED_LAND";
-        }else if(mode == 15){
+        }else if(mode_ == 15){
             sMode = "GO_HOME";
-        }else if(mode == 17){
+        }else if(mode_ == 17){
             sMode = "NAVI_SDK_CTMODE_CTRLRL";
-        }else if(mode == 33){
+        }else if(mode_ == 33){
             sMode = "FORCE_AUTO_LANDING";
-        }else if(mode == 40){
+        }else if(mode_ == 40){
             sMode = "SEARCH";
-        }else if(mode == 41){
+        }else if(mode_ == 41){
             sMode = "ENGINE_START";
         }else{
             sMode = "UNRECOGNIZED";
         }
 
-        _data.flightStatus = sFlightStatus; 
-        _data.mode = sMode;
-        _data.latLon(0) = latLon.latitude;
-        _data.latLon(1) = latLon.longitude; 
-        _data.altitude = altitude;
-        _data.nGPS = latLon.visibleSatelliteNumber; 
-        _data.batteryVoltage = battery_info.voltage;
-        _data.imu(0) = hardSync_FC.w.x;
-        _data.imu(1) = hardSync_FC.w.y;
-        _data.imu(2) = hardSync_FC.w.z;
-        _data.imu(3) = hardSync_FC.a.x;
-        _data.imu(4) = hardSync_FC.a.y;
-        _data.imu(5) = hardSync_FC.a.z;
-        _data.imu(6) = hardSync_FC.q.q0;
-        _data.imu(7) = hardSync_FC.q.q1;
-        _data.imu(8) = hardSync_FC.q.q2;
-        _data.imu(9) = hardSync_FC.q.q3;
+        _data = sMode;
 
-        _data.localPosition(0) = localPose.x;
-        _data.localPosition(1) = localPose.y;
-        _data.localPosition(2) = localPose.z;
-        if(usePositionVO_){
-            _data.positionVO(0) = position_vo.x;
-            _data.positionVO(1) = position_vo.y;
-            _data.positionVO(2) = position_vo.z;
-            _data.positionVO(3) = position_vo.xHealth;
-            _data.positionVO(4) = position_vo.yHealth;
-            _data.positionVO(5) = position_vo.zHealth;
-        }else{
-            _data.positionVO(0) = 0.0;
-            _data.positionVO(1) = 0.0;
-            _data.positionVO(2) = 0.0;
-            _data.positionVO(3) = 0.0;
-            _data.positionVO(4) = 0.0;
-            _data.positionVO(5) = 0.0;
-        }
-        _data.rc(0) = rc.roll; 
-        _data.rc(1) = rc.pitch; 
-        _data.rc(2) = rc.yaw; 
-        _data.rc(3) = rc.throttle; 
-        _data.velocity(0) = velocity.data.x; 
-        _data.velocity(1) = velocity.data.y; 
-        _data.velocity(2) = velocity.data.z; 
-        _data.quaternion(0) = quaternion.q0; 
-        _data.quaternion(1) = quaternion.q1; 
-        _data.quaternion(2) = quaternion.q2; 
-        _data.quaternion(3) = quaternion.q3; 
-
-        if(rtkAvailable_){
-            secureGuard_.lock();
-            rtk = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RTK_POSITION>();
-            secureGuard_.unlock();
-
-            secureGuard_.lock();
-            rtk_pos_info = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RTK_POSITION_INFO>();
-            secureGuard_.unlock();
-            
-            secureGuard_.lock();
-            rtk_velocity = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RTK_VELOCITY>();
-            secureGuard_.unlock();
-            
-            secureGuard_.lock();
-            rtk_yaw = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RTK_YAW>();
-            secureGuard_.unlock();
-            
-            secureGuard_.lock();
-            rtk_yaw_info = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RTK_YAW_INFO>();
-            secureGuard_.unlock();
-
-            _data.rtk(0) = rtk.latitude; 
-            _data.rtk(1) = rtk.longitude; 
-            _data.rtk(2) = rtk.HFSL; 
-            _data.rtk(3) = rtk_velocity.x; 
-            _data.rtk(4) = rtk_velocity.y; 
-            _data.rtk(5) = rtk_velocity.z; 
-            _data.rtk(6) = rtk_yaw; 
-            _data.rtk(7) = rtk_yaw_info; 
-            _data.rtk(8) = rtk_pos_info; 
-        }else{
-            _data.rtk(0) = 0; 
-            _data.rtk(1) = 0; 
-            _data.rtk(2) = 0; 
-            _data.rtk(3) = 0; 
-            _data.rtk(4) = 0; 
-            _data.rtk(5) = 0; 
-            _data.rtk(6) = 0;
-            _data.rtk(7) = 0; 
-            _data.rtk(8) = 0; 
-        }
-
-        if(_saveToFile){
-            // Flight Status / Mode / Battery level / Roll / Pitch / Yaw / Throttle
-            // Position Latitude / Position Longitude / Position Altitude / Satellite number / Local Position x / Local Position y / Local Position z / Position VO x / Position VO y / Position VO z
-            // Vx / Vy / Vz / Qw / Qx / Qy / Qz 
-            // RTK Latitude / RTK Longitude / RTK Altitude / RTK Vx / RTK Vy / RTK Vz / RTK Yaw / RTK Yaw info / RTK Position info
-            std::string stringGeneral = std::to_string((int)flightStatus) + " " + sMode + " " + std::to_string(battery_info.percentage) + " " + std::to_string(rc.roll) + " " + std::to_string(rc.pitch) + " " + std::to_string(rc.yaw) + " " + std::to_string(rc.throttle);
-            std::string stringPosition = std::to_string(latLon.latitude) + " " + std::to_string(latLon.longitude) + " " + std::to_string(altitude) + " " + std::to_string((int)latLon.visibleSatelliteNumber) + " " + std::to_string(localPose.x) + " " + std::to_string(localPose.y) + " " + std::to_string(localPose.z) + " " + std::to_string(position_vo.x) + " " + std::to_string(position_vo.y) + " " + std::to_string(position_vo.z);
-            std::string stringVelocity = std::to_string(velocity.data.x) + " " + std::to_string(velocity.data.y) + " " + std::to_string(velocity.data.z) + " " + std::to_string(quaternion.q0) + " " + std::to_string(quaternion.q1) + " " + std::to_string(quaternion.q2) + " " + std::to_string(quaternion.q3);
-            std::string stringRTK = std::to_string(rtk.latitude) + " " + std::to_string(rtk.longitude) + " " + std::to_string(rtk.HFSL) + " " + std::to_string(rtk_velocity.x) + " " + std::to_string(rtk_velocity.y) + " " + std::to_string(rtk_velocity.z) + " " + std::to_string(rtk_yaw) + " " + std::to_string(rtk_yaw_info) + " " + std::to_string(rtk_pos_info);
-            std::string stringTelemetry = stringGeneral + " " + stringPosition + " " + stringVelocity + " " + stringRTK;
-            LogTelemetry::get()->message(stringTelemetry, false);
-        }
-                    
         return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getBatery(int& _data){
+
+        secureGuard_.lock();
+        battery_info_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO>();
+        secureGuard_.unlock();  
+
+        _data = battery_info_.voltage;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getRC(VectorRC& _data){
+        secureGuard_.lock();
+        rc_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA>();
+        secureGuard_.unlock();
+
+        _data(0) = rc_.pitch;
+        _data(1) = rc_.roll;
+        _data(2) = rc_.yaw;
+        _data(3) = rc_.throttle;
+        _data(4) = rc_.flag.logicConnected;
+        _data(5) = rc_.flag.skyConnected;
+        _data(6) = rc_.flag.groundConnected;
+        _data(7) = rc_.flag.appConnected;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getControlDevice(Eigen::Vector3i& _data){
+
+        secureGuard_.lock();
+        controlDevice_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE>();
+        secureGuard_.unlock();
+
+        _data(0) = controlDevice_.controlMode;
+        _data(1) = controlDevice_.deviceStatus;
+        _data(2) = controlDevice_.flightStatus;
+
+        return true;
+    }
+
+    //-----------------------------------------------------------------------------------------------------------------
+    bool BackendDJI::getLocalPosition(VectorLocalPosition& _data){
+
+        secureGuard_.lock();
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+        secureGuard_.unlock();
+
+        localPoseFromGps(localPose_, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS_));
+
+        _data(0) = localPose_.x;
+        _data(1) = localPose_.y;
+        _data(2) = localPose_.z;
+
+        return true;
+
     }
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -683,59 +993,148 @@ namespace dal{
     //-----------------------------------------------------------------------------------------------------------------
     bool BackendDJI::init(const Config &_config){
 
-        LogStatus::init("DJIStatus_" + std::to_string(time(NULL)));
-        LogTelemetry::init("DJITelemetry_" + std::to_string(time(NULL)));
+        std::cout <<    "     ........               ........    \n"
+                        "  .............           ............. \n"
+                        " ...............         ...............\n"
+                        " .......▄........       ........▄.......\n"
+                        " .......▄▄▄......       ......▄▄▄.......\n"
+                        " .........▄▄▄...         ...▄▄▄.........\n"
+                        "  ..........▄▄▄  ▄▄▄▄▄▄▄  ▄▄▄.......... \n"
+                        "    ......... ▄▄▄▄▄▄▄▄▄▄▄▄▄ .........   \n"
+                        "	        ▄▄▄▄▄▄▄▄▄               \n"
+                        "		 ▄▄▄▄▄▄▄                \n"
+                        "		 ▄▄▄▄▄▄▄                \n"
+                        "	        ▄▄▄▄▄▄▄▄▄               \n"
+                        "    ......... ▄▄▄▄▄▄▄▄▄▄▄▄▄ .........   \n"
+                        "  ..........▄▄▄  ▄▄▄▄▄▄▄  ▄▄▄.......... \n"
+                        " .........▄▄▄...         ...▄▄▄.........\n"
+                        " .......▄▄▄......       ......▄▄▄.......\n"
+                        " .......▄........       ........▄.......\n"
+                        " ...............         ...............\n"
+                        "  .............           ............. \n"
+                        "  ____________________________________  \n"
+                        " |                                    | \n"
+                        " | Initializing DJI backend - Manuoso | \n"
+                        " |____________________________________| \n";
 
-        usePositionVO_ = _config.usePositionVO;
+        // Use Log Status
+        useLogStatus_ = _config.useLogStatus;
+
+        if(useLogStatus_){
+            LogStatus::init("DJIStatus" + std::to_string(time(NULL)));
+        }
 
         // Setup Vehicle
         secureGuard_.lock();
-        vehicle_ = new DJI::OSDK::Vehicle(_config.device.c_str(),
-                                   _config.baudrate,
-                                   true,
-                                   _config.useAdvancedSensing);
+        vehicle_ = new DJI::OSDK::Vehicle(_config.device.c_str(), _config.baudrate, true, _config.useAdvancedSensing);
+
+        if(vehicle_ == NULL){
+            if(useLogStatus_){
+                LogStatus::get()->error("Vehicle not initialized, exiting", true);
+            }
+            return false;
+        }
 
         // Check if the communication is working fine
-        if (!vehicle_->protocolLayer->getDriver()->getDeviceStatus())
-        {
-            LogStatus::get()->error("Comms appear to be incorrectly set up exiting", true);
+        if(!vehicle_->protocolLayer->getDriver()->getDeviceStatus()){
+            if(useLogStatus_){
+                LogStatus::get()->error("Comms appear to be incorrectly set up exiting", true);
+            }
             return false;
         }
         secureGuard_.unlock();
 
         // Activate
-        activateData_.ID = _config.app_id;
+        DJI::OSDK::Vehicle::ActivateData activateData;
+        activateData.ID = _config.app_id;
         char app_key[65];
-        activateData_.encKey = app_key;
-        std::strcpy(activateData_.encKey, _config.app_key.c_str());
+        activateData.encKey = app_key;
+        std::strcpy(activateData.encKey, _config.app_key.c_str());
 
         secureGuard_.lock();
-        activateData_.version = vehicle_->getFwVersion();
-        DJI::OSDK::ACK::ErrorCode ack = vehicle_->activate(&activateData_, functionTimeout_);
+        activateData.version = vehicle_->getFwVersion();
+        DJI::OSDK::ACK::ErrorCode ack = vehicle_->activate(&activateData, functionTimeout_);
         secureGuard_.unlock();
 
-        if (DJI::OSDK::ACK::getError(ack))
-        {
+        if(DJI::OSDK::ACK::getError(ack)){
             DJI::OSDK::ACK::getErrorCodeMessage(ack, __func__);
-            LogStatus::get()->error("Error validating Vehicle, exiting", true);
+            if(useLogStatus_){
+                LogStatus::get()->error("Error validating Vehicle, exiting", true);
+            }
             return false;
         }
 
-        if(vehicle_ == NULL){
-            LogStatus::get()->error("Vehicle not initialized, exiting", true);
-            return false;
+        if(useLogStatus_){
+            LogStatus::get()->status("Vehicle initialized", true);
         }
-        LogStatus::get()->status("Vehicle initialized", true);
-      
+
         // Obtain Control Authority
         if(obtainControlAuthority(true)){
-            if(subscribeToData()){     // 666 TODO: MAKE THIS BETTER, UNA ESPECIE DE SINGLETON?
-            LogStatus::get()->status("Subscribe To Data success", true);
-                return true;
+            if(_config.topics.size() > 0){
+                if(useLogStatus_){
+                    LogStatus::get()->status("Using std map", true);
+                }
+                
+                bool result;
+                int searchFreq = 0, searchFreqLast = 0, contMaxFreq = 0;
+                std::map<DJI::OSDK::Telemetry::TopicName, int>::iterator it, itSameFreq;
+                std::map<DJI::OSDK::Telemetry::TopicName, int> copyConfigTopics = _config.topics;
+                it = copyConfigTopics.begin();
+
+                while(it != copyConfigTopics.end()){ 
+                    searchFreq = it->second;
+
+                    if(searchFreqLast == searchFreq){
+                        continue;
+                    }
+
+                    contMaxFreq++;
+                    if(contMaxFreq > 5){
+                        LogStatus::get()->status("Using more packages with different frequencies than DJI allows", true);
+                        return false;
+                    }
+
+                    itSameFreq = it;
+                    std::vector<DJI::OSDK::Telemetry::TopicName> topics;
+                    while(itSameFreq != copyConfigTopics.end()){ 
+                        if(searchFreq == itSameFreq->second){
+                            topics.push_back(itSameFreq->first);
+                            it = copyConfigTopics.erase(itSameFreq);
+                        }
+
+                        itSameFreq++;
+                    }
+                
+                    if(topics.size() > 0){
+                        result = subscribeToTopic(topics, searchFreq);
+                        if(!result){
+                            return false;
+                        }
+                    }
+
+                    searchFreqLast = searchFreq;
+                    if(copyConfigTopics.size() == 0){
+                        break;
+                    }else{
+                        it++;
+                    }
+
+                }
+                
+                // Wait for the data to start coming in.
+                sleep(3);
+
+                return setLocalPosition();
+
             }else{
-                LogStatus::get()->status("Subscribe To Data failed", true);
+                // 666 TODO: NO SOPORTADO DEBIDO A QUE SOLO SE PUEDEN ENVIAR 5 PAQUETES MAXIMO DE TELEMETRIA
+                if(useLogStatus_){
+                    LogStatus::get()->status("Not working without std map", true);
+                }
                 return false;
             }
+
+            return true;
         }else{
             return false;
         }    
@@ -750,56 +1149,47 @@ namespace dal{
         secureGuard_.unlock();
         if (DJI::OSDK::ACK::getError(ctrlStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(ctrlStatus, __func__);
-            LogStatus::get()->error("Not obtained Control Authority, exiting", _info);
+            if(useLogStatus_){
+                LogStatus::get()->error("Not obtained Control Authority, exiting", _info);
+            }
             return false;
         }
-        LogStatus::get()->status("Obtained Control Authority of the Vehicle", _info);
+        if(useLogStatus_){
+            LogStatus::get()->status("Obtained Control Authority of the Vehicle", _info);
+        }
         return true;
 
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::subscribeToData(){     // 666 TODO: MAKE THIS BETTER, UNA ESPECIE DE SINGLETON?
+    bool BackendDJI::subscribeToTopic(std::vector<DJI::OSDK::Telemetry::TopicName> _topics, int _freq){
 
-        // We will subscribe to six kinds of data:
-        // 1. Flight Status at 10 Hz
-        // 2. Mode at 10 Hz
-        // 3. Fused Lat/Lon at 50 Hz
-        // 4. Fused Altitude at 50 Hz
-        // 5. RC Channels at 50 Hz
-        // 6. Velocity at 50 Hz
-        // 7. Quaternion at 200 Hz
-        // 8. RTK if available at 5 Hz
-        // 9. Battery info at 10 Hz
-        // 10. Imu at 400 Hz
-        // 11. Position VO at 50 Hz
-
-        // Please make sure your drone is in simulation mode. You can fly the drone with your RC to get different values.
-	
-        // Telemetry: Verify the subscription
-        DJI::OSDK::ACK::ErrorCode subscribeStatus;
-        
         secureGuard_.lock();
-        subscribeStatus = vehicle_->subscribe->verify(functionTimeout_);
+        DJI::OSDK::ACK::ErrorCode subscribeStatus = vehicle_->subscribe->verify(functionTimeout_);
         secureGuard_.unlock();
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
-            LogStatus::get()->error("Not verified subscription to Telemetry, exiting", true);
+            if(useLogStatus_){
+                LogStatus::get()->error("Not verified subscription to Telemetry, exiting", true);
+            }
             return false;
         }
-	
-        // Package 0: Subscribe to flight status, battery info and mode at freq 10 Hz
-        pkgIndex_ = 0;
-        int freq = 10;
-        DJI::OSDK::Telemetry::TopicName topicList10Hz[] = { DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT, DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE, DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO};
-        int numTopic = sizeof(topicList10Hz) / sizeof(topicList10Hz[0]);
+
+        DJI::OSDK::Telemetry::TopicName topicList[_topics.size()];   
+        for(unsigned int i = 0; i < _topics.size(); i++ ){
+            topicList[i] = _topics[i];
+        }
+
+        int numTopic = sizeof(topicList) / sizeof(topicList[0]);
         bool enableTimestamp = false;
 
         secureGuard_.lock();
-        bool pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList10Hz, enableTimestamp, freq);
+        bool pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList, enableTimestamp, _freq);
         secureGuard_.unlock();
         if (!pkgStatus){
-            LogStatus::get()->error("Not init package 0 from topic list, exiting", true);
+            if(useLogStatus_){
+                LogStatus::get()->error("Not init package 0 from topic list, exiting", true);
+            }
             return false;
         }
 
@@ -809,162 +1199,30 @@ namespace dal{
         if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
-            unsubscribeToData(); 
-            LogStatus::get()->error("Start package 0 error, exiting", true);
+            unsubscribeAllTopics(); 
+            if(useLogStatus_){
+                LogStatus::get()->error("Start package 0 error, exiting", true);
+            }
             return false;
         }
 
-        // Package 1: Subscribe to Lat/Lon, Alt, RC Channel, Velocity and Position VO at freq 50 Hz
-        pkgIndex_ = 1;
-        freq = 50;
-        enableTimestamp = false;
-        if(usePositionVO_){
-            DJI::OSDK::Telemetry::TopicName topicList50Hz[] = { DJI::OSDK::Telemetry::TOPIC_GPS_FUSED, DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED, DJI::OSDK::Telemetry::TOPIC_RC, DJI::OSDK::Telemetry::TOPIC_VELOCITY, DJI::OSDK::Telemetry::TOPIC_POSITION_VO};
-            numTopic = sizeof(topicList50Hz) / sizeof(topicList50Hz[0]);
-            
-            secureGuard_.lock();
-            pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList50Hz, enableTimestamp, freq);
-            secureGuard_.unlock();
-            if (!pkgStatus){
-                LogStatus::get()->error("Not init package 1 from topic list, exiting", true);
-                return false;
-            }
-        }else{
-            DJI::OSDK::Telemetry::TopicName topicList50Hz[] = { DJI::OSDK::Telemetry::TOPIC_GPS_FUSED, DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED, DJI::OSDK::Telemetry::TOPIC_RC, DJI::OSDK::Telemetry::TOPIC_VELOCITY};
-            numTopic = sizeof(topicList50Hz) / sizeof(topicList50Hz[0]);
-            
-            secureGuard_.lock();
-            pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList50Hz, enableTimestamp, freq);
-            secureGuard_.unlock();
-            if (!pkgStatus){
-                LogStatus::get()->error("Not init package 1 from topic list, exiting", true);
-                return false;
-            }
-        }
+        pkgIndex_++;
         
-        secureGuard_.lock();
-        subscribeStatus = vehicle_->subscribe->startPackage(pkgIndex_, functionTimeout_);
-        secureGuard_.unlock();
-        if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
-            // Cleanup before return
-            unsubscribeToData(); 
-            LogStatus::get()->error("Start package 1 error, exiting", true);
-            return false;
-        }
-
-        // Package 2: Subscribe to Quaternion at freq 200 Hz.
-        pkgIndex_ = 2;
-        freq = 200;
-        DJI::OSDK::Telemetry::TopicName topicList200Hz[] = { DJI::OSDK::Telemetry::TOPIC_QUATERNION };
-        numTopic = sizeof(topicList200Hz) / sizeof(topicList200Hz[0]);
-        enableTimestamp = false;
-
-        secureGuard_.lock();
-        pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList200Hz, enableTimestamp, freq);
-        secureGuard_.unlock();
-        if (!pkgStatus){
-            LogStatus::get()->error("Not init package 2 from topic list, exiting", true);
-            return false;
-        }
-
-        secureGuard_.lock();
-        subscribeStatus = vehicle_->subscribe->startPackage(pkgIndex_, functionTimeout_);
-        secureGuard_.unlock();
-        if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
-            // Cleanup before return
-            unsubscribeToData();
-            LogStatus::get()->error("Start package 2 error, exiting", true);
-            return false;
-        }
-
-        // Package 3: Subscribe to RTK at freq 5 Hz.
-        pkgIndex_ = 3;
-        freq = 5;
-        DJI::OSDK::Telemetry::TopicName topicListRTK5Hz[] = {DJI::OSDK::Telemetry::TOPIC_RTK_POSITION, DJI::OSDK::Telemetry::TOPIC_RTK_YAW_INFO, DJI::OSDK::Telemetry::TOPIC_RTK_POSITION_INFO, DJI::OSDK::Telemetry::TOPIC_RTK_VELOCITY, DJI::OSDK::Telemetry::TOPIC_RTK_YAW};
-        numTopic = sizeof(topicListRTK5Hz) / sizeof(topicListRTK5Hz[0]);
-        enableTimestamp = false;
-
-        secureGuard_.lock();
-        pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicListRTK5Hz, enableTimestamp, freq);
-        secureGuard_.unlock();
-        if (!pkgStatus){
-            LogStatus::get()->error("Not init package 3 from topic list, exiting", true);
-            return false;
-        }else{
-            secureGuard_.lock();
-            subscribeStatus = vehicle_->subscribe->startPackage(pkgIndex_, functionTimeout_);
-            secureGuard_.unlock();
-            if(subscribeStatus.data == DJI::OSDK::ErrorCode::SubscribeACK::SOURCE_DEVICE_OFFLINE){
-                LogStatus::get()->status("RTK Not Available", true);
-                rtkAvailable_ = false;
-            }else{
-                rtkAvailable_ = true;
-                LogStatus::get()->status("RTK Available", true);
-                if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS) {
-                    DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
-                    // Cleanup before return
-                    unsubscribeToData();
-                    LogStatus::get()->error("Start package 3 error, exiting", true);
-                    return false;
-                }
-            }
-        }
-
-        // Package 4: Subscribe to Quaternion at freq 200 Hz.
-        pkgIndex_ = 4;
-        freq = 400;
-        DJI::OSDK::Telemetry::TopicName topicList400Hz[] = { DJI::OSDK::Telemetry::TOPIC_HARD_SYNC };
-        numTopic = sizeof(topicList400Hz) / sizeof(topicList400Hz[0]);
-        enableTimestamp = false;
-
-        secureGuard_.lock();
-        pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList400Hz, enableTimestamp, freq);
-        secureGuard_.unlock();
-        if (!pkgStatus){
-            LogStatus::get()->error("Not init package 4 from topic list, exiting", true);
-            return false;
-        }
-
-        secureGuard_.lock();
-        subscribeStatus = vehicle_->subscribe->startPackage(pkgIndex_, functionTimeout_);
-        secureGuard_.unlock();
-        if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
-            // Cleanup before return
-            unsubscribeToData(); 
-            LogStatus::get()->error("Start package 4 error, exiting", true);
-            return false;
-        }
-
-        // Wait for the data to start coming in.
-        sleep(1);
-
-        // // Also, since we don't have a source for relative height through subscription,
-        // // start using broadcast height
-        // if (!startGlobalPositionBroadcast()){
-        //     // Cleanup before return
-        //     unsubscribeToData();
-        //     return false;
-        // }
-
-        // // Wait for the data to start coming in.
-        // sleep(1);
-        
-        return setLocalPosition();
+        return true;
 
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::unsubscribeToData(){
+    bool BackendDJI::unsubscribeAllTopics(){
 
         for(int i = 0; i < pkgIndex_; i++ ){
             secureGuard_.lock();
             DJI::OSDK::ACK::ErrorCode ack = vehicle_->subscribe->removePackage(i, functionTimeout_);
             secureGuard_.unlock();
             if (DJI::OSDK::ACK::getError(ack)){
-                LogStatus::get()->error("Error unsubscribing at package: " + std::to_string(i) + "; please restart the drone/FC to get back to a clean state, exiting", true);
+                if(useLogStatus_){
+                    LogStatus::get()->error("Error unsubscribing at package: " + std::to_string(i) + "; please restart the drone/FC to get back to a clean state, exiting", true);
+                }
                 return false;
             }
         }
@@ -979,12 +1237,11 @@ namespace dal{
         secureGuard_.lock();
         originGPS_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
         secureGuard_.unlock();
+    
+        secureGuard_.lock();
+        originAltitude_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
+        secureGuard_.unlock();
         
-        // // Get the broadcast GP since we need the height
-        // secureGuard_.lock();
-        // broadcastGP_ = vehicle_->broadcast->getGlobalPosition();
-        // secureGuard_.unlock();
-
         return true;
 
     }
@@ -1086,8 +1343,9 @@ namespace dal{
     void BackendDJI::uploadWaypoints(std::vector<DJI::OSDK::WayPointSettings>& _wpList){
 
         for (std::vector<DJI::OSDK::WayPointSettings>::iterator wp = _wpList.begin(); wp != _wpList.end(); ++wp){
-            
-            LogStatus::get()->status("Waypoint created at (LLA): " + std::to_string(wp->latitude) + " | " + std::to_string(wp->longitude) + " | " + std::to_string(wp->altitude), true);
+            if(useLogStatus_){
+                LogStatus::get()->status("Waypoint created at (LLA): " + std::to_string(wp->latitude) + " | " + std::to_string(wp->longitude) + " | " + std::to_string(wp->altitude), true);
+            }
             secureGuard_.lock();
             DJI::OSDK::ACK::WayPointIndex wpDataACK = vehicle_->missionManager->wpMission->uploadIndexData(&(*wp), functionTimeout_);
             secureGuard_.unlock();
@@ -1121,53 +1379,6 @@ namespace dal{
 
         return result;
     
-    }
-
-    bool BackendDJI::startGlobalPositionBroadcast(){
-        uint8_t freq[16];
-
-        /* Channels definition for A3/N3/M600
-        * 0 - Timestamp
-        * 1 - Attitude Quaternions
-        * 2 - Acceleration
-        * 3 - Velocity (Ground Frame)
-        * 4 - Angular Velocity (Body Frame)
-        * 5 - Position
-        * 6 - GPS Detailed Information
-        * 7 - RTK Detailed Information
-        * 8 - Magnetometer
-        * 9 - RC Channels Data
-        * 10 - Gimbal Data
-        * 11 - Flight Status
-        * 12 - Battery Level
-        * 13 - Control Information
-        */
-        freq[0]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[1]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[2]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[3]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[4]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[5]  =  DJI::OSDK::DataBroadcast::FREQ_50HZ; // This is the only one we want to change
-        freq[6]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[7]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[8]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[9]  =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[10] =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[11] =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[12] =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-        freq[13] =  DJI::OSDK::DataBroadcast::FREQ_HOLD;
-
-        secureGuard_.lock();
-        DJI::OSDK::ACK::ErrorCode ack = vehicle_->broadcast->setBroadcastFreq(freq, 1);
-        secureGuard_.unlock();
-        if(DJI::OSDK::ACK::getError(ack)){
-            DJI::OSDK::ACK::getErrorCodeMessage(ack, __func__);
-            LogStatus::get()->error("Global Position Broadcast error, exiting", true);
-            return false;
-        }
-        else{
-            return true;
-        }
     }
 
 }

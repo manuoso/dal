@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
-//  DRONE ABSTRACTION LAYER
+//  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2019 ViGUS University of Seville
+//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -22,25 +22,22 @@
 
 #include <dal/backends/Backend.h>
 #include <dal/backends/BackendDJI.h>
-#include <dal/backends/BackendAPM.h>
-#include <dal/backends/BackendPX4.h>
 
 namespace dal{
+    dal::Backend *dal::Backend::bd_ = nullptr;
+
+    //---------------------------------------------------------------------------------------------------------------------
     Backend::Backend() {}
 
+    //---------------------------------------------------------------------------------------------------------------------
     Backend::~Backend() {}
     
+    //---------------------------------------------------------------------------------------------------------------------
     Backend * Backend::create(const Backend::Config &_config){
         bd_ = nullptr;
         switch(_config.type){
         case Backend::Config::eType::DJI:
             bd_ = new BackendDJI();
-            break;
-        case Backend::Config::eType::APM:
-            bd_ = new BackendAPM();
-            break;
-        case Backend::Config::eType::PX4:
-            bd_ = new BackendPX4();
             break;
         case Backend::Config::eType::Dummy:
             bd_ = new BackendDummy();
@@ -57,5 +54,3 @@ namespace dal{
     }
 
 }
-
-dal::Backend *dal::Backend::bd_;

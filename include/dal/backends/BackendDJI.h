@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
-//  DRONE ABSTRACTION LAYER
+//  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2019 ViGUS University of Seville
+//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -27,13 +27,13 @@
 
 // System Includes
 #include <cmath>
-#include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <chrono>
 #include <mutex>
 #include <vector>
 #include <iostream>
+#include <map>
 
 // DJI OSDK includes
 #include <djiosdk/dji_status.hpp>
@@ -42,7 +42,6 @@
 
 // Logs
 #include <dal/LogStatus.h>
-#include <dal/LogTelemetry.h>
 
 #define C_EARTH (double)6378137.0
 #define C_PI (double)3.141592653589793
@@ -54,18 +53,34 @@
 // ¡¡¡ IMPORTANT !!! 
 //
 // This backend is developed for the DJI A3 controller. 
-// So the implemented functions may vary for another model like the M100 and M600.
+// So the implemented functions may vary for another model like the M210 and M600.
 //
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 namespace dal{
     class BackendDJI: public Backend{
         public:
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR INITIALIZATION
+	        //---------------------------------------------------------------------------------------------------------------------
+
             /// Constructor
             BackendDJI();
 
             /// Destructor
             ~BackendDJI();
+
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR CONTROL
+	        //---------------------------------------------------------------------------------------------------------------------
+
+            /// This method is the implementation of emergency brake.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool emergencyBrake();
+
+            /// This method is the implementation of recover control.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool recoverFromManual();
 
             /// This method is the implementation of takeoff using DJI SDK, this will block the main thread.
             /// \param _height: desired height to takeoff.
@@ -76,13 +91,47 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool land();
 
-            /// This method is the implementation of emergency brake.
+            /// This method is the implementation of position control and yaw using DJI SDK.
+            /// \param _x: desired x in NEU coordinates (m).
+            /// \param _y: desired y in NEU coordinates (m).
+            /// \param _z: desired z in NEU coordinates (m).
+            /// \param _yaw: desired yaw (deg).
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool emergencyBrake();
+            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw);
+	    
+            /// This method is the implementation of velocity control and yaw using DJI SDK.
+            /// \param _x: desired Vx in NEU coordinates (m/s).
+            /// \param _y: desired Vy in NEU coordinates (m/s).
+            /// \param _z: desired Vz in NEU coordinates (m/s).
+            /// \param _yaw: desired yaw rate (deg/s).
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate);
 
-            /// This method is the implementation of recover control.
+            /// This method is the implementation of the attitude and vertical position control using DJI SDK.
+            /// \param _roll: attitude set-point in x axis of body frame in FRU coordinates (deg).
+            /// \param _pitch: attitude set-point in y axis of body frame FRU coordinates (deg).
+            /// \param _yaw: attitude set-point in z axis of ground frame NED coordinates (deg).
+            /// \param _z: position set-point in z axis of ground frame NED (m).
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool recoverFromManual();
+            virtual bool attitudeCtrlVer(float _roll, float _pitch, float _yaw, float _z);
+
+            /// This method is the implementation of the attitude rate and vertical position control using DJI SDK.
+            /// \param _rollRate: attitude rate set-point in x axis of body frame FRU coordinates (deg/s).
+            /// \param _pitchRate: attitude rate set-point in y axis of body frame FRU coordinates (deg/s).
+            /// \param _yawRate: attitude rate set-point in z axis of body frame FRU coordinates (deg/s).
+            /// \param _z: z position set-point in z axis of ground frame NED coordinates (m).
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool angularRateCtrlVer(float _rollRate, float _pitchRate, float _yawRate, float _z);
+
+            /// This method is the implementation of move onepoint in GPS Coordinate using DJI SDK.
+            /// \param _wayPoint: data with the GPS coordinates, where 0 = lat, 1 = lon, 2 = alt.
+            /// \param _config: struct for configure the mission.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool positionCtrlGPS(Eigen::Vector3f _wayPoint, dataMission _config);
+
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR MISSIONS
+	        //---------------------------------------------------------------------------------------------------------------------
 
             /// This method is for configure a desired mission given the waypoints in GPS coordinates.
             /// \param _wayPoints: vector with the GPS coordinates of each point, where 0 = lat, 1 = lon, 2 = alt.
@@ -108,27 +157,99 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool resume_mission();
 
-            /// This method is the implementation of position control and yaw using DJI SDK.
-            /// \param _x: desired x in NEU coordinates.
-            /// \param _y: desired y in NEU coordinates.
-            /// \param _z: desired z in NEU coordinates.
-            /// \param _yaw: desired yaw.
-            /// \return true if params are good or set without errors, false if something failed.
-            virtual bool positionCtrlYaw(float _x, float _y, float _z, float _yaw);
-	    
-            /// This method is the implementation of velocity control and yaw using DJI SDK.
-            /// \param _x: desired Vx in NEU coordinates.
-            /// \param _y: desired Vy in NEU coordinates.
-            /// \param _z: desired Vz in NEU coordinates.
-            /// \param _yaw: desired yaw rate.
-            /// \return true if params are good or set without errors, false if something failed.
-            virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate);
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR TELEMETRY
+	        //---------------------------------------------------------------------------------------------------------------------
 
-            /// This method is the implementation of get Telemetry data.
-            /// \param _data: struct with the desired received data.
-            /// \param _saveToFile: if true save data received.
+            //---------------------------------------------------------------------------------------------------------------------
+            // INITS
+
+            /// This method is the implementation of init local position using GPS.
             /// \return true if params are good or set without errors, false if something failed.
-            virtual bool receiveTelemetry(dataTelemetry& _data, bool _saveToFile);
+            virtual bool initLocalPosition();
+
+            //---------------------------------------------------------------------------------------------------------------------
+            // GETTERS
+
+            /// This method is the implementation of get local position VO.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getPositionVO(VectorPositionVO& _data);
+
+            /// This method is the implementation of get GPS.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getGPS(VectorGPS& _data);
+
+            /// This method is the implementation of get GPS Detail.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getGPSDetail(VectorGPSDetail& _data);
+
+            /// This method is the implementation of get GPS Signal Level.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getGPSSignal(int& _data);
+
+            /// This method is the implementation of get Altitude fusioned.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getAltitude(float& _data);
+
+            /// This method is the implementation of get Angular Rate fusioned.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getAngularRate(VectorAngularRate& _data);
+
+            /// This method is the implementation of get Hard Sync.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getHardSync(VectorHardSync& _data);
+
+            /// This method is the implementation of get Compass.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getCompass(VectorCompass& _data);
+
+            /// This method is the implementation of get Quaternion.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getQuaternion(VectorQuaternion& _data);
+
+            /// This method is the implementation of get Velocity.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getVelocity(VectorVelocity& _data);
+
+            /// This method is the implementation of get Status Flight.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getStatusFlight(std::string& _data);
+
+            /// This method is the implementation of get Display Mode.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getDisplayMode(std::string& _data);
+
+            /// This method is the implementation of get Batery Info.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getBatery(int& _data);
+
+            /// This method is the implementation of get RC with Flag Data.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getRC(VectorRC& _data);
+
+            /// This method is the implementation of get Control Device Info.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getControlDevice(VectorControlDevice& _data);
+
+            /// This method is the implementation of get local position using GPS.
+            /// \param _data: x, y and z returned (m).
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool getLocalPosition(VectorLocalPosition& _data);
 
         private:
             /// This method initialize DJI Vehicle and some important params.
@@ -139,22 +260,15 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             bool obtainControlAuthority(bool _info);
 
-            /// This method is the implementation of subscription to Telemetry data and others.
-            /// By defect, we will subscribe to six kinds of data:
-            /// 1. Flight Status at 10 Hz
-            /// 2. Mode at 10 Hz
-            /// 2. Fused Lat/Lon at 50Hz
-            /// 3. Fused Altitude at 50Hz
-            /// 4. RC Channels at 50 Hz
-            /// 5. Velocity at 50 Hz
-            /// 6. Quaternion at 200 Hz
-            /// 7. RTK if available at 5 Hz
+            /// This method is the implementation of subscription to Telemetry topics.
+            /// \param _topic: topic that we want to initialize to subscribe.
+            /// \param _freq: frequency of the desired topic data.
             /// \return true if params are good or set without errors, false if something failed.
-            bool subscribeToData();
+            bool subscribeToTopic(std::vector<DJI::OSDK::Telemetry::TopicName> _topics, int _freq);
 
             /// This method is the implementation of unsubscribscription of all data.
             /// \return true if params are good or set without errors, false if something failed.
-            bool unsubscribeToData();
+            bool unsubscribeAllTopics();
 
             /// This method is the implementation of set the local position to move the vehicle in local coordinates.
             /// \return true if params are good or set without errors, false if something failed.
@@ -190,24 +304,35 @@ namespace dal{
             /// \return the converted result.
             DJI::OSDK::Telemetry::Vector3f toEulerAngle(void* _quaternionData);
 
-            /// This method is the implementation of start global broadcast of all data.
-            /// \return true if params are good or set without errors, false if something failed.
-            bool startGlobalPositionBroadcast();
+        private:
+            // Data for internal telemetry
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>::type            position_vo_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS>::type            GPSDetail_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_SIGNAL_LEVEL>::type       GPSSignal_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_FUSIONED>::type  angularRate_;
+            DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_HARD_SYNC>::type                         hardSync_FC_;
+            DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_COMPASS>::type                           compass_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_VELOCITY>::type               velocity_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type          flightStatus_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode_;
+            DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_BATTERY_INFO>::type                      battery_info_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA>::type      rc_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE>::type         controlDevice_;
+            DJI::OSDK::Telemetry::Vector3f                                                          localPose_;
 
         private:
-            DJI::OSDK::Vehicle* vehicle_;
-            DJI::OSDK::Vehicle::ActivateData activateData_;
+            DJI::OSDK::Vehicle* vehicle_ = nullptr;
 
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type originAltitude_, actualAltitude_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originGPS_;
-            DJI::OSDK::Telemetry::GlobalPosition broadcastGP_;
 
             std::mutex secureGuard_;
 
-            // RTK can be detected as unavailable only for Flight controllers that don't support RTK
-            bool rtkAvailable_ = false;
-
-            bool usePositionVO_ = false;
-
+            bool useLogStatus_ = false;
+            
             int pkgIndex_ = 0;
             std::string missionType_ = "";
 
