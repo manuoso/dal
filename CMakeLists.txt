@@ -27,8 +27,8 @@ project(dal VERSION 0.1 LANGUAGES C CXX)
 ##########################################
 
 # Others
-set(BUILD_TOOLS ON)
-set(BUILD_EXAMPLES ON)
+set(BUILD_TOOLS OFF)
+set(BUILD_EXAMPLES 0FF)
 
 #########################################
 ###### Loading 3rd party libraries ######
