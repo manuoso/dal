@@ -26,9 +26,11 @@ project(dal VERSION 0.1 LANGUAGES C CXX)
 ######		   Configure project		  ######
 ##########################################
 
-# Others
-set(BUILD_TOOLS OFF)
-set(BUILD_EXAMPLES 0FF)
+# Some build options
+option(BUILD_TOOLS "Build tools module" OFF)
+option(BUILD_EXAMPLES "Build example module" OFF)
+
+option(BUILD_PYTHON "Build python module" ON)
 
 #########################################
 ###### Loading 3rd party libraries ######
@@ -114,6 +116,14 @@ endif(${BUILD_TOOLS})
 if(${BUILD_EXAMPLES})
 	add_subdirectory(examples)
 endif(${BUILD_EXAMPLES})
+
+#########################################
+######			    Python   		       ######
+#########################################
+
+if(${BUILD_PYTHON})
+	add_subdirectory(python)
+endif(${BUILD_PYTHON})
 
 #########################################
 ######			     Install 		       ######
