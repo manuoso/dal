@@ -30,7 +30,7 @@ project(dal VERSION 0.1 LANGUAGES C CXX)
 option(BUILD_TOOLS "Build tools module" OFF)
 option(BUILD_EXAMPLES "Build example module" OFF)
 
-option(BUILD_PYTHON "Build python module" ON)
+option(BUILD_PYTHON "Build python module" OFF)
 
 #########################################
 ###### Loading 3rd party libraries ######
