@@ -128,8 +128,6 @@ namespace dal{
             float vz = pidZ_->update(_z, incT_);
             // float yawRate = 0.0;
             secureGuard_.unlock();
-    
-            // backend_->velocityCtrlYaw(vx, vy, vz, yawRate);
 
             vel(0) = vx;
             vel(1) = vy;
@@ -144,7 +142,6 @@ namespace dal{
         }
 
         return vel;
-
         
     }
 
