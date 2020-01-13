@@ -113,6 +113,8 @@ namespace dal{
         pidZ_ = new PID(_z(0), _z(1), _z(2), _z(3), _z(4), _z(5), _z(6));
         pidInitialized_ = true;
 
+        t0_ = std::chrono::system_clock::now();
+
         return true;
     }
 
@@ -120,7 +122,9 @@ namespace dal{
     Eigen::Vector3f DAL::localControl(float _x, float _y, float _z){
         Eigen::Vector3f vel;
         if(pidInitialized_){
-            incT_ = 0.1;
+            t1_ = std::chrono::system_clock::now();
+            incT_ = std::chrono::duration_cast<std::chrono::milliseconds>(t1_-t0_).count()/1000.0;
+            t0_ = t1_;
 
             secureGuard_.lock();
             float vx = pidX_->update(_x, incT_);

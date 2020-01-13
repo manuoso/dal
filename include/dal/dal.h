@@ -208,6 +208,8 @@ namespace dal{
             bool pidInitialized_ = false;
             float incT_ = 0;
 
+            std::chrono::high_resolution_clock::time_point t0_, t1_;
+
     };
 }
 
