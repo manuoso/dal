@@ -108,23 +108,26 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::initPID(VectorPID _x, VectorPID _y, VectorPID _z){
         // kp, ki, kd, minSat, maxSat, minWind, maxWind
+        secureGuard_.lock();
         pidX_ = new PID(_x(0), _x(1), _x(2), _x(3), _x(4), _x(5), _x(6));
         pidY_ = new PID(_y(0), _y(1), _y(2), _y(3), _y(4), _y(5), _y(6));
         pidZ_ = new PID(_z(0), _z(1), _z(2), _z(3), _z(4), _z(5), _z(6));
+        secureGuard_.unlock();
+
         pidInitialized_ = true;
 
         t0_ = std::chrono::system_clock::now();
 	
-	std::cout << "KpX: " << _x(0) << " KiX: " << _x(1) << " KdX: " << _x(2) << " minSatX: " << _x(3) << " maxSatX: " << _x(4) << " minWX: " << _x(5) << " maxWX: " << _x(6)  << std::endl;
-	std::cout << "KpY: " << _y(0) << " KiY: " << _y(1) << " KdY: " << _y(2) << " minSatY: " << _y(3) << " maxSatY: " << _y(4) << " minWY: " << _y(5) << " maxWY: " << _y(6)  << std::endl;
-	std::cout << "KpZ: " << _z(0) << " KiZ: " << _z(1) << " KdZ: " << _z(2) << " minSatZ: " << _z(3) << " maxSatZ: " << _z(4) << " minWZ: " << _z(5) << " maxWZ: " << _z(6)  << std::endl;
+        std::cout << "KpX: " << _x(0) << " KiX: " << _x(1) << " KdX: " << _x(2) << " minSatX: " << _x(3) << " maxSatX: " << _x(4) << " minWX: " << _x(5) << " maxWX: " << _x(6)  << std::endl;
+        std::cout << "KpY: " << _y(0) << " KiY: " << _y(1) << " KdY: " << _y(2) << " minSatY: " << _y(3) << " maxSatY: " << _y(4) << " minWY: " << _y(5) << " maxWY: " << _y(6)  << std::endl;
+        std::cout << "KpZ: " << _z(0) << " KiZ: " << _z(1) << " KdZ: " << _z(2) << " minSatZ: " << _z(3) << " maxSatZ: " << _z(4) << " minWZ: " << _z(5) << " maxWZ: " << _z(6)  << std::endl;
 
         return true;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    Eigen::Vector3f DAL::localControl(float _x, float _y, float _z){
-        Eigen::Vector3f vel;
+    Eigen::Vector4f DAL::localControl(float _x, float _y, float _z){
+        Eigen::Vector4f atti;
         if(pidInitialized_){
             t1_ = std::chrono::system_clock::now();
             incT_ = std::chrono::duration_cast<std::chrono::milliseconds>(t1_-t0_).count()/1000.0;
@@ -134,22 +137,22 @@ namespace dal{
             float vx = pidX_->update(_x, incT_);
             float vy = pidY_->update(_y, incT_);
             float vz = pidZ_->update(_z, incT_);
-            // float yawRate = 0.0;
             secureGuard_.unlock();
 
-            vel(0) = vx;
-            vel(1) = vy;
-            vel(2) = vz;
+            atti = convertAttiCommands(vx, vy, vz);
+
+            backend_->attitudeCtrlVer(atti(0), atti(1), atti(2), atti(3));
 
         }else{
             std::cout << "PID not initialized." << std::endl;
 
-            vel(0) = 0.0;
-            vel(1) = 0.0;
-            vel(2) = 0.0;
+            atti(0) = 0.0;
+            atti(1) = 0.0;
+            atti(2) = 0.0;
+            atti(3) = 0.0;
         }
 
-        return vel;
+        return atti;
         
     }
 
@@ -173,11 +176,17 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::setKp(float _kp, std::string _pid){
         if(_pid == "x"){
+            secureGuard_.lock();
             pidX_->kp(_kp);
+            secureGuard_.unlock();
         }else if(_pid == "y"){
+            secureGuard_.lock();
             pidY_->kp(_kp);
+            secureGuard_.unlock();
         }else if(_pid == "z"){
+            secureGuard_.lock();
             pidZ_->kp(_kp);
+            secureGuard_.unlock();
         }else{
             std::cout << "Unrecognized pid" << std::endl;
             return false;
@@ -190,11 +199,17 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::setKi(float _ki, std::string _pid){
         if(_pid == "x"){
+            secureGuard_.lock();
             pidX_->ki(_ki);
+            secureGuard_.unlock();
         }else if(_pid == "y"){
+            secureGuard_.lock();
             pidY_->ki(_ki);
+            secureGuard_.unlock();
         }else if(_pid == "z"){
+            secureGuard_.lock();
             pidZ_->ki(_ki);
+            secureGuard_.unlock();
         }else{
             std::cout << "Unrecognized pid" << std::endl;
             return false;
@@ -207,11 +222,17 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::setKd(float _kd, std::string _pid){
         if(_pid == "x"){
+            secureGuard_.lock();
             pidX_->kd(_kd);
+            secureGuard_.unlock();
         }else if(_pid == "y"){
+            secureGuard_.lock();
             pidY_->kd(_kd);
+            secureGuard_.unlock();
         }else if(_pid == "z"){
+            secureGuard_.lock();
             pidZ_->kd(_kd);
+            secureGuard_.unlock();
         }else{
             std::cout << "Unrecognized pid" << std::endl;
             return false;
@@ -219,6 +240,28 @@ namespace dal{
 
         return true;
 
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    Eigen::Vector4f DAL::convertAttiCommands(float _vx, float _vy, float _vz){
+        float g = 9.81;
+        float massUAV = 2000/9.81;
+
+        float roll = atan2(-_vy, g);
+        float pitch = atan2(_vx * cos(roll), g);
+        float yaw = 0.0;
+        float thrust = ((_vz + g) * massUAV)/(cos(lastRollLC_) * cos(lastPitchLC_));
+
+        lastRollLC_ = roll;
+        lastPitchLC_ = pitch;
+
+        Eigen::Vector4f atti;
+        atti(0) = roll;
+        atti(1) = pitch;
+        atti(2) = yaw;
+        atti(3) = thrust;
+
+        return atti;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
@@ -271,7 +314,7 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::telemetryGPS(Eigen::Vector2f& _data){
+    bool DAL::telemetryGPS(Backend::VectorGPS& _data){
         return backend_->getGPS(_data);
     }
 
@@ -291,7 +334,7 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::telemetryAngularRate(Eigen::Vector3f& _data){
+    bool DAL::telemetryAngularRate(Backend::VectorAngularRate& _data){
         return backend_->getAngularRate(_data);
     }
 
@@ -301,17 +344,17 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::telemetryCompass(Eigen::Vector3f& _data){
+    bool DAL::telemetryCompass(Backend::VectorCompass& _data){
         return backend_->getCompass(_data);
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::telemetryQuaternion(Eigen::Vector4f& _data){
+    bool DAL::telemetryQuaternion(Backend::VectorQuaternion& _data){
         return backend_->getQuaternion(_data);
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::telemetryVelocity(Eigen::Vector3f& _data){
+    bool DAL::telemetryVelocity(Backend::VectorVelocity& _data){
         return backend_->getVelocity(_data);
     }
 
@@ -336,12 +379,12 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::telemetryControlDevice(Eigen::Vector3i& _data){
+    bool DAL::telemetryControlDevice(Backend::VectorControlDevice& _data){
         return backend_->getControlDevice(_data);
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::localPosition(Eigen::Vector3f& _data){
+    bool DAL::localPosition(Backend::VectorLocalPosition& _data){
         return backend_->getLocalPosition(_data);
     }
 

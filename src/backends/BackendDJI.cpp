@@ -727,7 +727,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::getGPS(Eigen::Vector2f& _data){
+    bool BackendDJI::getGPS(VectorGPS& _data){
         
         secureGuard_.lock();
         latLon_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
@@ -784,7 +784,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::getAngularRate(Eigen::Vector3f& _data){
+    bool BackendDJI::getAngularRate(VectorAngularRate& _data){
         
         secureGuard_.lock();
         angularRate_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_FUSIONED>();
@@ -819,7 +819,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::getCompass(Eigen::Vector3f& _data){
+    bool BackendDJI::getCompass(VectorCompass& _data){
 
         secureGuard_.lock();
         compass_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_COMPASS>();
@@ -833,7 +833,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::getQuaternion(Eigen::Vector4f& _data){
+    bool BackendDJI::getQuaternion(VectorQuaternion& _data){
 
         secureGuard_.lock();
         quaternion_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
@@ -848,7 +848,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::getVelocity(Eigen::Vector3f& _data){
+    bool BackendDJI::getVelocity(VectorVelocity& _data){
         
         secureGuard_.lock();
         velocity_  = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_VELOCITY>();
@@ -956,7 +956,7 @@ namespace dal{
     }
 
     //-----------------------------------------------------------------------------------------------------------------
-    bool BackendDJI::getControlDevice(Eigen::Vector3i& _data){
+    bool BackendDJI::getControlDevice(VectorControlDevice& _data){
 
         secureGuard_.lock();
         controlDevice_ = vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE>();

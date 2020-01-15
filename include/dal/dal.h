@@ -93,7 +93,7 @@ namespace dal{
             bool initPID(VectorPID _x, VectorPID _y, VectorPID _z);
 
             /// Method for control the UAV using a PID
-            Eigen::Vector3f localControl(float _x, float _y, float _z);
+            Eigen::Vector4f localControl(float _x, float _y, float _z);
 
             /// Method for set the position of reference
             bool setReference(float _x, float _y, float _z);
@@ -106,6 +106,9 @@ namespace dal{
 
             /// Method for change Kd of the desired PID
             bool setKd(float _kd, std::string _pid);
+            
+            /// Method for convert from velocities to attitude commands
+            Eigen::Vector4f convertAttiCommands(float _vx, float _vy, float _vz);
              
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR MISSIONS
@@ -143,7 +146,7 @@ namespace dal{
             bool telemetryPositionVO(Backend::VectorPositionVO& _data);
 
             /// Method for get telemetry GPS
-            bool telemetryGPS(Eigen::Vector2f& _data);
+            bool telemetryGPS(Backend::VectorGPS& _data);
 
             /// Method for get telemetry GPS Detail
             bool telemetryGPSDetail(Backend::VectorGPSDetail& _data);
@@ -155,19 +158,19 @@ namespace dal{
             bool telemetryAltitude(float& _data);
 
             /// Method for get telemetry Angular Rate fusioned
-            bool telemetryAngularRate(Eigen::Vector3f& _data);
+            bool telemetryAngularRate(Backend::VectorAngularRate& _data);
 
             /// Method for get telemetry Hard Sync
             bool telemetryHardSync(Backend::VectorHardSync& _data);
 
             /// Method for get telemetry Compass
-            bool telemetryCompass(Eigen::Vector3f& _data);
+            bool telemetryCompass(Backend::VectorCompass& _data);
 
             /// Method for get telemetry Quaternion
-            bool telemetryQuaternion(Eigen::Vector4f& _data);
+            bool telemetryQuaternion(Backend::VectorQuaternion& _data);
 
             /// Method for get telemetry Velocity
-            bool telemetryVelocity(Eigen::Vector3f& _data);
+            bool telemetryVelocity(Backend::VectorVelocity& _data);
 
             /// Method for get telemetry Status Flight
             bool telemetryStatusFlight(std::string& _data);
@@ -182,10 +185,10 @@ namespace dal{
             bool telemetryRC(Backend::VectorRC& _data);
 
             /// Method for get telemetry Control Device Info
-            bool telemetryControlDevice(Eigen::Vector3i& _data);
+            bool telemetryControlDevice(Backend::VectorControlDevice& _data);
 
             /// Method for get Local Position
-            bool localPosition(Eigen::Vector3f& _data);
+            bool localPosition(Backend::VectorLocalPosition& _data);
 
         public:
             Backend * backend(){return backend_;}
@@ -209,6 +212,8 @@ namespace dal{
             float incT_ = 0;
 
             std::chrono::high_resolution_clock::time_point t0_, t1_;
+            float lastRollLC_ = 0.0, lastPitchLC_ = 0.0;
+
 
     };
 }

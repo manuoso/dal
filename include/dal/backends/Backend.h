@@ -189,7 +189,7 @@ namespace dal{
             virtual bool getPositionVO(VectorPositionVO& _data) = 0;
 
             /// \brief abstract method for receive GPS
-            virtual bool getGPS(Eigen::Vector2f& _data) = 0;
+            virtual bool getGPS(VectorGPS& _data) = 0;
 
             /// \brief abstract method for receive GPS Detail
             virtual bool getGPSDetail(VectorGPSDetail& _data) = 0;
@@ -201,19 +201,19 @@ namespace dal{
             virtual bool getAltitude(float& _data) = 0;
 
             /// \brief abstract method for receive Angular Rate fusioned
-            virtual bool getAngularRate(Eigen::Vector3f& _data) = 0;
+            virtual bool getAngularRate(VectorAngularRate& _data) = 0;
 
             /// \brief abstract method for receive Hard Sync
             virtual bool getHardSync(VectorHardSync& _data) = 0;
 
             /// \brief abstract method for receive Compass
-            virtual bool getCompass(Eigen::Vector3f& _data) = 0;
+            virtual bool getCompass(VectorCompass& _data) = 0;
 
             /// \brief abstract method for receive Quaternion
-            virtual bool getQuaternion(Eigen::Vector4f& _data) = 0;
+            virtual bool getQuaternion(VectorQuaternion& _data) = 0;
 
             /// \brief abstract method for receive Velocity
-            virtual bool getVelocity(Eigen::Vector3f& _data) = 0;
+            virtual bool getVelocity(VectorVelocity& _data) = 0;
 
             /// \brief abstract method for receive Status Flight
             virtual bool getStatusFlight(std::string& _data) = 0;
@@ -228,10 +228,10 @@ namespace dal{
             virtual bool getRC(VectorRC& _data) = 0;
 
             /// \brief abstract method for receive Control Device Info
-            virtual bool getControlDevice(Eigen::Vector3i& _data) = 0;
+            virtual bool getControlDevice(VectorControlDevice& _data) = 0;
 
             /// \brief abstract method for receive local position
-            virtual bool getLocalPosition(Eigen::Vector3f& _data) = 0;
+            virtual bool getLocalPosition(VectorLocalPosition& _data) = 0;
 
         protected:
             /// \brief abstract method for initialization of the class
@@ -282,21 +282,21 @@ namespace dal{
             virtual bool initLocalPosition(){return true;}
 
             virtual bool getPositionVO(VectorPositionVO& _data){return true;}
-            virtual bool getGPS(Eigen::Vector2f& _data){return true;}
+            virtual bool getGPS(VectorGPS& _data){return true;}
             virtual bool getGPSDetail(VectorGPSDetail& _data){return true;}
             virtual bool getGPSSignal(int& _data){return true;}
             virtual bool getAltitude(float& _data){return true;}
-            virtual bool getAngularRate(Eigen::Vector3f& _data){return true;}
+            virtual bool getAngularRate(VectorAngularRate& _data){return true;}
             virtual bool getHardSync(VectorHardSync& _data){return true;}
-            virtual bool getCompass(Eigen::Vector3f& _data){return true;}
-            virtual bool getQuaternion(Eigen::Vector4f& _data){return true;}
-            virtual bool getVelocity(Eigen::Vector3f& _data){return true;}
+            virtual bool getCompass(VectorCompass& _data){return true;}
+            virtual bool getQuaternion(VectorQuaternion& _data){return true;}
+            virtual bool getVelocity(VectorVelocity& _data){return true;}
             virtual bool getStatusFlight(std::string& _data){return true;}
             virtual bool getDisplayMode(std::string& _data){return true;}
             virtual bool getBatery(int& _data){return true;}
             virtual bool getRC(VectorRC& _data){return true;}
-            virtual bool getControlDevice(Eigen::Vector3i& _data){return true;}
-            virtual bool getLocalPosition(Eigen::Vector3f& _data){return true;}
+            virtual bool getControlDevice(VectorControlDevice& _data){return true;}
+            virtual bool getLocalPosition(VectorLocalPosition& _data){return true;}
 
     private:
         virtual bool init(const Config &_config){return true;}
