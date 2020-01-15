@@ -114,6 +114,10 @@ namespace dal{
         pidInitialized_ = true;
 
         t0_ = std::chrono::system_clock::now();
+	
+	std::cout << "KpX: " << _x(0) << " KiX: " << _x(1) << " KdX: " << _x(2) << " minSatX: " << _x(3) << " maxSatX: " << _x(4) << " minWX: " << _x(5) << " maxWX: " << _x(6)  << std::endl;
+	std::cout << "KpY: " << _y(0) << " KiY: " << _y(1) << " KdY: " << _y(2) << " minSatY: " << _y(3) << " maxSatY: " << _y(4) << " minWY: " << _y(5) << " maxWY: " << _y(6)  << std::endl;
+	std::cout << "KpZ: " << _z(0) << " KiZ: " << _z(1) << " KdZ: " << _z(2) << " minSatZ: " << _z(3) << " maxSatZ: " << _z(4) << " minWZ: " << _z(5) << " maxWZ: " << _z(6)  << std::endl;
 
         return true;
     }
