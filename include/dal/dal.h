@@ -35,6 +35,10 @@
 #include <cassert>
 #include <Eigen/Eigen>
 
+#define C_PI (double)3.141592653589793
+#define DEG2RAD(DEG) ((DEG) * ((C_PI) / (180.0)))
+#define RAD2DEG(RAD) ((RAD) * (180.0) / (C_PI))
+
 namespace dal{
     class DAL {
         public:
@@ -90,25 +94,25 @@ namespace dal{
 	        //---------------------------------------------------------------------------------------------------------------------
 
             /// Method for initialize PID's
-            bool initPID(VectorPID _x, VectorPID _y, VectorPID _z);
+            bool initPID(std::string _type, VectorPID _x, VectorPID _y, VectorPID _z);
 
             /// Method for control the UAV using a PID
             Eigen::Vector4f localControl(float _x, float _y, float _z);
 
             /// Method for set the position of reference
-            bool setReference(float _x, float _y, float _z);
+            bool setReferencePIDV(float _x, float _y, float _z);
 
             /// Method for change Kp of the desired PID
-            bool setKp(float _kp, std::string _pid);
+            bool setKpPIDV(float _kp, std::string _pid);
 
             /// Method for change Ki of the desired PID
-            bool setKi(float _ki, std::string _pid);
+            bool setKiPIDV(float _ki, std::string _pid);
 
             /// Method for change Kd of the desired PID
-            bool setKd(float _kd, std::string _pid);
+            bool setKdPIDV(float _kd, std::string _pid);
             
             /// Method for convert from velocities to attitude commands
-            Eigen::Vector4f convertAttiCommands(float _vx, float _vy, float _vz);
+            Eigen::Vector4f convertAttiCommands(float _vx, float _vy, float _vz, float _z);
              
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR MISSIONS
@@ -207,13 +211,13 @@ namespace dal{
 
             std::mutex secureGuard_;
             
-            PID *pidX_, *pidY_, *pidZ_;
+            std::string pidType_ = "";
+            PID *pidVX_, *pidVY_, *pidVZ_;
             bool pidInitialized_ = false;
             float incT_ = 0;
 
             std::chrono::high_resolution_clock::time_point t0_, t1_;
-            float lastRollLC_ = 0.0, lastPitchLC_ = 0.0;
-
+            float refz_ = 0.0;
 
     };
 }
