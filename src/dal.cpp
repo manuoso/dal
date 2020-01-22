@@ -116,14 +116,19 @@ namespace dal{
         std::cout << "KpVX: " << _x(0) << " KiVX: " << _x(1) << " KdVX: " << _x(2) << " minSatVX: " << _x(3) << " maxSatVX: " << _x(4) << " minWVX: " << _x(5) << " maxWVX: " << _x(6)  << std::endl;
         std::cout << "KpVY: " << _y(0) << " KiVY: " << _y(1) << " KdVY: " << _y(2) << " minSatVY: " << _y(3) << " maxSatVY: " << _y(4) << " minWVY: " << _y(5) << " maxWVY: " << _y(6)  << std::endl;
         std::cout << "KpVZ: " << _z(0) << " KiVZ: " << _z(1) << " KdVZ: " << _z(2) << " minSatVZ: " << _z(3) << " maxSatVZ: " << _z(4) << " minWVZ: " << _z(5) << " maxWVZ: " << _z(6)  << std::endl;
-
-        if(_type == "attitude"){
+        
+        if(_type == "velocity"){
+            std::cout << "Using velocity control" << std::endl;            
+        }else if(_type == "attitude"){
             pidAX_ = new PID(_x(7), _x(8), _x(9), _x(10), _x(11), _x(12), _x(13));
             pidAY_ = new PID(_y(7), _y(8), _y(9), _y(10), _y(11), _y(12), _y(13));
 
             std::cout << "KpAX: " << _x(7) << " KiAX: " << _x(8) << " KdAX: " << _x(9) << " minSatAX: " << _x(10) << " maxSatAX: " << _x(11) << " minWAX: " << _x(12) << " maxWAX: " << _x(13)  << std::endl;
             std::cout << "KpAY: " << _y(7) << " KiAY: " << _y(8) << " KdAY: " << _y(9) << " minSatAY: " << _y(10) << " maxSatAY: " << _y(11) << " minWAY: " << _y(12) << " maxWAY: " << _y(13)  << std::endl;
 
+            std::cout << "Using attitude control" << std::endl;            
+        }else{
+            std::cout << "Unrecognized control" << std::endl;            
         }
         secureGuard_.unlock();
 
