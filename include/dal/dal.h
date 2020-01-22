@@ -43,7 +43,7 @@ namespace dal{
     class DAL {
         public:
             /// Especials Typedefs
-            typedef Eigen::Matrix<float, 7, 1> VectorPID;
+            typedef Eigen::Matrix<float, 14, 1> VectorPID;
 
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR INITIALIZATION
@@ -97,22 +97,22 @@ namespace dal{
             bool initPID(std::string _type, VectorPID _x, VectorPID _y, VectorPID _z);
 
             /// Method for control the UAV using a PID
-            Eigen::Vector4f localControl(float _x, float _y, float _z);
+            Eigen::Vector4f localControl(float _x, float _y, float _z, float _vx, float _vy, float _yaw);
 
             /// Method for set the position of reference
             bool setReferencePIDV(float _x, float _y, float _z);
 
             /// Method for change Kp of the desired PID
-            bool setKpPIDV(float _kp, std::string _pid);
+            bool setKpPID(float _kp, std::string _pid);
 
             /// Method for change Ki of the desired PID
-            bool setKiPIDV(float _ki, std::string _pid);
+            bool setKiPID(float _ki, std::string _pid);
 
             /// Method for change Kd of the desired PID
-            bool setKdPIDV(float _kd, std::string _pid);
+            bool setKdPID(float _kd, std::string _pid);
             
             /// Method for convert from velocities to attitude commands
-            Eigen::Vector4f convertAttiCommands(float _vx, float _vy, float _vz, float _z);
+            Eigen::Vector4f convertAttiCommands(float _ax, float _ay, float _z, float _yaw);
              
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR MISSIONS
@@ -212,7 +212,7 @@ namespace dal{
             std::mutex secureGuard_;
             
             std::string pidType_ = "";
-            PID *pidVX_, *pidVY_, *pidVZ_;
+            PID *pidVX_, *pidVY_, *pidVZ_, *pidAX_, *pidAY_;
             bool pidInitialized_ = false;
             float incT_ = 0;
 

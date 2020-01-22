@@ -112,14 +112,23 @@ namespace dal{
         pidVX_ = new PID(_x(0), _x(1), _x(2), _x(3), _x(4), _x(5), _x(6));
         pidVY_ = new PID(_y(0), _y(1), _y(2), _y(3), _y(4), _y(5), _y(6));
         pidVZ_ = new PID(_z(0), _z(1), _z(2), _z(3), _z(4), _z(5), _z(6));
+
+        std::cout << "KpVX: " << _x(0) << " KiVX: " << _x(1) << " KdVX: " << _x(2) << " minSatVX: " << _x(3) << " maxSatVX: " << _x(4) << " minWVX: " << _x(5) << " maxWVX: " << _x(6)  << std::endl;
+        std::cout << "KpVY: " << _y(0) << " KiVY: " << _y(1) << " KdVY: " << _y(2) << " minSatVY: " << _y(3) << " maxSatVY: " << _y(4) << " minWVY: " << _y(5) << " maxWVY: " << _y(6)  << std::endl;
+        std::cout << "KpVZ: " << _z(0) << " KiVZ: " << _z(1) << " KdVZ: " << _z(2) << " minSatVZ: " << _z(3) << " maxSatVZ: " << _z(4) << " minWVZ: " << _z(5) << " maxWVZ: " << _z(6)  << std::endl;
+
+        if(_type == "attitude"){
+            pidAX_ = new PID(_x(7), _x(8), _x(9), _x(10), _x(11), _x(12), _x(13));
+            pidAY_ = new PID(_y(7), _y(8), _y(9), _y(10), _y(11), _y(12), _y(13));
+
+            std::cout << "KpAX: " << _x(7) << " KiAX: " << _x(8) << " KdAX: " << _x(9) << " minSatAX: " << _x(10) << " maxSatAX: " << _x(11) << " minWAX: " << _x(12) << " maxWAX: " << _x(13)  << std::endl;
+            std::cout << "KpAY: " << _y(7) << " KiAY: " << _y(8) << " KdAY: " << _y(9) << " minSatAY: " << _y(10) << " maxSatAY: " << _y(11) << " minWAY: " << _y(12) << " maxWAY: " << _y(13)  << std::endl;
+
+        }
         secureGuard_.unlock();
 
         pidType_ = _type;
         pidInitialized_ = true;
-
-        std::cout << "KpX: " << _x(0) << " KiX: " << _x(1) << " KdX: " << _x(2) << " minSatX: " << _x(3) << " maxSatX: " << _x(4) << " minWX: " << _x(5) << " maxWX: " << _x(6)  << std::endl;
-        std::cout << "KpY: " << _y(0) << " KiY: " << _y(1) << " KdY: " << _y(2) << " minSatY: " << _y(3) << " maxSatY: " << _y(4) << " minWY: " << _y(5) << " maxWY: " << _y(6)  << std::endl;
-        std::cout << "KpZ: " << _z(0) << " KiZ: " << _z(1) << " KdZ: " << _z(2) << " minSatZ: " << _z(3) << " maxSatZ: " << _z(4) << " minWZ: " << _z(5) << " maxWZ: " << _z(6)  << std::endl;
 
         t0_ = std::chrono::system_clock::now();
 
@@ -127,7 +136,7 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    Eigen::Vector4f DAL::localControl(float _x, float _y, float _z){
+    Eigen::Vector4f DAL::localControl(float _x, float _y, float _z, float _vx, float _vy, float _yaw){
         Eigen::Vector4f debug;
         if(pidInitialized_){
             t1_ = std::chrono::system_clock::now();
@@ -140,7 +149,7 @@ namespace dal{
             float vz = pidVZ_->update(_z, incT_);
             secureGuard_.unlock();
 
-            if(pidType_ == "vel"){
+            if(pidType_ == "velocity"){
                 // NOT WORKING WITH YAW RATE
                 float yawRate = 0.0;
                 backend_->velocityCtrlYaw(vx, vy, vz, yawRate);
@@ -149,10 +158,23 @@ namespace dal{
                 debug(1) = vy;
                 debug(2) = vz;
                 debug(3) = yawRate;
-            }else if(pidType_ == "att"){
-                // convertAttiCommands(vx, vy, vz, refz_);
+            }else if(pidType_ == "attitude"){
+                secureGuard_.lock();
+                pidAX_->reference(vx);
+                pidAY_->reference(vy);
 
-                // backend_->attitudeCtrlVer(atti(0), atti(1), atti(2), atti(3));  
+                float ax = pidAX_->update(_vx, incT_);
+                float ay = pidAY_->update(_vy, incT_);
+                secureGuard_.unlock();
+
+                Eigen::Vector4f atti = convertAttiCommands(ax, ay, refz_, _yaw);
+
+                backend_->attitudeCtrlVer(atti(0), atti(1), atti(2), atti(3));  
+
+                debug(0) = atti(0);
+                debug(1) = atti(1);
+                debug(2) = atti(2);
+                debug(3) = atti(3);
             }else{
                 std::cout << "Unrecognized pid type" << std::endl;
             }      
@@ -188,19 +210,27 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::setKpPIDV(float _kp, std::string _pid){
-        if(_pid == "x"){
+    bool DAL::setKpPID(float _kp, std::string _pid){
+        if(_pid == "vx"){
             secureGuard_.lock();
             pidVX_->kp(_kp);
             secureGuard_.unlock();
-        }else if(_pid == "y"){
+        }else if(_pid == "vy"){
             secureGuard_.lock();
             pidVY_->kp(_kp);
             secureGuard_.unlock();
-        }else if(_pid == "z"){
+        }else if(_pid == "vz"){
             secureGuard_.lock();
             pidVZ_->kp(_kp);
             secureGuard_.unlock();
+        }else if(_pid == "ax"){
+            secureGuard_.lock();
+            pidAX_->kp(_kp);
+            secureGuard_.unlock();
+        }else if(_pid == "ay"){
+            secureGuard_.lock();
+            pidAY_->kp(_kp);
+            secureGuard_.unlock();
         }else{
             std::cout << "Unrecognized pid" << std::endl;
             return false;
@@ -211,19 +241,27 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::setKiPIDV(float _ki, std::string _pid){
-        if(_pid == "x"){
+    bool DAL::setKiPID(float _ki, std::string _pid){
+        if(_pid == "vx"){
             secureGuard_.lock();
             pidVX_->ki(_ki);
             secureGuard_.unlock();
-        }else if(_pid == "y"){
+        }else if(_pid == "vy"){
             secureGuard_.lock();
             pidVY_->ki(_ki);
             secureGuard_.unlock();
-        }else if(_pid == "z"){
+        }else if(_pid == "vz"){
             secureGuard_.lock();
             pidVZ_->ki(_ki);
             secureGuard_.unlock();
+        }else if(_pid == "ax"){
+            secureGuard_.lock();
+            pidAX_->ki(_ki);
+            secureGuard_.unlock();
+        }else if(_pid == "ay"){
+            secureGuard_.lock();
+            pidAY_->ki(_ki);
+            secureGuard_.unlock();
         }else{
             std::cout << "Unrecognized pid" << std::endl;
             return false;
@@ -234,18 +272,26 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::setKdPIDV(float _kd, std::string _pid){
-        if(_pid == "x"){
+    bool DAL::setKdPID(float _kd, std::string _pid){
+        if(_pid == "vx"){
             secureGuard_.lock();
             pidVX_->kd(_kd);
             secureGuard_.unlock();
-        }else if(_pid == "y"){
+        }else if(_pid == "vy"){
             secureGuard_.lock();
             pidVY_->kd(_kd);
             secureGuard_.unlock();
-        }else if(_pid == "z"){
+        }else if(_pid == "vz"){
             secureGuard_.lock();
             pidVZ_->kd(_kd);
+            secureGuard_.unlock();
+        }else if(_pid == "ax"){
+            secureGuard_.lock();
+            pidAX_->kd(_kd);
+            secureGuard_.unlock();
+        }else if(_pid == "ay"){
+            secureGuard_.lock();
+            pidAY_->kd(_kd);
             secureGuard_.unlock();
         }else{
             std::cout << "Unrecognized pid" << std::endl;
@@ -257,13 +303,32 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    Eigen::Vector4f DAL::convertAttiCommands(float _vx, float _vy, float _vz, float _z){
-        float g = 9.81;
+    Eigen::Vector4f DAL::convertAttiCommands(float _ax, float _ay, float _z, float _yaw){
+        // WORKING WITH MANUAL YAW CONTROL 
+        float yaw_rad = DEG2RAD(_yaw);
 
-        // NOT WORKING
-        float roll = atan2(-_vy, g);
-        float pitch = atan2(_vx * cos(roll), g);
-        float yaw = 0.0;
+        float pitch = -1*( (cos(yaw_rad)*_ax) + (sin(yaw_rad)*_ay) );
+        float roll= ( (cos(yaw_rad)*_ay) - (sin(yaw_rad)*_ax) );
+        float yaw = yaw_rad;
+
+        // SATURATIONS
+        if(roll > 0.25){
+            roll = 0.25;
+        }else if(roll < -0.25){
+            roll = -0.25;
+        }
+
+        if(pitch > 0.25){
+            pitch = 0.25;
+        }else if(pitch < -0.25){
+            pitch = -0.25;
+        }
+
+        if(yaw > 0.25){
+            yaw = 0.25;
+        }else if(yaw < -0.25){
+            yaw = -0.25;
+        }
 
         Eigen::Vector4f atti;
         atti(0) = RAD2DEG(roll);
