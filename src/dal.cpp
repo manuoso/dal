@@ -164,6 +164,7 @@ namespace dal{
                 debug(2) = vz;
                 debug(3) = yawRate;
             }else if(pidType_ == "attitude"){
+                // WORKING WITH FIXED YAW
                 secureGuard_.lock();
                 pidAX_->reference(vx);
                 pidAY_->reference(vy);
@@ -309,12 +310,10 @@ namespace dal{
 
     //---------------------------------------------------------------------------------------------------------------------
     Eigen::Vector4f DAL::convertAttiCommands(float _ax, float _ay, float _z, float _yaw){
-        // WORKING WITH MANUAL YAW CONTROL 
-        float yaw_rad = DEG2RAD(_yaw);
 
-        float pitch = -1*( (cos(yaw_rad)*_ax) + (sin(yaw_rad)*_ay) );
-        float roll= ( (cos(yaw_rad)*_ay) - (sin(yaw_rad)*_ax) );
-        float yaw = yaw_rad;
+        float yaw = _yaw;
+        float pitch = -1*( (cos(yaw)*_ax) + (sin(yaw)*_ay) );
+        float roll= ( (cos(yaw)*_ay) - (sin(yaw)*_ax) );
 
         // SATURATIONS
         if(roll > 0.25){
@@ -327,12 +326,6 @@ namespace dal{
             pitch = 0.25;
         }else if(pitch < -0.25){
             pitch = -0.25;
-        }
-
-        if(yaw > 0.25){
-            yaw = 0.25;
-        }else if(yaw < -0.25){
-            yaw = -0.25;
         }
 
         Eigen::Vector4f atti;
