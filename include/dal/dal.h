@@ -214,9 +214,10 @@ namespace dal{
             std::string pidType_ = "";
             PID *pidVX_, *pidVY_, *pidVZ_, *pidAX_, *pidAY_;
             bool pidInitialized_ = false;
+            
             float incT_ = 0;
-
             std::chrono::high_resolution_clock::time_point t0_, t1_;
+
             float refz_ = 0.0;
 
     };
