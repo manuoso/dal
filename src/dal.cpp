@@ -316,16 +316,16 @@ namespace dal{
         float roll= ( (cos(yaw)*_ay) - (sin(yaw)*_ax) );
 
         // SATURATIONS
-        if(roll > 0.25){
-            roll = 0.25;
-        }else if(roll < -0.25){
-            roll = -0.25;
+        if(roll > 0.35){
+            roll = 0.35;
+        }else if(roll < -0.35){
+            roll = -0.35;
         }
 
-        if(pitch > 0.25){
-            pitch = 0.25;
-        }else if(pitch < -0.25){
-            pitch = -0.25;
+        if(pitch > 0.35){
+            pitch = 0.35;
+        }else if(pitch < -0.35){
+            pitch = -0.35;
         }
 
         Eigen::Vector4f atti;
