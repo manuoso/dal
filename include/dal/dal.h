@@ -85,6 +85,9 @@ namespace dal{
 
             /// Method for move in attitude rate using own function
             bool attitudeRate(float _rollRate, float _pitchRate, float _yawRate, float _z);
+
+            /// Method for move with custom flags
+            bool customControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP);
             
             /// Method for go to desire position using GPS coordinates
             bool positionGPS(Eigen::Vector3f _wayPoint, Backend::dataMission _config);

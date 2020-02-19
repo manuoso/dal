@@ -123,6 +123,15 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             virtual bool angularRateCtrlVer(float _rollRate, float _pitchRate, float _yawRate, float _z);
 
+            /// This method is the implementation of control using DJI SDK with custom flags.
+            /// \param  uint8_t _flag:
+            /// \param _xSP: 
+            /// \param _ySP: 
+            /// \param _zSP: 
+            /// \param _yawSP:
+            /// \return true if params are good or set without errors, false if something failed.
+            virtual bool selfControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP);
+
             /// This method is the implementation of move onepoint in GPS Coordinate using DJI SDK.
             /// \param _wayPoint: data with the GPS coordinates, where 0 = lat, 1 = lon, 2 = alt.
             /// \param _config: struct for configure the mission.

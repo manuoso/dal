@@ -95,6 +95,11 @@ namespace dal{
     bool DAL::attitudeRate(float _rollRate, float _pitchRate, float _yawRate, float _z){
         return backend_->angularRateCtrlVer(_rollRate, _pitchRate, _yawRate, _z);
     }
+    
+    //---------------------------------------------------------------------------------------------------------------------
+    bool DAL::customControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP){
+        return backend_->selfControl(_flag, _xSP, _ySP, _zSP, _yawSP);
+    }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool DAL::positionGPS(Eigen::Vector3f _wayPoint, Backend::dataMission _config){

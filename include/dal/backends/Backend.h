@@ -150,6 +150,9 @@ namespace dal{
             /// \brief abstract method for attitude rate control and vertical position
             virtual bool angularRateCtrlVer(float _rollRate, float _pitchRate, float _yawRate, float _z) = 0;
 
+            /// \brief abstract method for with custom flags
+            virtual bool selfControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP) = 0;
+
             /// \brief abstract method for position GPS
             virtual bool positionCtrlGPS(Eigen::Vector3f _wayPoint, dataMission _config) = 0;
 
@@ -256,6 +259,7 @@ namespace dal{
             virtual bool velocityCtrlYaw(float _vx, float _vy, float _vz, float _yawRate){return true;}
             virtual bool attitudeCtrlVer(float _roll, float _pitch, float _yaw, float _z){return true;}
             virtual bool angularRateCtrlVer(float _rollRate, float _pitchRate, float _yawRate, float _z){return true;}
+            virtual bool selfControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP){return true;}
             virtual bool positionCtrlGPS(Eigen::Vector3f _wayPoint, dataMission _config){return true;}
             
             virtual bool mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){return true;}
