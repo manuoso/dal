@@ -353,105 +353,12 @@ namespace dal{
             }
             return false;
         }
-        
-        // FROM DJI ROS ONBOARD SDK
-        uint8_t HORI  = (_flag & 0xC0);
-        uint8_t VERT  = (_flag & 0x30);
-        uint8_t YAW   = (_flag & 0x08);
-        uint8_t FRAME = (_flag & 0x06);
-        uint8_t HOLD  = (_flag & 0x01);
-
-        double xCmd, yCmd, zCmd, yawCmd;
-        if (FRAME == DJI::OSDK::Control::HORIZONTAL_GROUND)
-        {
-            // 1.1 Horizontal channels
-            if ( (HORI == DJI::OSDK::Control::HORIZONTAL_VELOCITY) || (HORI == DJI::OSDK::Control::HORIZONTAL_POSITION) )
-            {
-            xCmd = _ySP;
-            yCmd = _xSP;
-            }
-            else
-            {
-            //ROS_DEBUG("GROUND frame is specified, but angle and rate command is generated in body frame");
-            xCmd = RAD2DEG(_xSP);
-            yCmd = RAD2DEG(-_ySP);
-            }
-
-            // 1.2 Verticle Channel
-            if ( (VERT == DJI::OSDK::Control::VERTICAL_VELOCITY) || (VERT == DJI::OSDK::Control::VERTICAL_POSITION) )
-            {
-            zCmd = _zSP;
-            }
-            else
-            {
-            //ROS_WARN_THROTTLE(1.0, "GROUND frame is specified, but thrust command is generated in body frame");
-            zCmd = _zSP;
-            }
-        }
-        else if(FRAME == DJI::OSDK::Control::HORIZONTAL_BODY)
-        {
-            // 2.1 Horizontal channels
-            if ( (HORI == DJI::OSDK::Control::HORIZONTAL_VELOCITY) || (HORI == DJI::OSDK::Control::HORIZONTAL_POSITION) )
-            {
-            // The X and Y Vel and Pos should be only based on rotation after Yaw,
-            // whithout roll and pitch. Otherwise the behavior will be weird.
-
-            // Transform from F-R to F-L
-            xCmd = _xSP;
-            yCmd = -_ySP;
-            }
-            else
-            {
-            xCmd = RAD2DEG(_xSP);
-            yCmd = RAD2DEG(-_ySP);
-            }
-
-            // 2.2 Vertical channel
-            if ( (VERT == DJI::OSDK::Control::VERTICAL_VELOCITY) || (VERT == DJI::OSDK::Control::VERTICAL_POSITION)  )
-            {
-            //ROS_WARN_THROTTLE(1.0, "BODY frame is specified, but hight and z-velocity is generated in ground frame");
-            zCmd = _zSP;
-            }
-            else
-            {
-            zCmd = _zSP;
-            }
-        }
-
-        // The behavior of yaw should be the same in either frame
-        if ( YAW == DJI::OSDK::Control::YAW_ANGLE )
-        {
-            Eigen::Matrix3d R_FLU2FRD;
-            R_FLU2FRD << 1,  0,  0, 0, -1,  0, 0,  0, -1;
-            Eigen::Matrix3d R_ENU2NED;
-            R_ENU2NED << 0,  1,  0, 1,  0,  0, 0,  0, -1;  
-            
-            Eigen::AngleAxisd rollAngle(0.0  , Eigen::Vector3d::UnitX());
-            Eigen::AngleAxisd pitchAngle(0.0 , Eigen::Vector3d::UnitY());
-            Eigen::AngleAxisd yawAngle(_yawSP, Eigen::Vector3d::UnitZ());
-
-            Eigen::Quaternion<double> q = rollAngle * pitchAngle * yawAngle;
-            Eigen::Matrix3d rotationSrc = q.matrix();
-
-            //The last term should be transpose, but since it's symmetric ...
-            Eigen::Matrix3d rotationDes;
-            rotationDes = R_ENU2NED * rotationSrc * R_FLU2FRD;
-
-            Eigen::Vector3d ea = rotationDes.eulerAngles(0,1,2);
-            yawCmd = ea[2];
-
-            yawCmd = RAD2DEG(yawCmd);
-        }
-        else if (YAW == DJI::OSDK::Control::YAW_RATE)
-        {
-            yawCmd = RAD2DEG(-_yawSP);
-        }
 
         if(useLogStatus_){
             LogStatus::get()->status("Moving in self control", false);
         }
 
-        DJI::OSDK::Control::CtrlData ctrlData(_flag, xCmd, yCmd, zCmd, yawCmd);
+        DJI::OSDK::Control::CtrlData ctrlData(_flag, RAD2DEG(_xSP), RAD2DEG(_ySP), _zSP, RAD2DEG(_yawSP));
         secureGuard_.lock();
         vehicle_->control->flightCtrl(ctrlData);
         secureGuard_.unlock();
