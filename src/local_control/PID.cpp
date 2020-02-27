@@ -20,9 +20,18 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#include <dal/PID.h>
+#include <dal/local_control/PID.h>
 
 namespace dal{
+
+    //---------------------------------------------------------------------------------------------------------------------
+    // PUBLIC FUNCTIONS
+    //---------------------------------------------------------------------------------------------------------------------
+
+    //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR UPDATE
+    //---------------------------------------------------------------------------------------------------------------------
+
     //---------------------------------------------------------------------------------------------------------------------
     PID::PID(float _kp, float _ki, float _kd, float _minSat, float _maxSat, float _minWind, float _maxWind) {
         kp_ = _kp;
@@ -32,28 +41,30 @@ namespace dal{
         maxSat_ = _maxSat;
         windupMin_ = _minWind;
         windupMax_ = _maxWind;
-        
+
+        std::cout << "\033[33mPID Params: \033[m" << kp_ << ", "<< ki_ << ", "<< kd_ << ", "<< minSat_ << ", "<< maxSat_ << ", "<< windupMin_ << ", "<< windupMax_ << std::endl;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    float PID::update(float & _val, float _incT) {
-        float dt = _incT; // TODO 666 input arg?
+    PID::~PID() {}
 
-        // Calculate error
+    //---------------------------------------------------------------------------------------------------------------------
+    float PID::update(float _val, float _incT) {
+        float dt = _incT; // 666 input arg?
+
         float err = reference_ - _val;
+        accumErr_ += err * dt;
 
-        accumErr_ += err*dt;
         // Apply anti wind-up 777 Analyze other options
         accumErr_ = std::min(std::max(accumErr_, windupMin_), windupMax_);
 
         // Compute PID
-        lastResult_ = kp_*err + ki_*accumErr_ + kd_*(err- lastError_)/dt;
+        lastResult_ = kp_ * err + ki_ * accumErr_ + kd_ * (err - lastError_) / dt;
         lastError_ = err;
 
         // Saturate signal
         lastResult_ = std::min(std::max(lastResult_, minSat_), maxSat_);
         lastResult_ *= bouncingFactor_;
-
         bouncingFactor_ *= 2.0;
         bouncingFactor_ = bouncingFactor_ > 1.0 ? 1.0 : bouncingFactor_;
 

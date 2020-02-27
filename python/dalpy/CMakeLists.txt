@@ -23,16 +23,7 @@ message(STATUS "PYTHON_SITE = ${PYTHON_SITE}")
 
 message(STATUS "Boost_LIBRARIES = ${Boost_LIBRARIES}")
 
-
 list(APPEND DALPY_DEFINITIONS "")
-
-#########################################
-## Load rapidjson
-find_package(RapidJSON)
-if(${RapidJSON_FOUND})
-	list(APPEND DALPY_DEFINITIONS "HAS_RJSON")
-	MESSAGE( STATUS "RapidJSON FOUND")
-endif()
 
 #########################################
 file(GLOB_RECURSE SRC_FILES "src/*.cpp")
@@ -46,9 +37,6 @@ target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${Boost_LIBRARIES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${PYTHON_LIBRARIES})
-
-target_include_directories(${PROJECT_NAME} PUBLIC ${RAPIDJSON_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${RAPIDJSON_LIBRARIES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${DAL_LIBRARY_PATH}/include)
 target_link_libraries(${PROJECT_NAME} LINK_PRIVATE dal)
