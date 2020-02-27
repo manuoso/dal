@@ -20,8 +20,8 @@
 ##---------------------------------------------------------------------------------------------------------------------
 
 if(NOT DAL_LIBRARY_PATH)
-  set(DAL_LIBRARY_PATH "DAL_LIBRARY_PATH: ${CMAKE_CURRENT_SOURCE_DIR}/..")
-	MESSAGE( STATUS ${DAL_LIBRARY_PATH})    
+  set(DAL_LIBRARY_PATH "${CMAKE_CURRENT_SOURCE_DIR}/..")
+	message(STATUS "DAL_PATH = ${DAL_LIBRARY_PATH}")    
 endif()
 
 add_subdirectory(dalpy)

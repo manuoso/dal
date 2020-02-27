@@ -8,12 +8,9 @@
 #include <stdio.h>
 #include <fstream>
 
-#ifdef HAS_RJSON
-    #include <rapidjson/document.h>
-#endif
+#include <Eigen/Eigen>
 
 #include <dal/dal.h>
-
 
 #define CONST_PI (double)3.141592653589793
 #define DEG_RAD(DEG) ((DEG) * ((CONST_PI) / (180.0)))
@@ -24,221 +21,227 @@ using namespace boost::python;
 class PAL
 {
     public:
-        #ifdef HAS_RJSON
-            //----------------------------------------------------------------------------------------------------
-            PAL(std::string config){ 
-                Py_Initialize();
-                if(config == "dummy"){
-                    configure_DAL(true);
-                }else{
-                    configure_json(config); 
-                    configure_DAL(false);
-                }  
-            }
-        #else
-            //----------------------------------------------------------------------------------------------------
-            PAL(std::string config){ 
-                std::cout << "Not found RapidJSON, please use: PAL(int id, std::string key, std::string port, bool PosVO, bool LogSta, bool LogTel, bool dummy)" << std::endl;
-            }
-        #endif
-
         //----------------------------------------------------------------------------------------------------
-        PAL(int id, std::string key, std::string port, bool LogSta, bool dummy){
+        PAL(int id, std::string key, std::string port, bool log){
             id_ = id;
             key_ = key;
             port_ = port;
-            useLogStatus_ = LogSta;
-            configure_DAL(dummy);
+            useLog_ = log;
+            configure_DAL();
         }
 
         //----------------------------------------------------------------------------------------------------
         void exit(){
             Py_Finalize();
-            dal::DAL::get()->close();    
+            dal::DAL::close();    
         }
 
         //----------------------------------------------------------------------------------------------------
         bool takeoff(){ 
-            return dal::DAL::get()->takeOff(1);
+            return djiManager_->control()->takeOff(1);
+            
         }
 
         //----------------------------------------------------------------------------------------------------
         bool land(){ 
-            return dal::DAL::get()->land();
+            return djiManager_->control()->land();
         }
 
         //----------------------------------------------------------------------------------------------------
         bool emergencyBrake(){ 
-            return dal::DAL::get()->emergencyBrake(); 
+            return djiManager_->control()->emergencyBrake(); 
         }
 
         //----------------------------------------------------------------------------------------------------
         bool recoverFromManual(){ 
-            return dal::DAL::get()->recoverFromManual();
+            return djiManager_->control()->recoverFromManual();
         }
 
         //----------------------------------------------------------------------------------------------------
         bool position(float x, float y, float z, float yaw){ 
-            return dal::DAL::get()->position(x, y, z, yaw);
+            return djiManager_->control()->position(x, y, z, yaw);
         }
 
         //----------------------------------------------------------------------------------------------------
         bool velocity(float vx, float vy, float vz, float yawRate){ 
-            return dal::DAL::get()->velocity(vx, vy, vz, yawRate);
+            return djiManager_->control()->velocity(vx, vy, vz, yawRate);
         }
 
         //----------------------------------------------------------------------------------------------------
         bool attitude(float roll, float pitch, float yaw, float z){ 
-            return dal::DAL::get()->attitude(roll, pitch, yaw, z);
+            return djiManager_->control()->attitude(roll, pitch, yaw, z);
         }
 
         //----------------------------------------------------------------------------------------------------
         bool attitudeRate(float rollRate, float pitchRate, float yawRate, float z){ 
-            return dal::DAL::get()->attitudeRate(rollRate, pitchRate, yawRate, z);
+            return djiManager_->control()->attitudeRate(rollRate, pitchRate, yawRate, z);
+        }
+
+        //----------------------------------------------------------------------------------------------------
+        bool rpyThrust(float roll, float pitch, float yawRate, float thrust){ 
+            return djiManager_->control()->rpyThrust(roll, pitch, yawRate, thrust);
         }
 
         //----------------------------------------------------------------------------------------------------
         boost::python::dict telemetry(){ 
-            Eigen::Vector2f gps;
-            if(!dal::DAL::get()->telemetryGPS(gps)){
+            dal::TelemetryDJI::VectorGPS gps;
+            if(!djiManager_->telemetry()->getGPS(gps)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            dal::TelemetryDJI::VectorGPSDetail gpsDetail;
+            if(!djiManager_->telemetry()->getGPSDetail(gpsDetail)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
 
             int gpsSignal;
-            if(!dal::DAL::get()->telemetryGPSSignal(gpsSignal)){
+            if(!djiManager_->telemetry()->getGPSSignal(gpsSignal)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
 
             float altitude;
-            if(!dal::DAL::get()->telemetryAltitude(altitude)){
+            if(!djiManager_->telemetry()->getAltitude(altitude)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
 
-            Eigen::Vector3f vel;
-            if(!dal::DAL::get()->telemetryVelocity(vel)){
+            dal::TelemetryDJI::VectorAngularRate angularRate;
+            if(!djiManager_->telemetry()->getAngularRate(angularRate)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            dal::TelemetryDJI::VectorHardSync imu;
+            if(!djiManager_->telemetry()->getHardSync(imu)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            dal::TelemetryDJI::VectorCompass compass;
+            if(!djiManager_->telemetry()->getCompass(compass)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            dal::TelemetryDJI::VectorQuaternion quat;
+            if(!djiManager_->telemetry()->getQuaternion(quat)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            dal::TelemetryDJI::VectorVelocity vel;
+            if(!djiManager_->telemetry()->getVelocity(vel)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
 
             std::string statusFlight;
-            if(!dal::DAL::get()->telemetryStatusFlight(statusFlight)){
+            if(!djiManager_->telemetry()->getStatusFlight(statusFlight)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
 
             std::string mode;
-            if(!dal::DAL::get()->telemetryDisplayMode(mode)){
+            if(!djiManager_->telemetry()->getDisplayMode(mode)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
 
             int bat;
-            if(!dal::DAL::get()->telemetryBatery(bat)){
+            if(!djiManager_->telemetry()->getBatery(bat)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
 
-            dal::Backend::Backend::VectorRC rc;
-            if(!dal::DAL::get()->telemetryRC(rc)){
+            dal::TelemetryDJI::VectorRC rc;
+            if(!djiManager_->telemetry()->getRC(rc)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
-            
+
+            Eigen::Vector3f localPositionGPS;
+            if(!djiManager_->telemetry()->getLocalPositionGPS(localPositionGPS)){
+                std::cout << "Error getting localPositionGPS of A3" << std::endl;
+            }
+
             boost::python::dict telem;
             telem["Flight_Status"] = statusFlight.c_str();
             telem["Mode"] = mode.c_str();
-
+            telem["Batery_Level"] = bat/1000.0;
+            
             telem["Pitch"] = rc(0);
             telem["Roll"] = rc(1);
             telem["Yaw"] = rc(2);
             telem["Throttle"] = rc(3);
-            telem["LogicConnected"] = rc(4);
-            telem["SkyConnected"] = rc(5);
-            telem["GroundConnected"] = rc(6);
-            telem["AppConnected"] = rc(7);
 
-            telem["GPS_Latitude"] = RAD_DEG(gps(0));
-            telem["GPS_Longitude"] = RAD_DEG(gps(1));
+            telem["GPS_Latitude"] = RAD_DEG(gps[0]);
+            telem["GPS_Longitude"] = RAD_DEG(gps[1]);
             telem["GPS_Altitude"] = altitude;
             telem["GPS_Signal"] = gpsSignal;
 
-            telem["Velocity_X"] = vel(0);
-            telem["Velocity_Y"] = vel(1);
-            telem["Velocity_Z"] = vel(2);
+            telem["Velocity_X"] = vel[0];
+            telem["Velocity_Y"] = vel[1];
+            telem["Velocity_Z"] = vel[2];
 
-            telem["Batery_Level"] = bat/1000.0;
+            telem["AngularRate_X"] = angularRate[0];
+            telem["AngularRate_Y"] = angularRate[1];
+            telem["AngularRate_Z"] = angularRate[2];
+
+            telem["compass_X"] = compass[0];
+            telem["compass_Y"] = compass[1];
+            telem["compass_Z"] = compass[2];
+
+            telem["LocalPoseGPS_X"] = localPositionGPS[0];
+            telem["LocalPoseGPS_Y"] = localPositionGPS[1];
+            telem["LocalPoseGPS_Z"] = localPositionGPS[2];
+
+            // 666 TODO: CHECK IMU ORI INFO!!
+            telem["IMU_angular_velocity_x"] = imu[0];
+            telem["IMU_angular_velocity_y"] = imu[1];
+            telem["IMU_angular_velocity_z"] = imu[2];
+
+            telem["IMU_linear_acceleration_x"] = imu[3];
+            telem["IMU_linear_acceleration_y"] = imu[4];
+            telem["IMU_linear_acceleration_z"] = imu[5];
+
+            telem["IMU_orientation_w"] = imu[6];
+            telem["IMU_orientation_x"] = imu[7];
+            telem["IMU_orientation_y"] = imu[8];
+            telem["IMU_orientation_z"] = imu[9];
+
+            // 666 TODO: CHECK CONVERSIONS!!
+            telem["quaternion_w"] = quat[0];
+            telem["quaternion_x"] = quat[1];
+            telem["quaternion_y"] = quat[2];
+            telem["quaternion_z"] = quat[3];
 
             return telem;
 
         }
 
     private:
-        #ifdef HAS_RJSON
-            //----------------------------------------------------------------------------------------------------
-            void configure_json(std::string _config){
-                std::ifstream rawFile(_config);
-                if (!rawFile.is_open()) {
-                    std::cout << "Error opening config file" << std::endl;
-                }
-
-                std::stringstream strStream;
-                strStream << rawFile.rdbuf();
-                std::string json = strStream.str();
-
-                rapidjson::Document configFile;
-                if(configFile.Parse(json.c_str()).HasParseError()){
-                    std::cout << "Error parsing json" << std::endl;
-                }
-
-                id_ = configFile["id"].GetInt();
-                key_ = configFile["key"].GetString();
-                port_ = configFile["port"].GetString();
-                baudrate_ = configFile["baudrate"].GetInt();
-                useLogStatus_ = configFile["useLogStatus"].GetBool();
-
-            }
-        #endif
-
         //----------------------------------------------------------------------------------------------------
-        void configure_DAL(bool _dummy){
-            dal::Backend::Config bc;
+        void configure_DAL(){
+            dal::HAL::Config bc;
             bc.app_id = id_;
             bc.app_key = key_;
             bc.useAdvancedSensing = false;
             bc.device = port_;
             bc.baudrate = baudrate_;
-            if(_dummy){
-                bc.type = dal::Backend::Config::eType::Dummy;
-            }else{
-                bc.type = dal::Backend::Config::eType::DJI;
-            }
-            bc.useLogStatus = useLogStatus_;
+            bc.useLog = useLog_;
 
             std::map<DJI::OSDK::Telemetry::TopicName, int> topics;
-            topics.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_GPS_FUSED, 50));
-            topics.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED, 50));
-            topics.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_VELOCITY, 200));
-            topics.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT, 50));
-            topics.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE, 50));
-            topics.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO, 50));
-            topics.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA, 50));
-
             bc.topics = topics;
 
-            dal::DAL::init(bc);
+            djiManager_ = dal::DAL::create(bc);
 
-            if(dal::DAL::get()->backend() == nullptr){
+            if(djiManager_ == nullptr){
                 std::cout << "Error initializing DAL" << std::endl;
             }
-
         }
 
     private:
+        dal::DAL *djiManager_ = nullptr;
+
         int id_, baudrate_;
         std::string key_, port_;
-        bool useLogStatus_;
+        bool useLog_;
     
 };
 
 BOOST_PYTHON_MODULE(dalpy)
 {
-    class_<PAL>("PAL", init<std::string>())
-        .def(init<int, std::string, std::string, bool, bool>())
+    class_<PAL>("PAL", init<int, std::string, std::string, bool>())
         .def("__del__", &PAL::exit) 
         .def("takeoff", &PAL::takeoff)
         .def("land", &PAL::land)
@@ -248,6 +251,7 @@ BOOST_PYTHON_MODULE(dalpy)
         .def("velocity", &PAL::velocity)
         .def("attitude", &PAL::attitude)
         .def("attitudeRate", &PAL::attitudeRate)
+        .def("rpyThrust", &PAL::rpyThrust)        
         .def("telemetry", &PAL::telemetry)
 
     ;
