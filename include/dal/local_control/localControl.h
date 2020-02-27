@@ -30,7 +30,7 @@ namespace dal{
     class LocalControl{
         public:
             /// Especials Typedefs
-            typedef Eigen::Matrix<float, 6, 1> VectorPID;
+            typedef Eigen::Matrix<float, 7, 1> VectorPID;
             typedef Eigen::Matrix<float, 6, 1> VectorUtils;
 
             //---------------------------------------------------------------------------------------------------------------------
