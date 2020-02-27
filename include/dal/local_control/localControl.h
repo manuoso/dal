@@ -20,74 +20,72 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#ifndef DAL_H_
-#define DAL_H_
+#ifndef DAL_LOCALCONTROL_LOCALCONTROL_H_
+#define DAL_LOCALCONTROL_LOCALCONTROL_H_
 
 #include <dal/hal.h>
+#include <dal/local_control/PID.h>
 
 namespace dal{
-    class DAL {
+    class LocalControl{
         public:
+            /// Especials Typedefs
+            typedef Eigen::Matrix<float, 6, 1> VectorPID;
+            typedef Eigen::Matrix<float, 6, 1> VectorUtils;
+
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR INITIALIZATION
 	        //---------------------------------------------------------------------------------------------------------------------
-            
-            /// Create the system. 
-            static DAL * create(const HAL::Config &_config);
 
-            /// Close the system.
-            static void close();
-
-            //---------------------------------------------------------------------------------------------------------------------
-            // MODULES
-	        //---------------------------------------------------------------------------------------------------------------------
-        
-            ControlDJI * control(){return control_;}
-
-            MissionsDJI * missions(){return missions_;}
-
-            TelemetryDJI * telemetry(){return telemetry_;}
-
-            //---------------------------------------------------------------------------------------------------------------------
-            // LOCAL CONTROL
-            //---------------------------------------------------------------------------------------------------------------------
-
-            /// Init Local Control PIDs.
-            bool initLC(LocalControl::VectorPID _roll, LocalControl::VectorPID _pitch, LocalControl::VectorPID _yaw, LocalControl::VectorPID _z, LocalControl::VectorUtils _utils);
-
-            /// Set reference of Local Control.
-            void setRefLC(Eigen::Vector4f _xyzYaw);
-
-            /// Update Local Control
-            bool updateLC(Eigen::Vector4f _xyzYaw);
-
-            //---------------------------------------------------------------------------------------------------------------------
-            // UTILS
-	        //---------------------------------------------------------------------------------------------------------------------
-
-            /// 666 TODO: NEED TO CHECK!!!
-            /// This method convert a quaternion to Euler Angle.
-            /// \param _quaternionData: quaternion to convert.
-            /// \return the converted result.
-            Eigen::Vector3f toEulerAngle(void* _quaternionData);
-
-        private:
-            /// Constructor with given configuration for backend
-            DAL(const HAL::Config &_config);
+            /// Constructor
+            LocalControl();
 
             /// Destructor
-            virtual ~DAL(); 
+            ~LocalControl();
+
+            /// This method inits the PIDs.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool init(VectorPID _roll, VectorPID _pitch, VectorPID _yaw, VectorPID _z, VectorUtils _utils);
+
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR UPDATE
+            //---------------------------------------------------------------------------------------------------------------------
+
+            /// This method set the reference position.
+            /// \param _xyzYaw: desired x y z and yaw references.
+            /// \return true if params are good or set without errors, false if something failed.
+            void reference(Eigen::Vector4f _xyzYaw);
+
+            /// This method update the PIDs and returns the target RPY and Thrust.
+            /// \param _xyzYaw: x y z and yaw parameters.
+            /// \param _incT: difference between two iterations.
+            /// \return values for the DJI controller.
+            Eigen::Vector4f update(Eigen::Vector4f _xyzYaw, float _incT);
 
         private:
-		    static DAL *dal_;
+            /// This method update the PIDs and returns the target RPY and Thrust.
+            /// \param _aX: values from PID roll.
+            /// \param _aY: values from PID pitch.
+            /// \param _zPush: thrust value.
+            /// \return the desired values converted.
+            Eigen::Vector3f accelAngleConversion(float _aX, float _aY, float _zPush);
 
-            HAL *hal_ = nullptr;
+            /// This method saturates the vale.
+            /// \param _signal: signal to saturate.
+            /// \param _saturation: max value to saturation.
+            /// \return values saturated.
+            float saturateSignal(float _signal, float _saturation);
 
-            ControlDJI *control_ = nullptr;
-            MissionsDJI *missions_ = nullptr;
-            TelemetryDJI *telemetry_ = nullptr;
+        private:
+            // Position control PIDs
+            PID *pidRoll_, *pidPitch_, *pidYaw_, *pidZ_;
 
-            LocalControl *lc_ = nullptr;
+            float hoveringValue_ = 28;
+            float maxRoll_ = 25;
+            float maxPitch_ = 25;
+            float maxWYaw_ = 45;
+            float minThrotle_ = 0;
+            float maxThrotle_ = 100;
 
     };
 }

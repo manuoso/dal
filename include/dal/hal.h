@@ -49,6 +49,7 @@
 #include <dal/dji/ControlDJI.h>
 #include <dal/dji/MissionsDJI.h>
 #include <dal/dji/TelemetryDJI.h>
+#include <dal/local_control/localControl.h>
 
 #define C_EARTH (double)6378137.0
 #define C_PI (double)3.141592653589793
@@ -121,6 +122,7 @@ namespace dal{
 
             /// This method initialize DJI Vehicle and some important params.
             /// \param _config: needed configuration to initialize DJI SDK
+            /// \return true if params are good or set without errors, false if something failed.
             bool create(const Config &_config);
 
             /// Close the system.

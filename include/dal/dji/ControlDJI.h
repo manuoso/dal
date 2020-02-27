@@ -34,6 +34,7 @@
 // So the implemented functions may vary for another model like the M210 and M600.
 //
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 namespace dal{
     class ControlDJI{
         public:

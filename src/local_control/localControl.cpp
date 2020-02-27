@@ -20,10 +20,9 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#include <dal/dal.h>
+#include <dal/local_control/localControl.h>
 
 namespace dal{
-    DAL *DAL::dal_ = nullptr;
 
     //---------------------------------------------------------------------------------------------------------------------
     // PUBLIC FUNCTIONS
@@ -33,94 +32,91 @@ namespace dal{
     // METHODS FOR INITIALIZATION
     //---------------------------------------------------------------------------------------------------------------------
 
-	//---------------------------------------------------------------------------------------------------------------------
-	DAL * DAL::create(const HAL::Config &_config) {
-		if(!dal_){
-			dal_ = new DAL(_config);
-        }else{
-			std::cout << "Someone tried to reinitialize the DAL system" << std::endl;
-        }
-        return dal_;
-	}
+    //---------------------------------------------------------------------------------------------------------------------
+    bool LocalControl::init(VectorPID _roll, VectorPID _pitch, VectorPID _yaw, VectorPID _z, VectorUtils _utils){
 
-	//---------------------------------------------------------------------------------------------------------------------
-	void DAL::close(){
-		delete dal_;
-	}
+        // kp, ki, kd, minSat, maxSat, minWind, maxWind
+        pidRoll_        = new PID(_roll[0], _roll[1], _roll[2], _roll[3], _roll[4], _roll[5], _roll[6]);
 
-    //---------------------------------------------------------------------------------------------------------------------
-    // LOCAL CONTROL
-    //---------------------------------------------------------------------------------------------------------------------
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::initLC(LocalControl::VectorPID _roll, LocalControl::VectorPID _pitch, LocalControl::VectorPID _yaw, LocalControl::VectorPID _z, LocalControl::VectorUtils _utils){
-        return lc_->init(_roll, _pitch, _yaw, _z, _utils);
+        pidPitch_       = new PID(_pitch[0], _pitch[1], _pitch[2], _pitch[3], _pitch[4], _pitch[5], _pitch[6]);
+
+        pidYaw_         = new PID(_yaw[0], _yaw[1], _yaw[2], _yaw[3], _yaw[4], _yaw[5], _yaw[6]);
+
+        pidZ_           = new PID(_z[0], _z[1], _z[2], _z[3], _z[4], _z[5], _z[6]);
+
+        hoveringValue_  = _utils[0];
+
+        maxRoll_        = _utils[1];
+        maxPitch_       = _utils[2];
+        maxWYaw_        = _utils[3];
+
+        minThrotle_     = _utils[4];
+        maxThrotle_     = _utils[5];
+
+        return true;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    void DAL::setRefLC(Eigen::Vector4f _xyzYaw){
-        lc_->reference(_xyzYaw);
+    // METHODS FOR UPDATE
+    //---------------------------------------------------------------------------------------------------------------------
+
+    //---------------------------------------------------------------------------------------------------------------------
+    void LocalControl::reference(Eigen::Vector4f _xyzYaw){
+        
+        pidRoll_->reference(_xyzYaw[0]);
+        pidPitch_->reference(_xyzYaw[1]);
+        pidYaw_->reference(_xyzYaw[3]);
+        pidZ_->reference(_xyzYaw[2]);
+
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool DAL::updateLC(Eigen::Vector4f _xyzYaw){
-        float hz = 30;
-        Eigen::Vector4f rpyT = lc_->update(_xyzYaw, 1/hz);
+    Eigen::Vector4f LocalControl::update(Eigen::Vector4f _xyzYaw, float _incT){
 
-        return control_->rpyThrust(rpyT[0], rpyT[1], rpyT[2], rpyT[3]);
-    }
+        // Update PIDs
+        float aY = pidRoll_->update(_xyzYaw[0], _incT);
+        float aX = pidPitch_->update(_xyzYaw[1], _incT);
+        float zPush = pidZ_->update(_xyzYaw[3], _incT);
+        float wYaw = pidYaw_->update(_xyzYaw[2], _incT);
 
-    //---------------------------------------------------------------------------------------------------------------------
-    // UTILS
-    //---------------------------------------------------------------------------------------------------------------------
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    Eigen::Vector3f DAL::toEulerAngle(void* _quaternionData){
-    
-        DJI::OSDK::Telemetry::Quaternion* quaternion = (DJI::OSDK::Telemetry::Quaternion*)_quaternionData;
-
-        double q2sqr = quaternion->q2 * quaternion->q2;
-        double t0    = -2.0 * (q2sqr + quaternion->q3 * quaternion->q3) + 1.0;
-        double t1 = +2.0 * (quaternion->q1 * quaternion->q2 + quaternion->q0 * quaternion->q3);
-        double t2 = -2.0 * (quaternion->q1 * quaternion->q3 - quaternion->q0 * quaternion->q2);
-        double t3 = +2.0 * (quaternion->q2 * quaternion->q3 + quaternion->q0 * quaternion->q1);
-        double t4 = -2.0 * (quaternion->q1 * quaternion->q1 + q2sqr) + 1.0;
-
-        t2 = (t2 > 1.0) ? 1.0 : t2;
-        t2 = (t2 < -1.0) ? -1.0 : t2;
-
-        Eigen::Vector3f result;
-        result << asin(t2), atan2(t3, t4), atan2(t1, t0);
+        // Transform target accelerations to roll pitch and thrust
+        Eigen::Vector3f rpt = accelAngleConversion(aX, aY, zPush);
+        
+        // Return result
+        Eigen::Vector4f result = {saturateSignal(rpt[0], maxRoll_),     // Output target roll.
+                                saturateSignal(rpt[1], maxPitch_),      // Output target pitch.
+                                saturateSignal(wYaw  , maxWYaw_),       // Output target w yaw.
+                                saturateSignal(rpt[2], maxThrotle_)};   // Output target throtle.
 
         return result;
     }
-
+    
     //---------------------------------------------------------------------------------------------------------------------
     // PRIVATE FUNCTIONS
     //---------------------------------------------------------------------------------------------------------------------
 
     //---------------------------------------------------------------------------------------------------------------------
-    DAL::DAL(const HAL::Config &_config) {
-        hal_ = new HAL();
-        hal_->create(_config);
+    Eigen::Vector3f LocalControl::accelAngleConversion(float _aX, float _aY, float _zPush){
+        // m en Kg
+        // a en m/s2
+        const float g = 9.81;
+        float roll = atan2(_aY,g);
+        float pitch = -atan2(_aX*cos(roll), g);
+        float thrust = _zPush + hoveringValue_;
 
-        lc_ = new LocalControl();
-
-        // Init modules
-        control_ = new ControlDJI();
-        missions_ = new MissionsDJI();
-        telemetry_ = new TelemetryDJI();
+        Eigen::Vector3f result = {roll, pitch, thrust}; 
+        return result;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    DAL::~DAL() {
-        hal_->close();
-
-        delete control_;
-        delete missions_;
-        delete telemetry_;
-        delete lc_;
+    float LocalControl::saturateSignal(float _signal, float _saturation){
+        if(_signal < -_saturation){
+            return -_saturation;
+        }else if(_signal > _saturation){
+            return _saturation;
+        }else{
+            return _signal;
+        }
     }
 
 }
-
