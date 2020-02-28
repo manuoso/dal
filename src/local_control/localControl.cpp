@@ -41,23 +41,40 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool LocalControl::init(VectorPID _roll, VectorPID _pitch, VectorPID _yaw, VectorPID _z, VectorUtils _utils){
 
-        // kp, ki, kd, minSat, maxSat, minWind, maxWind
-        pidRoll_        = new PID(_roll[0], _roll[1], _roll[2], _roll[3], _roll[4], _roll[5], _roll[6]);
+        if(_roll.size() > 0 && _roll.size() > 0 && _roll.size() > 0 && _roll.size() > 0 && _roll.size() > 0){
+            std::cout << "\033[33mUsing new PIDs Values \033[m" << std::endl;
 
-        pidPitch_       = new PID(_pitch[0], _pitch[1], _pitch[2], _pitch[3], _pitch[4], _pitch[5], _pitch[6]);
+            // kp, ki, kd, minSat, maxSat, minWind, maxWind
+            pidRoll_        = new PID(_roll[0], _roll[1], _roll[2], _roll[3], _roll[4], _roll[5], _roll[6]);
+            pidPitch_       = new PID(_pitch[0], _pitch[1], _pitch[2], _pitch[3], _pitch[4], _pitch[5], _pitch[6]);
+            pidYaw_         = new PID(_yaw[0], _yaw[1], _yaw[2], _yaw[3], _yaw[4], _yaw[5], _yaw[6]);
+            pidZ_           = new PID(_z[0], _z[1], _z[2], _z[3], _z[4], _z[5], _z[6]);
 
-        pidYaw_         = new PID(_yaw[0], _yaw[1], _yaw[2], _yaw[3], _yaw[4], _yaw[5], _yaw[6]);
+            hoveringValue_  = _utils[0];
 
-        pidZ_           = new PID(_z[0], _z[1], _z[2], _z[3], _z[4], _z[5], _z[6]);
+            maxRoll_        = _utils[1];
+            maxPitch_       = _utils[2];
+            maxWYaw_        = _utils[3];
 
-        hoveringValue_  = _utils[0];
+            minThrotle_     = _utils[4];
+            maxThrotle_     = _utils[5];
+        }else{
+            std::cout << "\033[33mUsing default PIDs Values \033[m" << std::endl;
 
-        maxRoll_        = _utils[1];
-        maxPitch_       = _utils[2];
-        maxWYaw_        = _utils[3];
+            pidRoll_        = new PID(4, 1, 2, -100, 100, -20, 20);
+            pidPitch_       = new PID(4, 1, 2, -100, 100, -20, 20);
+            pidYaw_         = new PID(0.5, 0, 0.25, -3, 3, -20, 20);
+            pidZ_           = new PID(15, 1, 10, 0, 100, -20, 20);
 
-        minThrotle_     = _utils[4];
-        maxThrotle_     = _utils[5];
+            hoveringValue_  = 18;
+            // In rad
+            maxRoll_        = 0.15;
+            maxPitch_       = 0.15;
+            maxWYaw_        = 1;
+
+            minThrotle_     = 0;
+            maxThrotle_     = 100;
+        }
 
         return true;
     }

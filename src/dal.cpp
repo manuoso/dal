@@ -38,7 +38,7 @@ namespace dal{
 		if(!dal_){
 			dal_ = new DAL(_config);
         }else{
-			std::cout << "Someone tried to reinitialize the DAL system" << std::endl;
+            std::cout << "\033[31mSomeone tried to reinitialize the DAL system \033[m" << std::endl;
         }
         return dal_;
 	}
