@@ -48,18 +48,7 @@ namespace dal{
 
             TelemetryDJI * telemetry(){return telemetry_;}
 
-            //---------------------------------------------------------------------------------------------------------------------
-            // LOCAL CONTROL
-            //---------------------------------------------------------------------------------------------------------------------
-
-            /// Init Local Control PIDs.
-            bool initLC(LocalControl::VectorPID _roll, LocalControl::VectorPID _pitch, LocalControl::VectorPID _yaw, LocalControl::VectorPID _z, LocalControl::VectorUtils _utils);
-
-            /// Set reference of Local Control.
-            void setRefLC(Eigen::Vector4f _xyzYaw);
-
-            /// Update Local Control
-            bool updateLC(Eigen::Vector4f _xyzYaw);
+            LocalControl * local_control(){return lc_;}
 
             //---------------------------------------------------------------------------------------------------------------------
             // UTILS

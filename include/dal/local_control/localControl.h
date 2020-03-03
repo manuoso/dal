@@ -54,7 +54,7 @@ namespace dal{
             /// This method set the reference position.
             /// \param _xyzYaw: desired x y z and yaw references.
             /// \return true if params are good or set without errors, false if something failed.
-            void reference(Eigen::Vector4f _xyzYaw);
+            bool reference(Eigen::Vector4f _xyzYaw);
 
             /// This method update the PIDs and returns the target RPY and Thrust.
             /// \param _xyzYaw: x y z and yaw parameters.

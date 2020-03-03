@@ -76,7 +76,7 @@ namespace dal{
             maxThrotle_     = 100;
         }
         
-        std::cout << "\033[33mUtils values: \033[m" << "Hovering value: " + std::to_string(hoveringValue_) + " Max Roll: " + std::to_string(maxRoll_) + " Max pitch: " + std::to_string(maxPitch_) + " Max Yaw: " + std::to_string(maxWYaw_) + " Min Throtle: " + std::to_string(minThrotle_) + " Max Throtle: " + std::to_string(maxThrotle_) << std::endl;
+        std::cout << "\033[33mUtils values: \033[m" << "Hovering value: " << hoveringValue_ << " Max Roll: " << maxRoll_ << " Max pitch: " << maxPitch_ << " Max Yaw: " << maxWYaw_ << " Min Throtle: " << minThrotle_ << " Max Throtle: " << maxThrotle_ << std::endl;
 
         return true;
     }
@@ -86,13 +86,14 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
 
     //---------------------------------------------------------------------------------------------------------------------
-    void LocalControl::reference(Eigen::Vector4f _xyzYaw){
+    bool LocalControl::reference(Eigen::Vector4f _xyzYaw){
         
         pidRoll_->reference(_xyzYaw[0]);
         pidPitch_->reference(_xyzYaw[1]);
-        pidYaw_->reference(_xyzYaw[3]);
         pidZ_->reference(_xyzYaw[2]);
+        pidYaw_->reference(_xyzYaw[3]);
 
+        return true;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
@@ -101,8 +102,8 @@ namespace dal{
         // Update PIDs
         float aY = pidRoll_->update(_xyzYaw[0], _incT);
         float aX = pidPitch_->update(_xyzYaw[1], _incT);
-        float zPush = pidZ_->update(_xyzYaw[3], _incT);
-        float wYaw = pidYaw_->update(_xyzYaw[2], _incT);
+        float zPush = pidZ_->update(_xyzYaw[2], _incT);
+        float wYaw = pidYaw_->update(_xyzYaw[3], _incT);
 
         // Transform target accelerations to roll pitch and thrust
         Eigen::Vector3f rpt = accelAngleConversion(aX, aY, zPush);
