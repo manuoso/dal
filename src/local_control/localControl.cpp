@@ -74,10 +74,9 @@ namespace dal{
 
             minThrotle_     = 0;
             maxThrotle_     = 100;
-			
-			std::cout << "\033[33mUtils values: \033[m" << "Hovering value: " + std::to_string(hoveringValue_) + " Max Roll: " + std::to_string(maxRoll_) + " Max pitch: " + std::to_string(maxPitch_) + " Max Yaw: " + std::to_string(maxWYaw_) + " Min Throtle: " + std::to_string(minThrotle_) + " Max Throtle: " + std::to_string(maxThrotle_) << std::endl;
-
         }
+        
+        std::cout << "\033[33mUtils values: \033[m" << "Hovering value: " + std::to_string(hoveringValue_) + " Max Roll: " + std::to_string(maxRoll_) + " Max pitch: " + std::to_string(maxPitch_) + " Max Yaw: " + std::to_string(maxWYaw_) + " Min Throtle: " + std::to_string(minThrotle_) + " Max Throtle: " + std::to_string(maxThrotle_) << std::endl;
 
         return true;
     }
