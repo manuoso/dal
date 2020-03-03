@@ -88,8 +88,8 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool LocalControl::reference(Eigen::Vector4f _xyzYaw){
         
-        pidRoll_->reference(_xyzYaw[0]);
-        pidPitch_->reference(_xyzYaw[1]);
+        pidPitch_->reference(_xyzYaw[0]);
+        pidRoll_->reference(_xyzYaw[1]);
         pidZ_->reference(_xyzYaw[2]);
         pidYaw_->reference(_xyzYaw[3]);
 
@@ -100,8 +100,8 @@ namespace dal{
     Eigen::Vector4f LocalControl::update(Eigen::Vector4f _xyzYaw, float _incT){
 
         // Update PIDs
-        float aY = pidRoll_->update(_xyzYaw[0], _incT);
-        float aX = pidPitch_->update(_xyzYaw[1], _incT);
+        float aX = pidPitch_->update(_xyzYaw[0], _incT);
+        float aY = pidRoll_->update(_xyzYaw[1], _incT);
         float zPush = pidZ_->update(_xyzYaw[2], _incT);
         float wYaw = pidYaw_->update(_xyzYaw[3], _incT);
 
