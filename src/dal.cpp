@@ -75,24 +75,25 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     
     //---------------------------------------------------------------------------------------------------------------------
-    Eigen::Vector3f DAL::toEulerAngle(void* _quaternionData){
+    Eigen::Vector3f DAL::toEulerAngle(Eigen::Vector4f _quat){
     
-        DJI::OSDK::Telemetry::Quaternion* quaternion = (DJI::OSDK::Telemetry::Quaternion*)_quaternionData;
+        double q2sqr = _quat(2) * _quat(2);
+    
+    	double t0 = -2.0 * (q2sqr + _quat(3) * _quat(3)) + 1.0;
+    	double t1 = +2.0 * (_quat(1) * _quat(2) + _quat(0) * _quat(3));
+    	double t2 = -2.0 * (_quat(1) * _quat(3) - _quat(0) * _quat(2));
+		double t3 = +2.0 * (_quat(2) * _quat(3) + _quat(0) * _quat(1));
+		double t4 = -2.0 * (_quat(1) * _quat(1) + q2sqr) + 1.0;
 
-        double q2sqr = quaternion->q2 * quaternion->q2;
-        double t0    = -2.0 * (q2sqr + quaternion->q3 * quaternion->q3) + 1.0;
-        double t1 = +2.0 * (quaternion->q1 * quaternion->q2 + quaternion->q0 * quaternion->q3);
-        double t2 = -2.0 * (quaternion->q1 * quaternion->q3 - quaternion->q0 * quaternion->q2);
-        double t3 = +2.0 * (quaternion->q2 * quaternion->q3 + quaternion->q0 * quaternion->q1);
-        double t4 = -2.0 * (quaternion->q1 * quaternion->q1 + q2sqr) + 1.0;
+		t2 = (t2 > 1.0) ? 1.0 : t2;
+		t2 = (t2 < -1.0) ? -1.0 : t2;
 
-        t2 = (t2 > 1.0) ? 1.0 : t2;
-        t2 = (t2 < -1.0) ? -1.0 : t2;
+		Eigen::Vector3f result;
+		result(0) = asin(t2);
+		result(1) = atan2(t3, t4);
+		result(2) = atan2(t1, t0);
 
-        Eigen::Vector3f result;
-        result << asin(t2), atan2(t3, t4), atan2(t1, t0);
-
-        return result;
+		return result;
     }
 
     //---------------------------------------------------------------------------------------------------------------------

@@ -67,9 +67,9 @@ namespace dal{
 
             /// 666 TODO: NEED TO CHECK!!!
             /// This method convert a quaternion to Euler Angle.
-            /// \param _quaternionData: quaternion to convert.
+            /// \param _quat: quaternion to convert.
             /// \return the converted result.
-            Eigen::Vector3f toEulerAngle(void* _quaternionData);
+            Eigen::Vector3f toEulerAngle(Eigen::Vector4f _quat);
 
         private:
             /// Constructor with given configuration for backend
