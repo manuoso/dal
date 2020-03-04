@@ -62,25 +62,23 @@ namespace dal{
             return false;
         }
 
-        // Create Waypoints
-        std::vector<DJI::OSDK::WayPointSettings> generatedWaypts;
-
-        DJI::OSDK::WayPointSettings  wp1;
-        setWaypointDefaults(&wp1);
-
         // Get actual Lat and Lon
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type gps = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
 
         float altitude = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
+        float altitudeWP = altitude - HAL::originAltitude_;
+        
+        // Create Waypoints
+        DJI::OSDK::WayPointSettings wp1;
+        setWaypointDefaults(&wp1);
 
         wp1.turnMode = _config.turnModeWP;
         wp1.index     = 0;
         wp1.latitude  = gps.latitude;
         wp1.longitude = gps.longitude;
-        wp1.altitude  = altitude;
-        generatedWaypts.push_back(wp1);
+        wp1.altitude  = altitudeWP;
         
-        DJI::OSDK::WayPointSettings  wp2;
+        DJI::OSDK::WayPointSettings wp2;
         setWaypointDefaults(&wp2);
 
         wp2.turnMode = _config.turnModeWP;
@@ -88,6 +86,9 @@ namespace dal{
         wp2.latitude  = _wayPoint[0];
         wp2.longitude = _wayPoint[1];
         wp2.altitude  = _wayPoint[2];
+
+        std::vector<DJI::OSDK::WayPointSettings> generatedWaypts;
+        generatedWaypts.push_back(wp1);
         generatedWaypts.push_back(wp2);
 
         // Upload Waypoints
