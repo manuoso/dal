@@ -41,7 +41,7 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool LocalControl::init(VectorPID _roll, VectorPID _pitch, VectorPID _yaw, VectorPID _z, VectorUtils _utils){
 
-        if(_utils[0] > 0){
+        if(!_utils.isZero(0) && !_roll.isZero(0) && !_pitch.isZero(0) && !_yaw.isZero(0) && !_z.isZero(0)){
             std::cout << "\033[33mUsing new PIDs Values \033[m" << std::endl;
 
             // kp, ki, kd, minSat, maxSat, minWind, maxWind
@@ -51,13 +51,14 @@ namespace dal{
             pidZ_           = new PID(_z[0], _z[1], _z[2], _z[3], _z[4], _z[5], _z[6]);
 
             hoveringValue_  = _utils[0];
+            massUAV_        = _utils[1];
 
-            maxRoll_        = _utils[1];
-            maxPitch_       = _utils[2];
-            maxWYaw_        = _utils[3];
+            maxRoll_        = _utils[2];
+            maxPitch_       = _utils[3];
+            maxWYaw_        = _utils[4];
 
-            minThrotle_     = _utils[4];
-            maxThrotle_     = _utils[5];
+            minThrotle_     = _utils[5];
+            maxThrotle_     = _utils[6];
         }else{
             std::cout << "\033[33mUsing default PIDs Values \033[m" << std::endl;
 
@@ -67,6 +68,8 @@ namespace dal{
             pidZ_           = new PID(15, 1, 10, 0, 100, -20, 20);
 
             hoveringValue_  = 18;
+            massUAV_        = 1.9;
+
             // In rad
             maxRoll_        = 0.15;
             maxPitch_       = 0.15;
@@ -76,7 +79,7 @@ namespace dal{
             maxThrotle_     = 100;
         }
         
-        std::cout << "\033[33mUtils values: \033[m" << "Hovering value: " << hoveringValue_ << " Max Roll: " << maxRoll_ << " Max pitch: " << maxPitch_ << " Max Yaw: " << maxWYaw_ << " Min Throtle: " << minThrotle_ << " Max Throtle: " << maxThrotle_ << std::endl;
+        std::cout << "\033[33mUtils values: \033[m" << "Hovering value: " << hoveringValue_ << " Mass UAV: " << massUAV_ << " Max Roll: " << maxRoll_ << " Max pitch: " << maxPitch_ << " Max Yaw: " << maxWYaw_ << " Min Throtle: " << minThrotle_ << " Max Throtle: " << maxThrotle_ << std::endl;
 
         return true;
     }
@@ -126,9 +129,12 @@ namespace dal{
         // m en Kg
         // a en m/s2
         const float g = 9.81;
-        float roll = atan2(_aY,g);
-        float pitch = -atan2(_aX*cos(roll), g);
-        float thrust = _zPush + hoveringValue_;
+        float roll = atan2(-_aY, g);
+        float pitch = atan2(_aX*cos(roll), g);
+        float thrust = ((_zPush + g)*massUAV_)/(cos(rollLast_)*cos(pitchLast_)) + hoveringValue_;
+
+        rollLast_ = roll;
+        pitchLast_ = pitch;
 
         Eigen::Vector3f result = {roll, pitch, thrust}; 
         return result;

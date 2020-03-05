@@ -276,8 +276,8 @@ namespace dal{
 
         localPoseFromGps(localPoseGPS_, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&HAL::originGPS_));
 
-        _data[0] = localPoseGPS_[0];
-        _data[1] = localPoseGPS_[1];
+        _data[0] = localPoseGPS_[1];
+        _data[1] = localPoseGPS_[0];
         _data[2] = localPoseGPS_[2];
 
         return true;

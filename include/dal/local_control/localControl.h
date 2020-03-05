@@ -31,7 +31,7 @@ namespace dal{
         public:
             /// Especials Typedefs
             typedef Eigen::Matrix<float, 7, 1> VectorPID;
-            typedef Eigen::Matrix<float, 6, 1> VectorUtils;
+            typedef Eigen::Matrix<float, 7, 1> VectorUtils;
 
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR INITIALIZATION
@@ -79,6 +79,9 @@ namespace dal{
         private:
             // Position control PIDs
             PID *pidRoll_, *pidPitch_, *pidYaw_, *pidZ_;
+
+            float rollLast_ = 0, pitchLast_ = 0;
+            float massUAV_ = 1.9;
 
             float hoveringValue_ = 28;
             float maxRoll_ = 25;

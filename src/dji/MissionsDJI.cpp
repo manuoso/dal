@@ -124,7 +124,7 @@ namespace dal{
             fdata.yawMode = _config.yawMode;
             fdata.traceMode = _config.traceModeWP;
             fdata.RCLostAction = _config.rcLostWP;
-            fdata.indexNumber = _wayPoints.size() + 1; // We add 1 to get the aircarft back to the start
+            fdata.indexNumber = _wayPoints.size() + 2; // We add 1 to get the aircarft back to the start and pose from init
 
             DJI::OSDK::ACK::ErrorCode initAck = HAL::vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, HAL::functionTimeout_, &fdata);
             if (DJI::OSDK::ACK::getError(initAck)){
@@ -240,7 +240,7 @@ namespace dal{
                 std::cout << "\033[31mError at stop mission, exiting \033[m" << std::endl;
                 return false;
             }else{
-                std::cout << "\033[Stop Waypoint Mission... \033[m" << std::endl;
+                std::cout << "\033[32mStop Waypoint Mission... \033[m" << std::endl;
             }
         }else if(missionType_ == "hotpoint"){
             
@@ -250,7 +250,7 @@ namespace dal{
                 std::cout << "\033[31mError at stop mission, exiting \033[m" << std::endl;
                 return false;
             }else{
-                std::cout << "\033[Stop Hotpoint Mission... \033[m" << std::endl;
+                std::cout << "\033[32mStop Hotpoint Mission... \033[m" << std::endl;
             }
 
         }else{
@@ -271,7 +271,7 @@ namespace dal{
                 std::cout << "\033[31mError at resume mission, exiting \033[m" << std::endl;
                 return false;
             }else{
-                std::cout << "\033[Resume Waypoint Mission... \033[m" << std::endl;
+                std::cout << "\033[32mResume Waypoint Mission... \033[m" << std::endl;
             }
         }else if(missionType_ == "hotpoint"){
 
@@ -281,7 +281,7 @@ namespace dal{
                 std::cout << "\033[31mError at resume mission, exiting \033[m" << std::endl;
                 return false;
             }else{
-                std::cout << "\033[Resume Hotpoint Mission... \033[m" << std::endl;
+                std::cout << "\033[32mResume Hotpoint Mission... \033[m" << std::endl;
 
             }
         }else{
@@ -330,9 +330,27 @@ namespace dal{
 
     //---------------------------------------------------------------------------------------------------------------------
     std::vector<DJI::OSDK::WayPointSettings> MissionsDJI::createWaypoints(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){
-            
+        
+        // Get actual Lat and Lon
+        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type gps = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+
+        float altitude = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
+        float altitudeWP = altitude - HAL::originAltitude_;
+
         // Let's create a vector to store our waypoints in
         std::vector<DJI::OSDK::WayPointSettings> wp_list;
+
+        // Init wp
+        DJI::OSDK::WayPointSettings init_wp;
+        setWaypointDefaults(&init_wp);
+
+        init_wp.turnMode = _config.turnModeWP;
+        init_wp.index     = 0;
+        init_wp.latitude  = gps.latitude;
+        init_wp.longitude = gps.longitude;
+        init_wp.altitude  = altitudeWP;
+
+        wp_list.push_back(init_wp);   
 
         for (unsigned i = 0; i < _wayPoints.size(); i++){
 
@@ -340,7 +358,7 @@ namespace dal{
             setWaypointDefaults(&wp);
 
             wp.turnMode = _config.turnModeWP;
-            wp.index     = i;
+            wp.index     = i+1;
             wp.latitude  = _wayPoints[i][0];
             wp.longitude = _wayPoints[i][1];
             wp.altitude  = _wayPoints[i][2];
@@ -353,7 +371,7 @@ namespace dal{
         setWaypointDefaults(&final_wp);
 
         final_wp.turnMode = _config.turnModeWP;
-        final_wp.index = _wayPoints.size();
+        final_wp.index = _wayPoints.size()+1;
         final_wp.latitude  = _wayPoints[0][0];
         final_wp.longitude = _wayPoints[0][1];
         final_wp.altitude  = _wayPoints[0][2];
