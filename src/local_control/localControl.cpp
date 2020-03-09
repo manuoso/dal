@@ -39,9 +39,9 @@ namespace dal{
     LocalControl::~LocalControl() {};
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool LocalControl::init(VectorPID _roll, VectorPID _pitch, VectorPID _yaw, VectorPID _z, VectorUtils _utils){
+    bool LocalControl::init(std::vector<float> _roll, std::vector<float> _pitch, std::vector<float> _yaw, std::vector<float> _z, std::vector<float> _utils){
 
-        if(!_utils.isZero(0) && !_roll.isZero(0) && !_pitch.isZero(0) && !_yaw.isZero(0) && !_z.isZero(0)){
+        if(_utils.size() > 0 && _roll.size() > 0 && _pitch.size() > 0 && _yaw.size() > 0 && _z.size() > 0){
             std::cout << "\033[33mUsing new PIDs Values \033[m" << std::endl;
 
             // kp, ki, kd, minSat, maxSat, minWind, maxWind

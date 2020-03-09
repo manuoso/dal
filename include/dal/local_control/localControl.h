@@ -29,10 +29,6 @@
 namespace dal{
     class LocalControl{
         public:
-            /// Especials Typedefs
-            typedef Eigen::Matrix<float, 7, 1> VectorPID;
-            typedef Eigen::Matrix<float, 7, 1> VectorUtils;
-
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR INITIALIZATION
 	        //---------------------------------------------------------------------------------------------------------------------
@@ -45,7 +41,7 @@ namespace dal{
 
             /// This method inits the PIDs.
             /// \return true if params are good or set without errors, false if something failed.
-            bool init(VectorPID _roll, VectorPID _pitch, VectorPID _yaw, VectorPID _z, VectorUtils _utils);
+            bool init(std::vector<float> _roll, std::vector<float> _pitch, std::vector<float> _yaw, std::vector<float> _z, std::vector<float> _utils);
 
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR UPDATE
