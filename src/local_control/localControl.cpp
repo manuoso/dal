@@ -85,6 +85,70 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR CHANGE PIDS
+    //---------------------------------------------------------------------------------------------------------------------
+    bool LocalControl::changePID(std::string _type, PID::PIDParams _params){
+        if(_type == "roll"){
+            if(_params.kp != 0){
+                pidRoll_->kp(_params.kp);
+                std::cout << "\033[33mNew Kp Value for Roll: \033[m" << _params.kp << std::endl;
+            }
+            if(_params.ki != 0){
+                pidRoll_->ki(_params.ki);
+                std::cout << "\033[33mNew Ki Value for Roll: \033[m" << _params.ki << std::endl;
+            }
+            if(_params.kd != 0){
+                pidRoll_->kd(_params.kd);
+                std::cout << "\033[33mNew Kd Value for Roll: \033[m" << _params.kd << std::endl;
+            }
+        }else if(_type == "pitch"){
+            if(_params.kp != 0){
+                pidPitch_->kp(_params.kp);
+                std::cout << "\033[33mNew Kp Value for Pitch: \033[m" << _params.kp << std::endl;
+            }
+            if(_params.ki != 0){
+                pidPitch_->ki(_params.ki);
+                std::cout << "\033[33mNew Ki Value for Pitch: \033[m" << _params.ki << std::endl;
+            }
+            if(_params.kd != 0){
+                pidPitch_->kd(_params.kd);
+                std::cout << "\033[33mNew Kd Value for Pitch: \033[m" << _params.kd << std::endl;
+            }
+        }else if(_type == "yaw"){
+            if(_params.kp != 0){
+                pidYaw_->kp(_params.kp);
+                std::cout << "\033[33mNew Kp Value for Yaw: \033[m" << _params.kp << std::endl;
+            }
+            if(_params.ki != 0){
+                pidYaw_->ki(_params.ki);
+                std::cout << "\033[33mNew Ki Value for Yaw: \033[m" << _params.ki << std::endl;
+            }
+            if(_params.kd != 0){
+                pidYaw_->kd(_params.kd);
+                std::cout << "\033[33mNew Kd Value for Yaw: \033[m" << _params.kd << std::endl;
+            }
+        }else if(_type == "z"){
+            if(_params.kp != 0){
+                pidZ_->kp(_params.kp);
+                std::cout << "\033[33mNew Kp Value for Z: \033[m" << _params.kp << std::endl;
+            }
+            if(_params.ki != 0){
+                pidZ_->ki(_params.ki);
+                std::cout << "\033[33mNew Ki Value for Z: \033[m" << _params.ki << std::endl;
+            }
+            if(_params.kd != 0){
+                pidZ_->kd(_params.kd);
+                std::cout << "\033[33mNew Kd Value for Z: \033[m" << _params.kd << std::endl;
+            }
+        }else{
+            std::cout << "\033[31mUnrecognized PID type \033[m" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
     // METHODS FOR UPDATE
     //---------------------------------------------------------------------------------------------------------------------
 
