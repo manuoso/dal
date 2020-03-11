@@ -102,7 +102,7 @@ namespace dal{
             /// This method set a new reference.
             /// \param _ref: new reference to set.
             /// \return void.
-            void reference(float _ref) { reference_ = _ref; accumErr_ = 0; lastError_ = 0; lastResult_ = 0; bouncingFactor_ = 0.1; }
+            void reference(float _ref, float _initBF = 0.1) { reference_ = _ref; accumErr_ = 0; lastError_ = 0; lastResult_ = 0; bouncingFactor_ = _initBF; }
             
             /// This method set a new kp.
             /// \param _ref: new kp to set.

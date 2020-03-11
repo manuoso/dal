@@ -157,7 +157,7 @@ namespace dal{
         
         pidPitch_->reference(_xyzYaw[0]);
         pidRoll_->reference(_xyzYaw[1]);
-        pidZ_->reference(_xyzYaw[2]);
+        pidZ_->reference(_xyzYaw[2], 1);
         pidYaw_->reference(_xyzYaw[3]);
 
         return true;
