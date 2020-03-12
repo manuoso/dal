@@ -176,10 +176,10 @@ namespace dal{
         Eigen::Vector3f rpt = accelAngleConversion(aX, aY, zPush);
         
         // Return result
-        Eigen::Vector4f result = {saturateSignal(rpt[0], -1*maxRoll_, maxRoll_),     // Output target roll.
-                                saturateSignal(rpt[1], -1*maxPitch_, maxPitch_),      // Output target pitch.
-                                saturateSignal(wYaw, -1*maxWYaw_, maxWYaw_),       // Output target w yaw.
-                                saturateSignal(rpt[2], minThrotle_, maxThrotle_)};   // Output target throtle.
+        Eigen::Vector4f result = {saturateSignal(rpt[0], -1*maxRoll_, maxRoll_),    // Output target roll.
+                                saturateSignal(rpt[1], -1*maxPitch_, maxPitch_),    // Output target pitch.
+                                saturateSignal(wYaw, -1*maxWYaw_, maxWYaw_),        // Output target w yaw.
+                                saturateSignal(rpt[2], minThrotle_, maxThrotle_)};  // Output target throtle.
 
         return result;
     }
