@@ -176,10 +176,10 @@ namespace dal{
         Eigen::Vector3f rpt = accelAngleConversion(aX, aY, zPush);
         
         // Return result
-        Eigen::Vector4f result = {saturateSignal(rpt[0], maxRoll_),     // Output target roll.
-                                saturateSignal(rpt[1], maxPitch_),      // Output target pitch.
-                                saturateSignal(wYaw  , maxWYaw_),       // Output target w yaw.
-                                saturateSignal(rpt[2], maxThrotle_)};   // Output target throtle.
+        Eigen::Vector4f result = {saturateSignal(rpt[0], -1*maxRoll_, maxRoll_),     // Output target roll.
+                                saturateSignal(rpt[1], -1*maxPitch_, maxPitch_),      // Output target pitch.
+                                saturateSignal(wYaw, -1*maxWYaw_, maxWYaw_),       // Output target w yaw.
+                                saturateSignal(rpt[2], minThrotle_, maxThrotle_)};   // Output target throtle.
 
         return result;
     }
@@ -195,21 +195,22 @@ namespace dal{
         const float g = 9.81;
         float roll = atan2(-_aY, g);
         float pitch = atan2(_aX*cos(roll), g);
-        float thrust = ((_zPush + g)*massUAV_)/(cos(rollLast_)*cos(pitchLast_)) + hoveringValue_;
+        float thrust = _zPush + hoveringValue_;
+        // float thrust = ((_zPush + g)*massUAV_)/(cos(rollLast_)*cos(pitchLast_)) + hoveringValue_;
 
-        rollLast_ = roll;
-        pitchLast_ = pitch;
+        // rollLast_ = roll;
+        // pitchLast_ = pitch;
 
         Eigen::Vector3f result = {roll, pitch, thrust}; 
         return result;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
-    float LocalControl::saturateSignal(float _signal, float _saturation){
-        if(_signal < -_saturation){
-            return -_saturation;
-        }else if(_signal > _saturation){
-            return _saturation;
+    float LocalControl::saturateSignal(float _signal, float _min, float _max){
+        if(_signal < _min){
+            return _min;
+        }else if(_signal > _max){
+            return _max;
         }else{
             return _signal;
         }

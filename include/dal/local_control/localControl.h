@@ -73,9 +73,10 @@ namespace dal{
 
             /// This method saturates the vale.
             /// \param _signal: signal to saturate.
-            /// \param _saturation: max value to saturation.
+            /// \param _min: min value to saturation.
+            /// \param _max: max value to saturation.
             /// \return values saturated.
-            float saturateSignal(float _signal, float _saturation);
+            float saturateSignal(float _signal, float _min, float _max);
 
         private:
             // Position control PIDs
