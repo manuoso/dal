@@ -81,14 +81,16 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     DAL::DAL(const HAL::Config &_config) {
         hal_ = new HAL();
-        hal_->create(_config);
+        if(hal_->create(_config)){
+            lc_ = new LocalControl();
 
-        lc_ = new LocalControl();
-
-        // Init modules
-        control_ = new ControlDJI();
-        missions_ = new MissionsDJI();
-        telemetry_ = new TelemetryDJI();
+            // Init modules
+            control_ = new ControlDJI();
+            missions_ = new MissionsDJI();
+            telemetry_ = new TelemetryDJI();
+        }else{
+            hal_ = nullptr;
+        }
     }
 
     //---------------------------------------------------------------------------------------------------------------------

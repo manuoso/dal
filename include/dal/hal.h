@@ -79,6 +79,9 @@ namespace dal{
                 /// Use logging
                 bool useLog = false;
 
+                /// Use DJI logging
+                bool useLogDJI = true;
+
                 /// Use advance sensing for DJI
                 bool useAdvancedSensing = false;
 
@@ -127,6 +130,15 @@ namespace dal{
 
             /// Close the system.
             void close();
+
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR CHECKS
+	        //---------------------------------------------------------------------------------------------------------------------
+            
+            /// This method verifies the subscription to the DJI vehicle. 
+            /// IMPORTANT! DO NOT USE CONTINUOUSLY
+            /// \return true if params are good or set without errors, false if something failed.
+            bool verify();
 
         private:
             //---------------------------------------------------------------------------------------------------------------------

@@ -71,6 +71,14 @@ namespace dal{
                         " | Initializing DJI backend - Manuoso | \n"
                         " |____________________________________| \033[m\n";
 
+        if(_config.useLogDJI){
+            // DJI::OSDK::Log::instance().enableDebugLogging();
+            DJI::OSDK::Log::instance().enableStatusLogging();
+        }else{
+            // DJI::OSDK::Log::instance().disableDebugLogging();
+            DJI::OSDK::Log::instance().disableStatusLogging();
+        }        
+        
         // Setup Vehicle
         vehicle_ = new DJI::OSDK::Vehicle(_config.device.c_str(), _config.baudrate, true, _config.useAdvancedSensing);
 
@@ -153,6 +161,23 @@ namespace dal{
         unsubscribeAllTopics();
 
         delete vehicle_;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR CHECKS
+    //---------------------------------------------------------------------------------------------------------------------
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool HAL::verify(){
+
+        DJI::OSDK::ACK::ErrorCode subscribeStatus = vehicle_->subscribe->verify(functionTimeout_);
+        if (DJI::OSDK::ACK::getError(subscribeStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
+            std::cout << "\033[31mNot verified subscription to Telemetry, exiting \033[m" << std::endl;
+            return false;
+        }
+
+        return true;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
