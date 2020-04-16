@@ -183,6 +183,12 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::position(float _x, float _y, float _z, float _yaw){
 
+        if(controlAct_){
+            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
+            return false;
+        }
+        controlAct_ = true;
+
         if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
         HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
@@ -222,11 +228,19 @@ namespace dal{
 
         HAL::vehicle_->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yaw);
 
+        controlAct_ = false;
+
         return true;
     }
     
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::velocity(float _vx, float _vy, float _vz, float _yawRate){
+        
+        if(controlAct_){
+            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
+            return false;
+        }
+        controlAct_ = true;
 
         if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
@@ -239,12 +253,20 @@ namespace dal{
 
         HAL::vehicle_->control->velocityAndYawRateCtrl(_vx, _vy, _vz, _yawRate);
         
+        controlAct_ = false;
+
         return true;
     }    
 
 
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::attitude(float _roll, float _pitch, float _yaw, float _z){
+
+        if(controlAct_){
+            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
+            return false;
+        }
+        controlAct_ = true;
 
         if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
@@ -257,11 +279,19 @@ namespace dal{
 
         HAL::vehicle_->control->attitudeAndVertPosCtrl(_roll, _pitch, _yaw, _z);
         
+        controlAct_ = false;
+
         return true;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::attitudeRate(float _rollRate, float _pitchRate, float _yawRate, float _z){
+
+        if(controlAct_){
+            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
+            return false;
+        }
+        controlAct_ = true;
 
         if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
@@ -273,6 +303,8 @@ namespace dal{
         }
 
         HAL::vehicle_->control->angularRateAndVertPosCtrl(_rollRate, _pitchRate, _yawRate, _z);
+        
+        controlAct_ = false;
         
         return true;
     }
@@ -296,6 +328,12 @@ namespace dal{
 
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::customControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP){
+
+        if(controlAct_){
+            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
+            return false;
+        }
+        controlAct_ = true;
 
         if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
         HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
@@ -398,6 +436,8 @@ namespace dal{
 
         DJI::OSDK::Control::CtrlData ctrlData(_flag, xCmd, yCmd, zCmd, yawCmd);
         HAL::vehicle_->control->flightCtrl(ctrlData);
+
+        controlAct_ = false;
 
         return true;
     }

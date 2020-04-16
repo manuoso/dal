@@ -120,6 +120,9 @@ namespace dal{
             /// \param _origin: origin position in GPS coordinates.
             void localPoseFromGps(Eigen::Vector3f& _delta, void* _target, void* _origin);
 
+        private:
+            bool controlAct_ = false;
+
     };
 }
 
