@@ -257,6 +257,35 @@ namespace dal{
         return true;
     }
 
+    bool TelemetryDJI::getRCRaw(VectorRCRaw& _data){
+        rcRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA>();
+        
+        _data[0] = rcRaw_.lb2.roll;
+        _data[1] = rcRaw_.lb2.pitch;
+        _data[2] = rcRaw_.lb2.yaw;
+        _data[3] = rcRaw_.lb2.throttle;
+        _data[4] = rcRaw_.lb2.mode;
+        _data[5] = rcRaw_.lb2.gear;
+        _data[6] = rcRaw_.lb2.camera;
+        _data[7] = rcRaw_.lb2.video;
+        _data[8] = rcRaw_.lb2.videoPause;
+        _data[9] = rcRaw_.lb2.goHome;
+        _data[10] = rcRaw_.lb2.leftWheel;
+        _data[11] = rcRaw_.lb2.rightWheelButton;
+        _data[12] = rcRaw_.lb2.rcC1;
+        _data[13] = rcRaw_.lb2.rcC2;
+        _data[14] = rcRaw_.lb2.rcD1;
+        _data[15] = rcRaw_.lb2.rcD2;
+        _data[16] = rcRaw_.lb2.rcD3;
+        _data[17] = rcRaw_.lb2.rcD4;
+        _data[18] = rcRaw_.lb2.rcD5;
+        _data[19] = rcRaw_.lb2.rcD6;
+        _data[20] = rcRaw_.lb2.rcD7;
+        _data[21] = rcRaw_.lb2.rcD8;
+
+        return true;
+    }
+
     //---------------------------------------------------------------------------------------------------------------------
     bool TelemetryDJI::getControlDevice(VectorControlDevice& _data){
 

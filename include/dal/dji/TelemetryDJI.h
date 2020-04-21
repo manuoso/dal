@@ -45,6 +45,7 @@ namespace dal{
             typedef Eigen::Matrix<float, 3, 1> VectorAngularRate;
             typedef Eigen::Matrix<float, 10, 1> VectorHardSync;
             typedef Eigen::Matrix<float, 8, 1> VectorRC;
+            typedef Eigen::Matrix<float, 21, 1> VectorRCRaw;
             typedef Eigen::Matrix<float, 3, 1> VectorCompass;
             typedef Eigen::Matrix<float, 4, 1> VectorQuaternion;
             typedef Eigen::Matrix<float, 3, 1> VectorVelocity;
@@ -135,6 +136,11 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             bool getRC(VectorRC& _data);
 
+            /// This method is the implementation of get raw remote controller stick, buttons and switch data
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool getRCRaw(VectorRCRaw& _data);
+
             /// This method is the implementation of get Control Device Info.
             /// \param _data: struct with the desired received data.
             /// \return true if params are good or set without errors, false if something failed.
@@ -168,6 +174,7 @@ namespace dal{
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode_;
             DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_BATTERY_INFO>::type                      battery_info_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA>::type      rc_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA>::type       rcRaw_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE>::type         controlDevice_;
             Eigen::Vector3f                                                                         localPoseGPS_;
 

@@ -140,6 +140,7 @@ namespace dal{
                 topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE, 50));
                 topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO, 50));
                 topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA, 50));
+                topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA, 50));
                 // topics.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE, 50));
 
                 if(extractTopics(topicsDefault)){
