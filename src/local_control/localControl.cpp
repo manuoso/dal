@@ -39,16 +39,41 @@ namespace dal{
     LocalControl::~LocalControl() {};
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool LocalControl::init(std::vector<float> _roll, std::vector<float> _pitch, std::vector<float> _yaw, std::vector<float> _z, std::vector<float> _utils){
+    bool LocalControl::init(std::vector<float> _roll, std::vector<float> _pitch, std::vector<float> _yaw, std::vector<float> _z, std::string _typeAWU, std::vector<float> _utils){
 
         if(_utils.size() > 0 && _roll.size() > 0 && _pitch.size() > 0 && _yaw.size() > 0 && _z.size() > 0){
             std::cout << "\033[33mUsing new PIDs Values \033[m" << std::endl;
 
-            // kp, ki, kd, minSat, maxSat, minWind, maxWind
-            pidRoll_        = new PID(_roll[0], _roll[1], _roll[2], _roll[3], _roll[4], _roll[5], _roll[6]);
-            pidPitch_       = new PID(_pitch[0], _pitch[1], _pitch[2], _pitch[3], _pitch[4], _pitch[5], _pitch[6]);
-            pidYaw_         = new PID(_yaw[0], _yaw[1], _yaw[2], _yaw[3], _yaw[4], _yaw[5], _yaw[6]);
-            pidZ_           = new PID(_z[0], _z[1], _z[2], _z[3], _z[4], _z[5], _z[6]);
+            // kp, ki, kd, minSat, maxSat
+            pidRoll_        = new PID(_roll[0], _roll[1], _roll[2], _roll[3], _roll[4]);
+            pidPitch_       = new PID(_pitch[0], _pitch[1], _pitch[2], _pitch[3], _pitch[4]);
+            pidYaw_         = new PID(_yaw[0], _yaw[1], _yaw[2], _yaw[3], _yaw[4]);
+            pidZ_           = new PID(_z[0], _z[1], _z[2], _z[3], _z[4]);
+
+            if(_typeAWU == "none"){
+                std::cout << "\033[33mUsing no AntiWindUp \033[m" << std::endl;
+            }else if(_typeAWU == "sat"){
+                std::cout << "\033[33mUsing Saturation AntiWindUp \033[m" << std::endl;
+                pidRoll_->setAntiWindup(dal::PID::AntiWindupMethod::Saturation, {_roll[5], _roll[6]});
+                pidPitch_->setAntiWindup(dal::PID::AntiWindupMethod::Saturation, {_pitch[5], _pitch[6]});
+                pidYaw_->setAntiWindup(dal::PID::AntiWindupMethod::Saturation, {_yaw[5], _yaw[6]});
+                pidZ_->setAntiWindup(dal::PID::AntiWindupMethod::Saturation, {_z[5], _z[6]});
+            }else if(_typeAWU == "back_cal"){
+                std::cout << "\033[33mUsing Back Calculation AntiWindUp \033[m" << std::endl;
+                pidRoll_->setAntiWindup(dal::PID::AntiWindupMethod::BackCalculation, {_roll[5]});
+                pidPitch_->setAntiWindup(dal::PID::AntiWindupMethod::BackCalculation, {_pitch[5]});
+                pidYaw_->setAntiWindup(dal::PID::AntiWindupMethod::BackCalculation, {_yaw[5]}); 
+                pidZ_->setAntiWindup(dal::PID::AntiWindupMethod::BackCalculation, {_z[5]});
+            }else if(_typeAWU == "clamp"){
+                std::cout << "\033[33mUsing Clamping AntiWindUp \033[m" << std::endl;
+                pidRoll_->setAntiWindup(dal::PID::AntiWindupMethod::Clamping, {});
+                pidPitch_->setAntiWindup(dal::PID::AntiWindupMethod::Clamping, {});
+                pidYaw_->setAntiWindup(dal::PID::AntiWindupMethod::Clamping, {});
+                pidZ_->setAntiWindup(dal::PID::AntiWindupMethod::Clamping, {});
+            }else{
+                std::cout << "\033[31mUnrecognized type of AntiWindUp \033[m" << std::endl;
+                return false;
+            }
 
             hoveringValue_  = _utils[0];
             massUAV_        = _utils[1];
@@ -62,10 +87,12 @@ namespace dal{
         }else{
             std::cout << "\033[33mUsing default PIDs Values \033[m" << std::endl;
 
-            pidRoll_        = new PID(4, 1, 2, -100, 100, -20, 20);
-            pidPitch_       = new PID(4, 1, 2, -100, 100, -20, 20);
-            pidYaw_         = new PID(0.5, 0, 0.25, -3, 3, -20, 20);
-            pidZ_           = new PID(15, 1, 10, 0, 100, -20, 20);
+            pidRoll_        = new PID(4, 1, 2, -100, 100);
+            pidPitch_       = new PID(4, 1, 2, -100, 100);
+            pidYaw_         = new PID(0.5, 0, 0.25, -3, 3);
+            pidZ_           = new PID(15, 1, 10, 0, 100);
+
+            // 666 TODO: make a default PID values with AntiWindUp 
 
             hoveringValue_  = 18;
             massUAV_        = 1.9;
@@ -153,12 +180,12 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
 
     //---------------------------------------------------------------------------------------------------------------------
-    bool LocalControl::reference(Eigen::Vector4f _xyzYaw){
+    bool LocalControl::reference(Eigen::Vector4f _xyzYaw, bool _reset){
         
-        pidPitch_->reference(_xyzYaw[0]);
-        pidRoll_->reference(_xyzYaw[1]);
-        pidZ_->reference(_xyzYaw[2], 1);
-        pidYaw_->reference(_xyzYaw[3]);
+        pidPitch_->reference(_xyzYaw[0], _reset);
+        pidRoll_->reference(_xyzYaw[1], _reset);
+        pidZ_->reference(_xyzYaw[2], _reset);
+        pidYaw_->reference(_xyzYaw[3], _reset);
 
         return true;
     }

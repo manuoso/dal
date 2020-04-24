@@ -41,7 +41,7 @@ namespace dal{
 
             /// This method inits the PIDs.
             /// \return true if params are good or set without errors, false if something failed.
-            bool init(std::vector<float> _roll, std::vector<float> _pitch, std::vector<float> _yaw, std::vector<float> _z, std::vector<float> _utils);
+            bool init(std::vector<float> _roll, std::vector<float> _pitch, std::vector<float> _yaw, std::vector<float> _z,  std::string _typeAWU, std::vector<float> _utils);
 
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR CHANGE PIDS
@@ -54,8 +54,9 @@ namespace dal{
 
             /// This method set the reference position.
             /// \param _xyzYaw: desired x y z and yaw references.
+            /// \param _reset: bool for reset or not the internal values of the PIDs.
             /// \return true if params are good or set without errors, false if something failed.
-            bool reference(Eigen::Vector4f _xyzYaw);
+            bool reference(Eigen::Vector4f _xyzYaw, bool _reset);
 
             /// This method update the PIDs and returns the target RPY and Thrust.
             /// \param _xyzYaw: x y z and yaw parameters.

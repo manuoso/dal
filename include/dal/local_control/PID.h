@@ -23,11 +23,17 @@
 #ifndef DAL_LOCALCONTROL_PID_H_
 #define DAL_LOCALCONTROL_PID_H_
 
+// System Includes
 #include <limits>
 #include <thread>
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <functional>
+#include <cmath>
+
+// External libraries
+#include <Eigen/Eigen>
 
 namespace dal{
     class PID {
@@ -37,7 +43,11 @@ namespace dal{
                 float kp = 0.0;
                 float ki = 0.0; 
                 float kd = 0.0;
+                float sat = 0.0;
+                float wind = 0.0;
             };
+
+            enum class AntiWindupMethod { None, Saturation, BackCalculation, Clamping};
 
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR INITIALIZATION
@@ -46,12 +56,13 @@ namespace dal{
             /// Constructor
             PID(float _kp, float _ki, float _kd,
                 float _minSat = std::numeric_limits<float>::min(),
-                float _maxSat = std::numeric_limits<float>::max(),
-                float _minWind = std::numeric_limits<float>::min(),
-                float _maxWind = std::numeric_limits<float>::max());
+                float _maxSat = std::numeric_limits<float>::max());
 
             /// Destructor
             ~PID();
+
+            /// This method set the Windup desired
+            void setAntiWindup(AntiWindupMethod _antiWindup, std::vector<float> _params);
             
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR UPDATE
@@ -62,6 +73,10 @@ namespace dal{
             /// \param _incT: difference between two iterations.
             /// \return error from PID.
             float update(float _val, float _incT);
+
+            /// This method update the distance function with the own created distance function.
+            /// \param _fn: distance function to set.
+            void distanceFunction(std::function<float(float,float)> _fn) { distanceFn_ = _fn; };
 
             //---------------------------------------------------------------------------------------------------------------------
             // GETTERS
@@ -99,10 +114,11 @@ namespace dal{
             // SETTERS
             //---------------------------------------------------------------------------------------------------------------------
 
-            /// This method set a new reference.
-            /// \param _ref: new reference to set.
+            /// This method set the actual reference.
+            /// \param _ref: set the actual reference.
+            /// \param _reset: reset internal variables.
             /// \return void.
-            void reference(float _ref, float _initBF = 0.1) { reference_ = _ref; accumErr_ = 0; lastError_ = 0; lastResult_ = 0; bouncingFactor_ = _initBF; }
+            void reference(float _ref, bool _reset);
             
             /// This method set a new kp.
             /// \param _ref: new kp to set.
@@ -131,6 +147,41 @@ namespace dal{
             /// \return void.
             void setWindupTerms(float _min, float _max) { windupMin_ = _min; windupMax_ = _max; }
 
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR DISTANCE
+            //---------------------------------------------------------------------------------------------------------------------
+
+            static float EuclideanDistance(float _a, float _b);
+
+        private:    
+            //---------------------------------------------------------------------------------------------------------------------
+            // ANTIWINDUP FUNCTIONS
+            //---------------------------------------------------------------------------------------------------------------------
+
+            /// This method is the implementation of None AntiWindUp update, its the default function used.
+            /// \param _val: actual value to update.
+            /// \param _incT: difference between two iterations.
+            /// \return error from PID.
+            float updateAWU_None(float _val, float _incT);
+
+            /// This method is the implementation of Saturation AntiWindUp update, its the default function used.
+            /// \param _val: actual value to update.
+            /// \param _incT: difference between two iterations.
+            /// \return error from PID.
+            float updateAWU_Saturation(float _val, float _incT);
+
+            /// This method is the implementation of Back Calculation AntiWindUp update, its the default function used.
+            /// \param _val: actual value to update.
+            /// \param _incT: difference between two iterations.
+            /// \return error from PID.
+            float updateAWU_BackCalculation(float _val, float _incT);
+
+            /// This method is the implementation of Clamping AntiWindUp update, its the default function used.
+            /// \param _val: actual value to update.
+            /// \param _incT: difference between two iterations.
+            /// \return error from PID.
+            float updateAWU_Clamping(float _val, float _incT);
+
         private:
             float reference_;
             
@@ -142,6 +193,18 @@ namespace dal{
             
             float lastResult_, lastError_, accumErr_;
             double bouncingFactor_ = 0.1;
+
+            // Params related with antiwindups
+            // Saturation
+            float minWindup_, maxWindup_;
+            // BackCalculation
+            float lastBackCalculation_ = 0;
+            float backCalculationCte_ = 1;
+            // Clamping
+            bool clampFactor_ = 1;
+
+            std::function<float(float, float)> distanceFn_ = EuclideanDistance; // default euclidean distance
+            std::function<float(float, float)> updateFn_;
 
     };
 }
