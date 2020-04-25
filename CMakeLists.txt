@@ -49,6 +49,14 @@ set(DAL_COMPILE_OPTIONS "-Wall -g -O0")
 
 #########################################
 ## Load Eigen
+find_package(pidpp REQUIRED)
+if(${pidpp_FOUND})
+	MESSAGE( STATUS "pidpp FOUND")
+	list(APPEND DAL_DEFINITIONS "DAL_USE_PIDPP")
+endif()
+
+#########################################
+## Load Eigen
 find_package(Eigen3 REQUIRED)
 if(${Eigen3_FOUND})
 	MESSAGE( STATUS "Eigen FOUND")
@@ -87,6 +95,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC "/usr/include/eigen3")
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${DJIOSDK_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${DJIOSDK_LIBRARIES})
+
+target_link_libraries(${PROJECT_NAME} PRIVATE pidpp::pidpp)
 
 #########################################
 ######			Documentation	   ######

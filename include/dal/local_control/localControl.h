@@ -24,11 +24,20 @@
 #define DAL_LOCALCONTROL_LOCALCONTROL_H_
 
 #include <dal/hal.h>
-#include <dal/local_control/PID.h>
+#include <pidpp/PID.h>
 
 namespace dal{
     class LocalControl{
         public:
+            /// Struct for Params of PID
+            struct PIDParams{
+                float kp = 0.0;
+                float ki = 0.0; 
+                float kd = 0.0;
+                float sat = 0.0;
+                float wind = 0.0;
+            };  
+            
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR INITIALIZATION
 	        //---------------------------------------------------------------------------------------------------------------------
@@ -46,7 +55,7 @@ namespace dal{
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR CHANGE PIDS
 	        //---------------------------------------------------------------------------------------------------------------------
-            bool changePID(std::string _type, PID::PIDParams _params);
+            bool changePID(std::string _type, PIDParams _params);
 
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR UPDATE
@@ -81,7 +90,7 @@ namespace dal{
 
         private:
             // Position control PIDs
-            PID *pidRoll_, *pidPitch_, *pidYaw_, *pidZ_;
+            pidpp::PID *pidRoll_, *pidPitch_, *pidYaw_, *pidZ_;
 
             float rollLast_ = 0, pitchLast_ = 0;
             float massUAV_ = 1.9;

@@ -83,7 +83,7 @@ class PAL
         }
 
         //----------------------------------------------------------------------------------------------------
-        boost::python::dict telemetry(){ 
+        boost::python::dict telGPS(){ 
             dal::TelemetryDJI::VectorGPS gps;
             if(!djiManager_->telemetry()->getGPS(gps)){
                 std::cout << "Error getting telemetry of A3" << std::endl;
@@ -104,87 +104,38 @@ class PAL
                 std::cout << "Error getting telemetry of A3" << std::endl;
             }
 
-            dal::TelemetryDJI::VectorAngularRate angularRate;
-            if(!djiManager_->telemetry()->getAngularRate(angularRate)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            dal::TelemetryDJI::VectorHardSync imu;
-            if(!djiManager_->telemetry()->getHardSync(imu)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            dal::TelemetryDJI::VectorCompass compass;
-            if(!djiManager_->telemetry()->getCompass(compass)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            dal::TelemetryDJI::VectorQuaternion quat;
-            if(!djiManager_->telemetry()->getQuaternion(quat)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            dal::TelemetryDJI::VectorVelocity vel;
-            if(!djiManager_->telemetry()->getVelocity(vel)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            std::string statusFlight;
-            if(!djiManager_->telemetry()->getStatusFlight(statusFlight)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            std::string mode;
-            if(!djiManager_->telemetry()->getDisplayMode(mode)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            int bat;
-            if(!djiManager_->telemetry()->getBatery(bat)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            dal::TelemetryDJI::VectorRC rc;
-            if(!djiManager_->telemetry()->getRC(rc)){
-                std::cout << "Error getting telemetry of A3" << std::endl;
-            }
-
-            Eigen::Vector3f localPositionGPS;
-            if(!djiManager_->telemetry()->getLocalPositionGPS(localPositionGPS)){
-                std::cout << "Error getting localPositionGPS of A3" << std::endl;
-            }
-
             boost::python::dict telem;
-            telem["Flight_Status"] = statusFlight.c_str();
-            telem["Mode"] = mode.c_str();
-            telem["Batery_Level"] = bat/1000.0;
-            
-            telem["Pitch"] = rc(0);
-            telem["Roll"] = rc(1);
-            telem["Yaw"] = rc(2);
-            telem["Throttle"] = rc(3);
-
             telem["GPS_Latitude"] = RAD_DEG(gps[0]);
             telem["GPS_Longitude"] = RAD_DEG(gps[1]);
             telem["GPS_Altitude"] = altitude;
             telem["GPS_Signal"] = gpsSignal;
 
-            telem["Velocity_X"] = vel[0];
-            telem["Velocity_Y"] = vel[1];
-            telem["Velocity_Z"] = vel[2];
+            return telem;
+        }
+        
+        //----------------------------------------------------------------------------------------------------
+        boost::python::dict telAngRate(){ 
+            dal::TelemetryDJI::VectorAngularRate angularRate;
+            if(!djiManager_->telemetry()->getAngularRate(angularRate)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
 
+            boost::python::dict telem;
             telem["AngularRate_X"] = angularRate[0];
             telem["AngularRate_Y"] = angularRate[1];
             telem["AngularRate_Z"] = angularRate[2];
 
-            telem["compass_X"] = compass[0];
-            telem["compass_Y"] = compass[1];
-            telem["compass_Z"] = compass[2];
+            return telem;
+        }
 
-            telem["LocalPoseGPS_X"] = localPositionGPS[0];
-            telem["LocalPoseGPS_Y"] = localPositionGPS[1];
-            telem["LocalPoseGPS_Z"] = localPositionGPS[2];
+        //----------------------------------------------------------------------------------------------------
+        boost::python::dict telIMU(){ 
+            dal::TelemetryDJI::VectorHardSync imu;
+            if(!djiManager_->telemetry()->getHardSync(imu)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
 
+            boost::python::dict telem;
             // 666 TODO: CHECK IMU ORI INFO!!
             telem["IMU_angular_velocity_x"] = imu[0];
             telem["IMU_angular_velocity_y"] = imu[1];
@@ -199,16 +150,112 @@ class PAL
             telem["IMU_orientation_y"] = imu[8];
             telem["IMU_orientation_z"] = imu[9];
 
+            return telem;
+        }
+
+        //----------------------------------------------------------------------------------------------------
+        boost::python::dict telCompass(){ 
+            dal::TelemetryDJI::VectorCompass compass;
+            if(!djiManager_->telemetry()->getCompass(compass)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            boost::python::dict telem;
+            telem["compass_X"] = compass[0];
+            telem["compass_Y"] = compass[1];
+            telem["compass_Z"] = compass[2];
+            
+            return telem;
+        }
+
+        //----------------------------------------------------------------------------------------------------
+        boost::python::dict telQuat(){ 
+            dal::TelemetryDJI::VectorQuaternion quat;
+            if(!djiManager_->telemetry()->getQuaternion(quat)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            boost::python::dict telem;
             // 666 TODO: CHECK CONVERSIONS!!
             telem["quaternion_w"] = quat[0];
             telem["quaternion_x"] = quat[1];
             telem["quaternion_y"] = quat[2];
             telem["quaternion_z"] = quat[3];
-
+            
             return telem;
-
         }
 
+        //----------------------------------------------------------------------------------------------------
+        boost::python::dict telVel(){ 
+            dal::TelemetryDJI::VectorVelocity vel;
+            if(!djiManager_->telemetry()->getVelocity(vel)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            boost::python::dict telem;
+            telem["Velocity_X"] = vel[0];
+            telem["Velocity_Y"] = vel[1];
+            telem["Velocity_Z"] = vel[2];
+
+            return telem;
+        }
+
+        //----------------------------------------------------------------------------------------------------
+        boost::python::dict telStatus(){ 
+            std::string statusFlight;
+            if(!djiManager_->telemetry()->getStatusFlight(statusFlight)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            std::string mode;
+            if(!djiManager_->telemetry()->getDisplayMode(mode)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            int bat;
+            if(!djiManager_->telemetry()->getBatery(bat)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+            
+            boost::python::dict telem;
+            telem["Flight_Status"] = statusFlight.c_str();
+            telem["Mode"] = mode.c_str();
+            telem["Batery_Level"] = bat/1000.0;
+
+            return telem;
+        }
+
+        //----------------------------------------------------------------------------------------------------
+        boost::python::dict telRC(){ 
+            dal::TelemetryDJI::VectorRC rc;
+            if(!djiManager_->telemetry()->getRC(rc)){
+                std::cout << "Error getting telemetry of A3" << std::endl;
+            }
+
+            boost::python::dict telem;
+            telem["Pitch"] = rc(0);
+            telem["Roll"] = rc(1);
+            telem["Yaw"] = rc(2);
+            telem["Throttle"] = rc(3);
+
+            return telem;
+        }
+
+        //----------------------------------------------------------------------------------------------------
+        boost::python::dict telLocalGPS(){ 
+            Eigen::Vector3f localPositionGPS;
+            if(!djiManager_->telemetry()->getLocalPositionGPS(localPositionGPS)){
+                std::cout << "Error getting localPositionGPS of A3" << std::endl;
+            }
+
+            boost::python::dict telem;
+            telem["LocalPoseGPS_X"] = localPositionGPS[0];
+            telem["LocalPoseGPS_Y"] = localPositionGPS[1];
+            telem["LocalPoseGPS_Z"] = localPositionGPS[2];
+            
+            return telem;
+        }
+            
     private:
         //----------------------------------------------------------------------------------------------------
         void configure_DAL(){
@@ -252,7 +299,15 @@ BOOST_PYTHON_MODULE(dalpy)
         .def("attitude", &PAL::attitude)
         .def("attitudeRate", &PAL::attitudeRate)
         .def("rpyThrust", &PAL::rpyThrust)        
-        .def("telemetry", &PAL::telemetry)
+        .def("telGPS", &PAL::telGPS)
+        .def("telAngRate", &PAL::telAngRate)
+        .def("telIMU", &PAL::telIMU)
+        .def("telCompass", &PAL::telCompass)
+        .def("telQuat", &PAL::telQuat)
+        .def("telVel", &PAL::telVel)
+        .def("telStatus", &PAL::telStatus)
+        .def("telRC", &PAL::telRC)
+        .def("telLocalGPS", &PAL::telLocalGPS)
 
     ;
 };
