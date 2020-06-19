@@ -61,6 +61,34 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
+    bool ControlDJI::arm(){
+        std::cout << "\033[32mArming motors \033[m" << std::endl;
+
+        DJI::OSDK::ACK::ErrorCode armStatus = HAL::vehicle_->control->armMotors(HAL::functionTimeout_);
+        if(DJI::OSDK::ACK::getError(armStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(armStatus, __func__);
+            std::cout << "\033[31mError at arm motors, exiting \033[m" << std::endl;
+            return false;
+        }
+        
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool ControlDJI::disarm(){
+        std::cout << "\033[32mDisarming motors \033[m" << std::endl;
+
+        DJI::OSDK::ACK::ErrorCode disarmStatus = HAL::vehicle_->control->disArmMotors(HAL::functionTimeout_);
+        if(DJI::OSDK::ACK::getError(disarmStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(disarmStatus, __func__);
+            std::cout << "\033[31mError at disarm motors, exiting \033[m" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::takeOff(const float _height){
         
         std::cout << "\033[32mStart takeoff \033[m" << std::endl;

@@ -60,6 +60,14 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             bool emergencyBrake();
 
+            /// This method is the implementation of arm motors using DJI SDK, this will block the main thread.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool arm();
+
+            /// This method is the implementation of disarm motors using DJI SDK, this will block the main thread.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool disarm();
+
             /// This method is the implementation of takeoff using DJI SDK, this will block the main thread.
             /// \param _height: desired height to takeoff.
             /// \return true if params are good or set without errors, false if something failed.
