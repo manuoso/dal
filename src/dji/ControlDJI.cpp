@@ -54,6 +54,18 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
+    bool ControlDJI::releaseAuthority(){
+        DJI::OSDK::ACK::ErrorCode ctrlStatus = HAL::vehicle_->releaseCtrlAuthority(HAL::functionTimeout_);
+        if (DJI::OSDK::ACK::getError(ctrlStatus) != DJI::OSDK::ACK::SUCCESS){
+            DJI::OSDK::ACK::getErrorCodeMessage(ctrlStatus, __func__);
+            std::cout << "\033[31m Cannot release DJI authority \033[m" << std::endl;
+            return false;
+        }
+        std::cout << "\033[32m DJI Authority released. Going back to manual flight \033[m" << std::endl;
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::emergencyBrake(){
 
         HAL::vehicle_->control->emergencyBrake();

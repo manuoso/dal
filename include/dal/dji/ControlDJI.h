@@ -56,6 +56,10 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             bool recoverFromManual();
 
+            /// This method is the implementation of releaseAuthority.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool releaseAuthority();
+
             /// This method is the implementation of emergency brake.
             /// \return true if params are good or set without errors, false if something failed.
             bool emergencyBrake();
