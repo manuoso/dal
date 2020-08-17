@@ -41,6 +41,7 @@ namespace dal{
             /// Especials Typedefs
             typedef Eigen::Matrix<float, 6, 1> VectorPositionVO;
             typedef Eigen::Matrix<float, 2, 1> VectorGPS;
+            typedef Eigen::Matrix<float, 3, 1> VectorGPSRaw;
             typedef Eigen::Matrix<float, 8, 1> VectorGPSDetail;
             typedef Eigen::Matrix<float, 3, 1> VectorAngularRate;
             typedef Eigen::Matrix<float, 10, 1> VectorHardSync;
@@ -75,6 +76,11 @@ namespace dal{
             /// \param _data: struct with the desired received data.
             /// \return true if params are good or set without errors, false if something failed.
             bool getGPS(VectorGPS& _data);
+
+            /// This method is the implementation of get GPS raw data.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool getGPSRaw(VectorGPSRaw& _data);
 
             /// This method is the implementation of get GPS Detail.
             /// \param _data: struct with the desired received data.
@@ -162,6 +168,7 @@ namespace dal{
             // Data for internal telemetry
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>::type            position_vo_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type              latLon_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_POSITION>::type           rawLatLonAlt_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS>::type            GPSDetail_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_SIGNAL_LEVEL>::type       GPSSignal_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude_;

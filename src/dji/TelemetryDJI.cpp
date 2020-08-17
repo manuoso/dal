@@ -67,6 +67,18 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
+    bool TelemetryDJI::getGPSRaw(VectorGPSRaw& _data){
+
+        rawLatLonAlt_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_POSITION>();
+
+        _data[0] = rawLatLonAlt_.x;
+        _data[1] = rawLatLonAlt_.y;
+        _data[2] = rawLatLonAlt_.z;
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
     bool TelemetryDJI::getGPSDetail(VectorGPSDetail& _data){
 
         GPSDetail_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS>();
