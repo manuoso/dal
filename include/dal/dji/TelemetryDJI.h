@@ -41,7 +41,7 @@ namespace dal{
             /// Especials Typedefs
             typedef Eigen::Matrix<float, 6, 1> VectorPositionVO;
             typedef Eigen::Matrix<float, 2, 1> VectorGPS;
-            typedef Eigen::Matrix<float, 7, 1> VectorGPSDetail;
+            typedef Eigen::Matrix<float, 8, 1> VectorGPSDetail;
             typedef Eigen::Matrix<float, 3, 1> VectorAngularRate;
             typedef Eigen::Matrix<float, 10, 1> VectorHardSync;
             typedef Eigen::Matrix<float, 8, 1> VectorRC;
