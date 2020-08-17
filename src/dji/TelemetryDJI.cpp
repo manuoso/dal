@@ -180,7 +180,7 @@ namespace dal{
         _data[1] = velocity_.data.y; 
         _data[2] = velocity_.data.z;
 
-        return true;
+        return velocity_.info.health;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
