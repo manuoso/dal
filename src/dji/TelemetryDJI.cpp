@@ -78,6 +78,7 @@ namespace dal{
         _data[4] = GPSDetail_.usedGPS;
         _data[5] = GPSDetail_.usedGLN; 
         _data[6] = GPSDetail_.NSV;
+        _data[7] = GPSDetail_.pdop;
 
         return true;
     }
