@@ -61,7 +61,7 @@ namespace dal{
             std::cout << "\033[31mError at init waypoint GPS, exiting \033[m" << std::endl;
             return false;
         }
-
+        
         // Get actual Lat and Lon
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type gps = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
 
@@ -93,6 +93,8 @@ namespace dal{
 
         // Upload Waypoints
         uploadWaypoints(generatedWaypts);
+
+        HAL::vehicle_->missionManager->printInfo();
 
         DJI::OSDK::ACK::ErrorCode startAck = HAL::vehicle_->missionManager->wpMission->start(HAL::functionTimeout_);
         if (DJI::OSDK::ACK::getError(startAck)){
@@ -133,7 +135,6 @@ namespace dal{
                 return false;
             }
 
-            HAL::vehicle_->missionManager->printInfo();
             std::cout << "\033[32mInitializing Waypoint Mission... \033[m" << std::endl;
 
             // Waypoint Mission: Create Waypoints
@@ -144,6 +145,8 @@ namespace dal{
             uploadWaypoints(generatedWaypts);
             std::cout << "\033[32mUploading Waypoints... \033[m" << std::endl;
 
+            HAL::vehicle_->missionManager->printInfo();
+
         }else if(_config.missionType == "hotpoint"){
 
             // HOTPOINT MISSION
@@ -152,11 +155,11 @@ namespace dal{
             // Hotpoint Mission Initialize
             HAL::vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::HOTPOINT, HAL::functionTimeout_, NULL);
 
-            HAL::vehicle_->missionManager->printInfo();
-
             HAL::vehicle_->missionManager->hpMission->setHotPoint(_wayPoints[0][1], _wayPoints[0][0], _wayPoints[0][2]);
 
             HAL::vehicle_->missionManager->hpMission->setRadius(_config.radiusHP);
+
+            HAL::vehicle_->missionManager->printInfo();
 
         }else{
             std::cout << "\033[31mUnrecognised mission type, exiting \033[m" << std::endl;
