@@ -44,6 +44,8 @@ namespace dal{
             typedef Eigen::Matrix<float, 3, 1> VectorGPSRaw;
             typedef Eigen::Matrix<float, 8, 1> VectorGPSDetail;
             typedef Eigen::Matrix<float, 3, 1> VectorAngularRate;
+            typedef Eigen::Matrix<float, 3, 1> VectorAngularRateRaw; 
+            typedef Eigen::Matrix<float, 3, 1> VectorAccelerationRaw;      
             typedef Eigen::Matrix<float, 10, 1> VectorHardSync;
             typedef Eigen::Matrix<float, 8, 1> VectorRC;
             typedef Eigen::Matrix<float, 21, 1> VectorRCRaw;
@@ -101,6 +103,16 @@ namespace dal{
             /// \param _data: struct with the desired received data.
             /// \return true if params are good or set without errors, false if something failed.
             bool getAngularRate(VectorAngularRate& _data);
+
+            /// This method is the implementation of get Angular Rate raw from IMU.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool getAngularRateRaw(VectorAngularRateRaw& _data);
+
+            /// This method is the implementation of get Acceleration raw from IMU.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool getAccelerationRaw(VectorAccelerationRaw& _data);
 
             /// This method is the implementation of get Hard Sync.
             /// \param _data: struct with the desired received data.
@@ -173,6 +185,8 @@ namespace dal{
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_SIGNAL_LEVEL>::type       GPSSignal_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>::type      altitude_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_FUSIONED>::type  angularRate_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_RAW>::type       angularRateRaw_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW>::type       accelerationRaw_;
             DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_HARD_SYNC>::type                         hardSync_FC_;
             DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_COMPASS>::type                           compass_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_QUATERNION>::type             quaternion_;

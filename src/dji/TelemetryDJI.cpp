@@ -128,6 +128,30 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
+    bool TelemetryDJI::getAngularRateRaw(VectorAngularRateRaw& _data){
+        
+        angularRateRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_RAW>();
+
+        _data[0] = angularRateRaw_.x;
+        _data[1] = angularRateRaw_.y;
+        _data[2] = angularRateRaw_.z;
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool TelemetryDJI::getAccelerationRaw(VectorAccelerationRaw& _data){
+        
+        accelerationRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW>();
+
+        _data[0] = accelerationRaw_.x;
+        _data[1] = accelerationRaw_.y;
+        _data[2] = accelerationRaw_.z;
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
     bool TelemetryDJI::getHardSync(VectorHardSync& _data){
         
         hardSync_FC_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_HARD_SYNC>();
