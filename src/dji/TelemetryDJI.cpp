@@ -67,6 +67,18 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
+    bool TelemetryDJI::getGPSRaw(VectorGPSRaw& _data){
+
+        rawLatLonAlt_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_POSITION>();
+
+        _data[0] = rawLatLonAlt_.x;
+        _data[1] = rawLatLonAlt_.y;
+        _data[2] = rawLatLonAlt_.z;
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
     bool TelemetryDJI::getGPSDetail(VectorGPSDetail& _data){
 
         GPSDetail_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS>();
@@ -78,6 +90,7 @@ namespace dal{
         _data[4] = GPSDetail_.usedGPS;
         _data[5] = GPSDetail_.usedGLN; 
         _data[6] = GPSDetail_.NSV;
+        _data[7] = GPSDetail_.pdop;
 
         return true;
     }
@@ -110,6 +123,30 @@ namespace dal{
         _data[0] = angularRate_.x;
         _data[1] = angularRate_.y;
         _data[2] = angularRate_.z;
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool TelemetryDJI::getAngularRateRaw(VectorAngularRateRaw& _data){
+        
+        angularRateRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_RAW>();
+
+        _data[0] = angularRateRaw_.x;
+        _data[1] = angularRateRaw_.y;
+        _data[2] = angularRateRaw_.z;
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    bool TelemetryDJI::getAccelerationRaw(VectorAccelerationRaw& _data){
+        
+        accelerationRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW>();
+
+        _data[0] = accelerationRaw_.x;
+        _data[1] = accelerationRaw_.y;
+        _data[2] = accelerationRaw_.z;
 
         return true;
     }
@@ -167,7 +204,7 @@ namespace dal{
         _data[1] = velocity_.data.y; 
         _data[2] = velocity_.data.z;
 
-        return true;
+        return velocity_.info.health;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
