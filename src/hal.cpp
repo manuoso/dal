@@ -77,7 +77,9 @@ namespace dal{
         }else{
             // DJI::OSDK::Log::instance().disableDebugLogging();
             DJI::OSDK::Log::instance().disableStatusLogging();
-        }        
+        }     
+
+        isM600_ = _config.isM600;
         
         // Setup Vehicle
         vehicle_ = new DJI::OSDK::Vehicle(_config.device.c_str(), _config.baudrate, true, _config.useAdvancedSensing);
@@ -139,8 +141,11 @@ namespace dal{
                 topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT, 50));
                 topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE, 50));
                 topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO, 50));
-                topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA, 50));
-                topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA, 50));
+                topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_RC, 50));
+                if(isM600_){
+                    topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA, 50));    // NOT VALID FOR M600
+                    topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA, 50));     // NOT VALID FOR M600
+                }
                 topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_RAW, 200));
                 topicsDefault.insert(std::make_pair(DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW, 200));
 
@@ -275,7 +280,7 @@ namespace dal{
 
         bool pkgStatus = vehicle_->subscribe->initPackageFromTopicList(pkgIndex_, numTopic, topicList, enableTimestamp, _freq);
         if (!pkgStatus){
-            std::cout << "\033[31mNot init package 0 from topic list, exiting \033[m" << std::endl;
+            std::cout << "\033[31mNot init package \033[m" << pkgIndex_ << "\033[31m from topic list, exiting \033[m" << std::endl;
             return false;
         }
 
@@ -284,7 +289,7 @@ namespace dal{
             DJI::OSDK::ACK::getErrorCodeMessage(subscribeStatus, __func__);
             // Cleanup before return
             unsubscribeAllTopics(); 
-            std::cout << "\033[31mStart package 0 error, exiting \033[m" << std::endl;
+            std::cout << "\033[31mStart package \033[m" << pkgIndex_ << "\033[31m error, exiting \033[m" << std::endl;
             return false;
         }
 
