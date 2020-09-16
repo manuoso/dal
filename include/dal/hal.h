@@ -46,6 +46,7 @@
 #include <djiosdk/dji_telemetry.hpp>
 
 // Modules
+#include <dal/dji/IOFunctionsDJI.h>
 #include <dal/dji/ControlDJI.h>
 #include <dal/dji/MissionsDJI.h>
 #include <dal/dji/TelemetryDJI.h>

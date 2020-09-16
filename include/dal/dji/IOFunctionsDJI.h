@@ -20,66 +20,70 @@
 //---------------------------------------------------------------------------------------------------------------------
 
 
-#ifndef DAL_H_
-#define DAL_H_
+#ifndef DAL_DJI_IOFUNCTIONSDJI_H_
+#define DAL_DJI_IOFUNCTIONSDJI_H_
 
+// Modules
 #include <dal/hal.h>
 
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+//
+// ¡¡¡ IMPORTANT !!! 
+//
+// This backend is developed for the DJI A3 controller. 
+// So the implemented functions may vary for another model like the M210 and M600.
+//
+// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 namespace dal{
-    class DAL {
+    class IOFunctionsDJI{
         public:
             //---------------------------------------------------------------------------------------------------------------------
             // METHODS FOR INITIALIZATION
 	        //---------------------------------------------------------------------------------------------------------------------
-            
-            /// Create the system. 
-            static DAL * create(const HAL::Config &_config);
 
-            /// Close the system.
-            static void close();
-
-            //---------------------------------------------------------------------------------------------------------------------
-            // MODULES
-	        //---------------------------------------------------------------------------------------------------------------------
-
-            IOFunctionsDJI * io_functions(){return io_;}
-
-            ControlDJI * control(){return control_;}
-
-            MissionsDJI * missions(){return missions_;}
-
-            TelemetryDJI * telemetry(){return telemetry_;}
-
-            LocalControl * local_control(){return lc_;}
-
-            //---------------------------------------------------------------------------------------------------------------------
-            // UTILS
-	        //---------------------------------------------------------------------------------------------------------------------
-
-            /// 666 TODO: NEED TO CHECK!!!
-            /// This method convert a quaternion to Euler Angle.
-            /// \param _quat: quaternion to convert.
-            /// \return the converted result.
-            Eigen::Vector3f toEulerAngle(Eigen::Vector4f _quat);
-
-        private:
-            /// Constructor with given configuration for backend
-            DAL(const HAL::Config &_config);
+            /// Constructor
+            IOFunctionsDJI();
 
             /// Destructor
-            virtual ~DAL(); 
+            ~IOFunctionsDJI();
 
-        private:
-		    static DAL *dal_;
+            /// This method configure the function channels used in GPIO using DJI SDK.
+            /// \param _height: .
+            /// \return true if params are good or set without errors, false if something failed.
+            bool configureChannels(std::map<DJI::OSDK::MFIO::CHANNEL, DJI::OSDK::MFIO::MODE> _channels);
 
-            HAL *hal_ = nullptr;
+            /// Map config can be
+            /// CHANNELS:
+            // CHANNEL_0    |   SDK1
+            // CHANNEL_1    |   SDK2    
+            // CHANNEL_2    |   SDK3
+            // CHANNEL_3    |   SDK4
+            // CHANNEL_4    |   SDK5
+            // CHANNEL_5    |   SDK6
+            // CHANNEL_6    |   SDK7
+            // CHANNEL_7    |   SDK8
 
-            IOFunctionsDJI *io_ = nullptr;
-            ControlDJI *control_ = nullptr;
-            MissionsDJI *missions_ = nullptr;
-            TelemetryDJI *telemetry_ = nullptr;
+            /// MODE:
+            // MODE_PWM_OUT 
+            // MODE_PWM_IN  
+            // MODE_GPIO_OUT
+            // MODE_GPIO_IN 
+            // MODE_ADC    
 
-            LocalControl *lc_ = nullptr;
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR OUTPUT
+	        //---------------------------------------------------------------------------------------------------------------------
+            
+            /// This method is the implementation of set PWM using DJI MFIO SDK.
+            /// \param _channel: desired channel.
+            /// \param _value: desired value.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool setPWM(DJI::OSDK::MFIO::CHANNEL _channel, uint32_t _value);
+
+            //---------------------------------------------------------------------------------------------------------------------
+            // METHODS FOR INPUT
+	        //---------------------------------------------------------------------------------------------------------------------
 
     };
 }
