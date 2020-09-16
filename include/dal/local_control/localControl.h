@@ -31,9 +31,9 @@ namespace dal{
         public:
             /// Struct for Params of PID
             struct PIDParams{
-                float kp = 0.0;
-                float ki = 0.0; 
-                float kd = 0.0;
+                float kp = -1.0;
+                float ki = -1.0; 
+                float kd = -1.0;
                 float sat = 0.0;
                 float wind = 0.0;
             };  
