@@ -60,6 +60,10 @@ namespace dal{
             /// \return the converted result.
             Eigen::Vector3f toEulerAngle(Eigen::Vector4f _quat);
 
+            /// This method tells if DAL has been correctly init (by watching if HAL has been init)
+            /// \return true if DAL is correctly init
+            bool isInit();
+
         private:
             /// Constructor with given configuration for backend
             DAL(const HAL::Config &_config);
