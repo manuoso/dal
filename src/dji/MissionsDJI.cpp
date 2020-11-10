@@ -337,9 +337,6 @@ namespace dal{
         // Get actual Lat and Lon
         DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type gps = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
 
-        float altitude = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
-        float altitudeWP = altitude - HAL::originAltitude_;
-
         // Let's create a vector to store our waypoints in
         std::vector<DJI::OSDK::WayPointSettings> wp_list;
 
@@ -351,7 +348,7 @@ namespace dal{
         init_wp.index     = 0;
         init_wp.latitude  = gps.latitude;
         init_wp.longitude = gps.longitude;
-        init_wp.altitude  = altitudeWP;
+        init_wp.altitude  = _wayPoints[0][2];
 
         wp_list.push_back(init_wp);   
 
@@ -375,8 +372,8 @@ namespace dal{
 
         final_wp.turnMode = _config.turnModeWP;
         final_wp.index = _wayPoints.size()+1;
-        final_wp.latitude  = _wayPoints[0][0];
-        final_wp.longitude = _wayPoints[0][1];
+        final_wp.latitude  = gps.latitude;
+        final_wp.longitude = gps.longitude;
         final_wp.altitude  = _wayPoints[0][2];
 
         wp_list.push_back(final_wp);        
