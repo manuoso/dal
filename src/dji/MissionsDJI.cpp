@@ -366,18 +366,6 @@ namespace dal{
 
         }
 
-        // Come back home
-        DJI::OSDK::WayPointSettings final_wp;
-        setWaypointDefaults(&final_wp);
-
-        final_wp.turnMode = _config.turnModeWP;
-        final_wp.index = _wayPoints.size()+1;
-        final_wp.latitude  = gps.latitude;
-        final_wp.longitude = gps.longitude;
-        final_wp.altitude  = _wayPoints[0][2];
-
-        wp_list.push_back(final_wp);        
-
         return wp_list;
     }
 
