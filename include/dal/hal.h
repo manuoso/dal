@@ -46,6 +46,7 @@
 #include <djiosdk/dji_telemetry.hpp>
 
 // Modules
+#include <dal/dji/IOFunctionsDJI.h>
 #include <dal/dji/ControlDJI.h>
 #include <dal/dji/MissionsDJI.h>
 #include <dal/dji/TelemetryDJI.h>
@@ -91,6 +92,9 @@ namespace dal{
                 /// Baudrate to connect to the controller
                 unsigned int baudrate;
 
+                /// Is DJI Matrice 600
+                bool isM600 = false;
+
                 /// Map that contains Topics of Telemetry to use
                 std::map<DJI::OSDK::Telemetry::TopicName, int> topics;
                 // TopicName element of topics must be equal to:
@@ -107,7 +111,11 @@ namespace dal{
                 // DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT
                 // DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE
                 // DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO
+                // DJI::OSDK::Telemetry::TOPIC_RC
                 // DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA
+                // DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA
+                // DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_RAW
+                // DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW
                 // DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE
 
             };
@@ -177,6 +185,7 @@ namespace dal{
 
         private:
             int pkgIndex_ = 0;
+            bool isM600_ = false;
 
     };
 

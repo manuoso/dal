@@ -19,99 +19,58 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
-
-#include <dal/dal.h>
+#include <dal/dji/IOFunctionsDJI.h>
 
 namespace dal{
-    DAL *DAL::dal_ = nullptr;
-
     //---------------------------------------------------------------------------------------------------------------------
     // PUBLIC FUNCTIONS
     //---------------------------------------------------------------------------------------------------------------------
-
+    
     //---------------------------------------------------------------------------------------------------------------------
     // METHODS FOR INITIALIZATION
     //---------------------------------------------------------------------------------------------------------------------
 
-	//---------------------------------------------------------------------------------------------------------------------
-	DAL * DAL::create(const HAL::Config &_config) {
-		if(!dal_){
-			dal_ = new DAL(_config);
-        }else{
-            std::cout << "\033[31mSomeone tried to reinitialize the DAL system \033[m" << std::endl;
-        }
-        return dal_;
-	}
-
-	//---------------------------------------------------------------------------------------------------------------------
-	void DAL::close(){
-		delete dal_;
-	}
+    //---------------------------------------------------------------------------------------------------------------------
+    IOFunctionsDJI::IOFunctionsDJI(){}
 
     //---------------------------------------------------------------------------------------------------------------------
-    // UTILS
+    IOFunctionsDJI::~IOFunctionsDJI(){}
+
+
     //---------------------------------------------------------------------------------------------------------------------
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    Eigen::Vector3f DAL::toEulerAngle(Eigen::Vector4f _quat){
-    
-        double q2sqr = _quat(2) * _quat(2);
-    
-    	double t0 = -2.0 * (q2sqr + _quat(3) * _quat(3)) + 1.0;
-    	double t1 = +2.0 * (_quat(1) * _quat(2) + _quat(0) * _quat(3));
-    	double t2 = -2.0 * (_quat(1) * _quat(3) - _quat(0) * _quat(2));
-		double t3 = +2.0 * (_quat(2) * _quat(3) + _quat(0) * _quat(1));
-		double t4 = -2.0 * (_quat(1) * _quat(1) + q2sqr) + 1.0;
+    bool IOFunctionsDJI::configureChannels(std::map<DJI::OSDK::MFIO::CHANNEL, DJI::OSDK::MFIO::MODE> _channels){
+        // PREDEFINED CONFIG. TODO 666: PLEASE CHANGE THIS IN FUTURE
+        // Parameters: initialValue - duty cycle
+        //             freq         - PWM freq
+        uint32_t initOnTimeUs = 1520;   // us
+        uint16_t pwmFreq      = 50;     // Hz
 
-		t2 = (t2 > 1.0) ? 1.0 : t2;
-		t2 = (t2 < -1.0) ? -1.0 : t2;
+        std::cout << "\033[32mConfiguring channels \033[m" << std::endl;
+        for(const auto &ch: _channels){
+            HAL::vehicle_->mfio->config(ch.second, ch.first, initOnTimeUs, pwmFreq, HAL::functionTimeout_);
+        }    
 
-		Eigen::Vector3f result;
-		result(0) = asin(t2);
-		result(1) = atan2(t3, t4);
-		result(2) = atan2(t1, t0);
-
-		return result;
-    }
-
-    bool DAL::isInit(){
-        if (hal_ == nullptr){
-            return false;
-        }
-        
         return true;
     }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR OUTPUT
+    //---------------------------------------------------------------------------------------------------------------------
+    
+    //---------------------------------------------------------------------------------------------------------------------
+    bool IOFunctionsDJI::setPWM(DJI::OSDK::MFIO::CHANNEL _channel, uint32_t _value){
+        std::cout << "\033[32mSet Value PWM \033[m" << std::endl;
+        HAL::vehicle_->mfio->setValue(_channel, _value, HAL::functionTimeout_);
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
+    // METHODS FOR INPUT
+    //---------------------------------------------------------------------------------------------------------------------
 
     //---------------------------------------------------------------------------------------------------------------------
     // PRIVATE FUNCTIONS
     //---------------------------------------------------------------------------------------------------------------------
 
-    //---------------------------------------------------------------------------------------------------------------------
-    DAL::DAL(const HAL::Config &_config) {
-        hal_ = new HAL();
-        if(hal_->create(_config)){
-            lc_ = new LocalControl();
-
-            // Init modules
-            io_ = new IOFunctionsDJI();
-            control_ = new ControlDJI();
-            missions_ = new MissionsDJI();
-            telemetry_ = new TelemetryDJI();
-        }else{
-            hal_ = nullptr;
-        }
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    DAL::~DAL() {
-        hal_->close();
-
-        delete io_;
-        delete control_;
-        delete missions_;
-        delete telemetry_;
-        delete lc_;
-    }
-
 }
-
