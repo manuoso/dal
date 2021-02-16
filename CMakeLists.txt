@@ -45,7 +45,7 @@ endif()
 # set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules/" ${CMAKE_MODULE_PATH})
 
 list(APPEND DAL_DEFINITIONS "")
-set(DAL_COMPILE_OPTIONS "-Wall -g -O0")
+set(DAL_COMPILE_OPTIONS "-Wall")
 
 #########################################
 ## Load Eigen
