@@ -50,8 +50,6 @@ namespace dal{
 
             TelemetryDJI * telemetry(){return telemetry_;}
 
-            LocalControl * local_control(){return lc_;}
-
             //---------------------------------------------------------------------------------------------------------------------
             // UTILS
 	        //---------------------------------------------------------------------------------------------------------------------
@@ -82,9 +80,7 @@ namespace dal{
             ControlDJI *control_ = nullptr;
             MissionsDJI *missions_ = nullptr;
             TelemetryDJI *telemetry_ = nullptr;
-
-            LocalControl *lc_ = nullptr;
-
+            
     };
 }
 

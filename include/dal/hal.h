@@ -36,6 +36,8 @@
 #include <map>
 #include <thread>
 #include <cassert>
+#include <atomic>
+#include <condition_variable>
 
 // External libraries
 #include <Eigen/Eigen>
@@ -50,7 +52,6 @@
 #include <dal/dji/ControlDJI.h>
 #include <dal/dji/MissionsDJI.h>
 #include <dal/dji/TelemetryDJI.h>
-#include <dal/local_control/localControl.h>
 
 #define C_EARTH (double)6378137.0
 #define C_PI (double)3.141592653589793
@@ -184,8 +185,8 @@ namespace dal{
             static DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originGPS_;
 
         private:
-            int pkgIndex_ = 0;
-            bool isM600_ = false;
+            std::atomic<int> pkgIndex_;
+            std::atomic<bool> isM600_;
 
     };
 

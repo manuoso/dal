@@ -117,7 +117,7 @@ namespace dal{
             void localPoseFromGps(Eigen::Vector3f& _delta, void* _target, void* _origin);
 
         private:
-            bool controlAct_ = false;
+            std::atomic<bool> controlAct_;
 
     };
 }

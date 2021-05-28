@@ -45,7 +45,11 @@ namespace dal{
 
 	//---------------------------------------------------------------------------------------------------------------------
 	void DAL::close(){
-		delete dal_;
+        if (dal_ != nullptr)
+        {
+		    delete dal_;
+            dal_ = nullptr;
+        }
 	}
 
     //---------------------------------------------------------------------------------------------------------------------
@@ -90,8 +94,6 @@ namespace dal{
     DAL::DAL(const HAL::Config &_config) {
         hal_ = new HAL();
         if(hal_->create(_config)){
-            lc_ = new LocalControl();
-
             // Init modules
             io_ = new IOFunctionsDJI();
             control_ = new ControlDJI();
@@ -110,7 +112,6 @@ namespace dal{
         delete control_;
         delete missions_;
         delete telemetry_;
-        delete lc_;
     }
 
 }

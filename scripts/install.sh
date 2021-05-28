@@ -56,7 +56,9 @@ fi
 ###################################################################
 install_git_repo "Onboard-SDK" "https://github.com/dji-sdk/Onboard-SDK" "3.9"
 
-###################################################################
-###########				INSTALL rapidjson			    ###########
-###################################################################
-install_git_repo "rapidjson" "https://github.com/Tencent/rapidjson"
+cd ~/.dal/
+mkdir build -p
+cd build 
+cmake ..
+make -j$(nproc)
+sudo make install 
