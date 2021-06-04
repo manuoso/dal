@@ -88,7 +88,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC "/usr/include/eigen3")
 target_include_directories(${PROJECT_NAME} PUBLIC ${DJIOSDK_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} LINK_PUBLIC ${DJIOSDK_LIBRARIES})
 
-target_link_libraries(${PROJECT_NAME} PRIVATE pidpp::pidpp)
 
 #########################################
 ######			Documentation	   ######
