@@ -47,6 +47,7 @@ namespace dal{
             typedef Eigen::Matrix<float, 3, 1> VectorAngularRateRaw; 
             typedef Eigen::Matrix<float, 3, 1> VectorAccelerationRaw;      
             typedef Eigen::Matrix<float, 10, 1> VectorHardSync;
+            typedef Eigen::Matrix<float, 6, 1> VectorBasicRC;
             typedef Eigen::Matrix<float, 8, 1> VectorRC;
             typedef Eigen::Matrix<float, 21, 1> VectorRCRaw;
             typedef Eigen::Matrix<float, 3, 1> VectorCompass;
@@ -148,6 +149,11 @@ namespace dal{
             /// \param _data: struct with the desired received data.
             /// \return true if params are good or set without errors, false if something failed.
             bool getBatery(int& _data);
+            
+            /// This method is the implementation of get RC without any flag data, only basic data.
+            /// \param _data: struct with the desired received data.
+            /// \return true if params are good or set without errors, false if something failed.
+            bool getBasicRC(VectorBasicRC& _data);
 
             /// This method is the implementation of get RC with Flag Data.
             /// \param _data: struct with the desired received data.
@@ -194,6 +200,7 @@ namespace dal{
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>::type          flightStatus_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>::type     mode_;
             DJI::OSDK::Telemetry::TypeMap<Telemetry::TOPIC_BATTERY_INFO>::type                      battery_info_;
+            DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC>::type                     rcBasic_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA>::type      rc_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA>::type       rcRaw_;
             DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE>::type         controlDevice_;

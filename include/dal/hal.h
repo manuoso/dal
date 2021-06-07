@@ -36,6 +36,8 @@
 #include <map>
 #include <thread>
 #include <cassert>
+#include <atomic>
+#include <condition_variable>
 
 // External libraries
 #include <Eigen/Eigen>
@@ -46,10 +48,10 @@
 #include <djiosdk/dji_telemetry.hpp>
 
 // Modules
+#include <dal/dji/IOFunctionsDJI.h>
 #include <dal/dji/ControlDJI.h>
 #include <dal/dji/MissionsDJI.h>
 #include <dal/dji/TelemetryDJI.h>
-#include <dal/local_control/localControl.h>
 
 #define C_EARTH (double)6378137.0
 #define C_PI (double)3.141592653589793
@@ -91,6 +93,9 @@ namespace dal{
                 /// Baudrate to connect to the controller
                 unsigned int baudrate;
 
+                /// Is DJI Matrice 600
+                bool isM600 = false;
+
                 /// Map that contains Topics of Telemetry to use
                 std::map<DJI::OSDK::Telemetry::TopicName, int> topics;
                 // TopicName element of topics must be equal to:
@@ -107,7 +112,11 @@ namespace dal{
                 // DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT
                 // DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE
                 // DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO
+                // DJI::OSDK::Telemetry::TOPIC_RC
                 // DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA
+                // DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA
+                // DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_RAW
+                // DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW
                 // DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE
 
             };
@@ -176,7 +185,8 @@ namespace dal{
             static DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type originGPS_;
 
         private:
-            int pkgIndex_ = 0;
+            std::atomic<int> pkgIndex_;
+            std::atomic<bool> isM600_;
 
     };
 

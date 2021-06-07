@@ -278,6 +278,20 @@ namespace dal{
     }
 
     //---------------------------------------------------------------------------------------------------------------------
+    bool TelemetryDJI::getBasicRC(VectorBasicRC& _data){
+        rcBasic_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
+        
+        _data[0] = rcBasic_.roll;
+        _data[1] = rcBasic_.pitch;
+        _data[2] = rcBasic_.yaw;
+        _data[3] = rcBasic_.throttle;
+        _data[4] = rcBasic_.mode;
+        _data[5] = rcBasic_.gear;
+
+        return true;
+    }
+
+    //---------------------------------------------------------------------------------------------------------------------
     bool TelemetryDJI::getRC(VectorRC& _data){
 
         rc_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA>();
@@ -294,6 +308,7 @@ namespace dal{
         return true;
     }
 
+    //---------------------------------------------------------------------------------------------------------------------
     bool TelemetryDJI::getRCRaw(VectorRCRaw& _data){
         rcRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA>();
         

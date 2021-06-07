@@ -97,22 +97,6 @@ namespace dal{
             /// \return true if params are good or set without errors, false if something failed.
             bool velocity(float _vx, float _vy, float _vz, float _yawRate);
 
-            /// This method is the implementation of the attitude and vertical position control using DJI SDK.
-            /// \param _roll: attitude set-point in x axis of body frame in FRU coordinates (deg).
-            /// \param _pitch: attitude set-point in y axis of body frame FRU coordinates (deg).
-            /// \param _yaw: attitude set-point in z axis of ground frame NED coordinates (deg).
-            /// \param _z: position set-point in z axis of ground frame NED (m).
-            /// \return true if params are good or set without errors, false if something failed.
-            bool attitude(float _roll, float _pitch, float _yaw, float _z);
-
-            /// This method is the implementation of the attitude rate and vertical position control using DJI SDK.
-            /// \param _rollRate: attitude rate set-point in x axis of body frame FRU coordinates (deg/s).
-            /// \param _pitchRate: attitude rate set-point in y axis of body frame FRU coordinates (deg/s).
-            /// \param _yawRate: attitude rate set-point in z axis of body frame FRU coordinates (deg/s).
-            /// \param _z: z position set-point in z axis of ground frame NED coordinates (m).
-            /// \return true if params are good or set without errors, false if something failed.
-            bool attitudeRate(float _rollRate, float _pitchRate, float _yawRate, float _z);
-
             /// This method is the implementation of attitude and thrust control using custom flags from DJI SDK.
             /// \param _roll: attitude set-point in x axis of body frame in FRU coordinates (deg).
             /// \param _pitch: attitude set-point in y axis of body frame in FRU coordinates (deg).
@@ -133,7 +117,7 @@ namespace dal{
             void localPoseFromGps(Eigen::Vector3f& _delta, void* _target, void* _origin);
 
         private:
-            bool controlAct_ = false;
+            std::atomic<bool> controlAct_;
 
     };
 }
