@@ -106,12 +106,15 @@ namespace dal{
 
     //---------------------------------------------------------------------------------------------------------------------
     DAL::~DAL() {
-        hal_->close();
+        if(hal_!=nullptr){
+            hal_->close();
+            delete io_;
+            delete control_;
+            delete missions_;
+            delete telemetry_;
+            hal_ = nullptr;
+        }
 
-        delete io_;
-        delete control_;
-        delete missions_;
-        delete telemetry_;
     }
 
 }
