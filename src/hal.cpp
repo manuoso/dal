@@ -97,8 +97,6 @@ namespace dal{
             return false;
         }
 
-        vehicle_->subscribe->reset();
-
         // Check if the communication is working fine
         if(!vehicle_->protocolLayer->getDriver()->getDeviceStatus()){
             std::cout << "\033[31mComms appear to be incorrectly set up exiting \033[m" << std::endl;
