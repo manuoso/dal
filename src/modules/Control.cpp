@@ -19,13 +19,20 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
+#include <iostream> // TODO: DELETE THIS
+
 #include <dal/modules/Control.hpp>
 
 namespace dal {
 namespace modules {
 
+    using namespace DJI::OSDK;
+    using namespace DJI::OSDK::Telemetry;
+
     // ----------------------------------------------------------------------
     Control::Control(std::shared_ptr<HAL> & _hal) 
+        : functionTimeout_(1)
+        , controlAct_(false)
     {
         hal_ = _hal;
     }
@@ -36,6 +43,311 @@ namespace modules {
         
     }
 
+    // ----------------------------------------------------------------------
+    bool Control::recoverFromManual()
+    {
+        ACK::ErrorCode ctrlStatus = hal_->getVehicle()->obtainCtrlAuthority(functionTimeout_);
+        if (ACK::getError(ctrlStatus) != ACK::SUCCESS)
+        {
+            ACK::getErrorCodeMessage(ctrlStatus, __func__);
+            std::cout << "\033[31mNot obtained Control Authority, exiting \033[m" << std::endl;
+            return false;
+        }
+        std::cout << "\033[32mObtained Control Authority of the Vehicle \033[m" << std::endl;
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    bool Control::releaseAuthority()
+    {
+        ACK::ErrorCode ctrlStatus = hal_->getVehicle()->releaseCtrlAuthority(functionTimeout_);
+        if (ACK::getError(ctrlStatus) != ACK::SUCCESS)
+        {
+            ACK::getErrorCodeMessage(ctrlStatus, __func__);
+            std::cout << "\033[31m Cannot release DJI authority \033[m" << std::endl;
+            return false;
+        }
+        std::cout << "\033[32m DJI Authority released. Going back to manual flight \033[m" << std::endl;
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    void Control::emergencyBrake()
+    {
+        hal_->getVehicle()->control->emergencyBrake();
+    }
+
+    // ----------------------------------------------------------------------
+    bool Control::arm()
+    {
+        std::cout << "\033[32mArming motors \033[m" << std::endl;
+
+        ACK::ErrorCode armStatus = hal_->getVehicle()->control->armMotors(functionTimeout_);
+        if(ACK::getError(armStatus) != ACK::SUCCESS)
+        {
+            ACK::getErrorCodeMessage(armStatus, __func__);
+            std::cout << "\033[31mError at arm motors, exiting \033[m" << std::endl;
+            return false;
+        }
+        return true;
+    }
+    
+    // ----------------------------------------------------------------------
+    bool Control::disarm()
+    {
+        std::cout << "\033[32mDisarming motors \033[m" << std::endl;
+
+        ACK::ErrorCode disarmStatus = hal_->getVehicle()->control->disArmMotors(functionTimeout_);
+        if(ACK::getError(disarmStatus) != ACK::SUCCESS)
+        {
+            ACK::getErrorCodeMessage(disarmStatus, __func__);
+            std::cout << "\033[31mError at disarm motors, exiting \033[m" << std::endl;
+            return false;
+        }
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    bool Control::takeOff(bool _block)
+    {
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    bool Control::land(bool _block)
+    {
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    bool Control::position(float _x, float _y, float _z, float _yaw)
+    {
+        if(controlAct_)
+        {
+            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
+            return false;
+        }
+        controlAct_ = true;
+
+        if(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_P_GPS &&
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ATTITUDE &&
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL)
+        {
+            int mode = hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>();
+            std::cout << "\033[31mError vehicle not in mode to control with API SDK, mode: \033[m" + std::to_string(mode) << std::endl;
+            return false;
+        }
+        
+        // Get local position
+        TypeMap<TOPIC_GPS_FUSED>::type currentSubscriptionGPS = hal_->getVehicle()->subscribe->getValue<TOPIC_GPS_FUSED>();
+        auto originGPS = hal_->getOriginGPS();
+
+        std::vector<float> localPoseGPS;
+        localPoseFromGps(localPoseGPS, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS));
+        
+        // 666 TODO: CHANGE GPS FUSED ALTITUDE
+
+        // Get initial offset. We will update this in a loop later.
+        double xOffset = _x - localPoseGPS[0];
+        double yOffset = _y - localPoseGPS[1];
+        double zOffset = _z - localPoseGPS[2];
+
+        // 0.1 m or 10 cms is the minimum error to reach target in x, y and z axes.
+        // This error threshold will have to change depending on aircraft / payload / wind conditions
+        double xCmd, yCmd, zCmd;
+        if(((std::abs(xOffset)) < 0.1) && 
+            ((std::abs(yOffset)) < 0.1) && 
+            (localPoseGPS[2] > (zOffset - 0.1)) && 
+            (localPoseGPS[2] < (zOffset + 0.1)))
+        {
+            xCmd = 0;
+            yCmd = 0;
+            zCmd = 0;
+        }else
+        {
+            xCmd = xOffset;
+            yCmd = yOffset;
+            zCmd = _z;
+        }
+
+        // 666 TODO: YAW NOT IMPLEMENTED!
+
+        hal_->getVehicle()->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yaw);
+
+        controlAct_ = false;
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    bool Control::velocity(float _vx, float _vy, float _vz, float _yawRate)
+    {
+        uint flag = ::Control::HorizontalLogic::HORIZONTAL_VELOCITY |
+                    ::Control::VerticalLogic::VERTICAL_VELOCITY |
+                    ::Control::YawLogic::YAW_RATE |
+                    ::Control::HorizontalCoordinate::HORIZONTAL_BODY |
+                    ::Control::StableMode::STABLE_ENABLE;
+
+        return customControl(flag, _vx, _vy, _vz, _yawRate);
+    }
+
+    // ----------------------------------------------------------------------
+    bool Control::rpyThrust(float _roll, float _pitch, float _yawRate, float _thrust)
+    {
+        // uint8_t mode =  (0 << 0)+               // bit 0 non stable mode
+        //                 (1 << 1) + (0 << 2)+    // bit 2:1 body frame
+        //                 (1 << 3)+               // bit 3 yaw rate
+        //                 (0 << 4) + (1 << 5)+    // bit 5:4 vertical thrust
+        //                 (0 << 6);               // bit 7:6 horizontal atti
+        uint flag = ::Control::HorizontalLogic::HORIZONTAL_ANGLE |
+                    ::Control::VerticalLogic::VERTICAL_THRUST |
+                    ::Control::YawLogic::YAW_RATE |
+                    ::Control::HorizontalCoordinate::HORIZONTAL_BODY |
+                    ::Control::StableMode::STABLE_DISABLE;
+
+        return customControl(flag, _roll, _pitch, _thrust, _yawRate);
+    }
+
+    // ----------------------------------------------------------------------
+    bool Control::customControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP)
+    {
+        if(controlAct_)
+        {
+            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
+            return false;
+        }
+        controlAct_ = true;
+
+        if(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_P_GPS &&
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ATTITUDE &&
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL)
+        {
+            int mode = hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>();
+            std::cout << "\033[31mError vehicle not in mode to control with API SDK, mode: \033[m" + std::to_string(mode) << std::endl;
+            return false;
+        }
+        
+        // FROM DJI ROS ONBOARD SDK
+        uint8_t HORI  = (_flag & 0xC0);
+        uint8_t VERT  = (_flag & 0x30);
+        uint8_t YAW   = (_flag & 0x08);
+        uint8_t FRAME = (_flag & 0x06);
+        // uint8_t HOLD  = (_flag & 0x01);
+
+        double xCmd = 0, yCmd = 0, zCmd = 0, yawCmd = 0;
+        if (FRAME == ::Control::HORIZONTAL_GROUND)
+        {
+            // 1.1 Horizontal channels
+            if ( (HORI == ::Control::HORIZONTAL_VELOCITY) || 
+                (HORI == ::Control::HORIZONTAL_POSITION) )
+            {
+                xCmd = _ySP;
+                yCmd = _xSP;
+            }
+            else
+            {
+                xCmd = RAD2DEG(_xSP);
+                yCmd = RAD2DEG(-_ySP);
+            }
+
+            // 1.2 Verticle Channel
+            if ( (VERT == ::Control::VERTICAL_VELOCITY) || 
+                (VERT == ::Control::VERTICAL_POSITION) )
+            {
+                zCmd = _zSP;
+            }
+            else
+            {
+                zCmd = _zSP;
+            }
+        }
+        else if(FRAME == ::Control::HORIZONTAL_BODY)
+        {
+            // 2.1 Horizontal channels
+            if ( (HORI == ::Control::HORIZONTAL_VELOCITY) || 
+                (HORI == ::Control::HORIZONTAL_POSITION) )
+            {
+                // The X and Y Vel and Pos should be only based on rotation after Yaw,
+                // whithout roll and pitch. Otherwise the behavior will be weird.
+
+                // Transform from F-R to F-L
+                xCmd = _xSP;
+                yCmd = -_ySP;
+            }
+            else
+            {
+                xCmd = RAD2DEG(_xSP);
+                yCmd = RAD2DEG(-_ySP);
+            }
+
+            // 2.2 Vertical channel
+            if ( (VERT == ::Control::VERTICAL_VELOCITY) || 
+                (VERT == ::Control::VERTICAL_POSITION)  )
+            {
+                zCmd = _zSP;
+            }
+            else
+            {
+                zCmd = _zSP;
+            }
+        }
+
+        // The behavior of yaw should be the same in either frame
+        if (YAW == ::Control::YAW_ANGLE )
+        {
+            // TODO:
+            // TODO:
+            // TODO: YAW CONVERSION WITHOUT EIGEN
+            // TODO:
+            // TODO:
+
+            // Eigen::Matrix3d R_FLU2FRD;
+            // R_FLU2FRD << 1,  0,  0, 0, -1,  0, 0,  0, -1;
+            // Eigen::Matrix3d R_ENU2NED;
+            // R_ENU2NED << 0,  1,  0, 1,  0,  0, 0,  0, -1;  
+            
+            // Eigen::AngleAxisd rollAngle(0.0  , Eigen::Vector3d::UnitX());
+            // Eigen::AngleAxisd pitchAngle(0.0 , Eigen::Vector3d::UnitY());
+            // Eigen::AngleAxisd yawAngle(_yawSP, Eigen::Vector3d::UnitZ());
+
+            // Eigen::Quaternion<double> q = rollAngle * pitchAngle * yawAngle;
+            // Eigen::Matrix3d rotationSrc = q.matrix();
+
+            // //The last term should be transpose, but since it's symmetric ...
+            // Eigen::Matrix3d rotationDes;
+            // rotationDes = R_ENU2NED * rotationSrc * R_FLU2FRD;
+
+            // Eigen::Vector3d ea = rotationDes.eulerAngles(0,1,2);
+            // yawCmd = ea[2];
+
+            yawCmd = RAD2DEG(yawCmd);
+        }
+        else if (YAW == ::Control::YAW_RATE)
+        {
+            yawCmd = RAD2DEG(-_yawSP);
+        }
+
+        ::Control::CtrlData ctrlData(_flag, xCmd, yCmd, zCmd, yawCmd);
+        hal_->getVehicle()->control->flightCtrl(ctrlData);
+
+        controlAct_ = false;
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------
+    void launchTakeoff()
+    {
+
+    }
+
+    // ----------------------------------------------------------------------
+    void launchLand()
+    {
+
+    }
 
 }
 }
@@ -70,61 +382,28 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::recoverFromManual(){
 
-        DJI::OSDK::ACK::ErrorCode ctrlStatus = HAL::vehicle_->obtainCtrlAuthority(HAL::functionTimeout_);
-        if (DJI::OSDK::ACK::getError(ctrlStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(ctrlStatus, __func__);
-            std::cout << "\033[31mNot obtained Control Authority, exiting \033[m" << std::endl;
-            return false;
-        }
-        std::cout << "\033[32mObtained Control Authority of the Vehicle \033[m" << std::endl;
-        return true;
+        
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::releaseAuthority(){
-        DJI::OSDK::ACK::ErrorCode ctrlStatus = HAL::vehicle_->releaseCtrlAuthority(HAL::functionTimeout_);
-        if (DJI::OSDK::ACK::getError(ctrlStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(ctrlStatus, __func__);
-            std::cout << "\033[31m Cannot release DJI authority \033[m" << std::endl;
-            return false;
-        }
-        std::cout << "\033[32m DJI Authority released. Going back to manual flight \033[m" << std::endl;
-        return true;
+        
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::emergencyBrake(){
 
-        HAL::vehicle_->control->emergencyBrake();
-        return true;        
+           
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::arm(){
-        std::cout << "\033[32mArming motors \033[m" << std::endl;
-
-        DJI::OSDK::ACK::ErrorCode armStatus = HAL::vehicle_->control->armMotors(HAL::functionTimeout_);
-        if(DJI::OSDK::ACK::getError(armStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(armStatus, __func__);
-            std::cout << "\033[31mError at arm motors, exiting \033[m" << std::endl;
-            return false;
-        }
         
-        return true;
     }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool ControlDJI::disarm(){
-        std::cout << "\033[32mDisarming motors \033[m" << std::endl;
-
-        DJI::OSDK::ACK::ErrorCode disarmStatus = HAL::vehicle_->control->disArmMotors(HAL::functionTimeout_);
-        if(DJI::OSDK::ACK::getError(disarmStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(disarmStatus, __func__);
-            std::cout << "\033[31mError at disarm motors, exiting \033[m" << std::endl;
-            return false;
-        }
-
-        return true;
+        
     }
 
     //---------------------------------------------------------------------------------------------------------------------
@@ -132,9 +411,9 @@ namespace dal{
         
         std::cout << "\033[32mStart takeoff \033[m" << std::endl;
         // Start takeoff
-        DJI::OSDK::ACK::ErrorCode takeoffStatus = HAL::vehicle_->control->takeoff(HAL::functionTimeout_);
-        if(DJI::OSDK::ACK::getError(takeoffStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(takeoffStatus, __func__);
+        ACK::ErrorCode takeoffStatus = hal_->getVehicle()->control->takeoff(functionTimeout_);
+        if(ACK::getError(takeoffStatus) != ACK::SUCCESS){
+            ACK::getErrorCodeMessage(takeoffStatus, __func__);
             std::cout << "\033[31mError at start takeoff, exiting \033[m" << std::endl;
             return false;
         }
@@ -143,8 +422,8 @@ namespace dal{
         int motorsNotStarted = 0;
         int timeoutCycles    = 20;
 
-        while(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() != DJI::OSDK::VehicleStatus::FlightStatus::ON_GROUND &&
-            HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ENGINE_START &&
+        while(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() != VehicleStatus::FlightStatus::ON_GROUND &&
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ENGINE_START &&
             motorsNotStarted < timeoutCycles){
                 
                 motorsNotStarted++;
@@ -162,9 +441,9 @@ namespace dal{
         int stillOnGround = 0;
         timeoutCycles     = 110;
 
-        while(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() != DJI::OSDK::VehicleStatus::FlightStatus::IN_AIR &&
-            (HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
-            HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF) &&
+        while(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() != VehicleStatus::FlightStatus::IN_AIR &&
+            (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF) &&
             stillOnGround < timeoutCycles){
             
             stillOnGround++;
@@ -179,14 +458,14 @@ namespace dal{
         }
 
         // Final check: Finished takeoff
-        while(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
-            HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF){
+        while(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() == VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() == VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF){
                 
                 sleep(1);
         }
 
-        if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS ||
-            HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE){
+        if(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_P_GPS ||
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ATTITUDE){
                 
                 std::cout << "\033[32mSuccessful takeoff! \033[m" << std::endl;
         }else{
@@ -203,9 +482,9 @@ namespace dal{
         
         std::cout << "\033[32mStart land \033[m" << std::endl;
         // Start landing
-        DJI::OSDK::ACK::ErrorCode landingStatus = HAL::vehicle_->control->land(HAL::functionTimeout_);
-        if(DJI::OSDK::ACK::getError(landingStatus) != DJI::OSDK::ACK::SUCCESS){
-            DJI::OSDK::ACK::getErrorCodeMessage(landingStatus, __func__);
+        ACK::ErrorCode landingStatus = hal_->getVehicle()->control->land(functionTimeout_);
+        if(ACK::getError(landingStatus) != ACK::SUCCESS){
+            ACK::getErrorCodeMessage(landingStatus, __func__);
             std::cout << "\033[31mError at land, exiting \033[m" << std::endl;
             return false;
         }
@@ -214,7 +493,7 @@ namespace dal{
         int landingNotStarted = 0;
         int timeoutCycles     = 20;
 
-        while (HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
+        while (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
             landingNotStarted < timeoutCycles){
                 
                 landingNotStarted++;
@@ -229,14 +508,14 @@ namespace dal{
         }
 
         // Second check: Finished landing
-        while (HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() == DJI::OSDK::VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
-            HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>() == DJI::OSDK::VehicleStatus::FlightStatus::IN_AIR){
+        while (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() == VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() == VehicleStatus::FlightStatus::IN_AIR){
                 
                 sleep(1);
         }
 
-        if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS ||
-            HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE){
+        if(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_P_GPS ||
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ATTITUDE){
                 
                 std::cout << "\033[32mSuccessful landing! \033[m" << std::endl;
         }else{
@@ -246,229 +525,5 @@ namespace dal{
         
         return true;        
     }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::position(float _x, float _y, float _z, float _yaw){
-
-        if(controlAct_){
-            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
-            return false;
-        }
-        controlAct_ = true;
-
-        if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
-        HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
-        HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
-            
-            int mode = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
-            std::cout << "\033[31mError vehicle not in mode to control with API SDK, mode: \033[m" + std::to_string(mode) << std::endl;
-            return false;
-        }
-        
-        // Get local position
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-
-        Eigen::Vector3f localPoseGPS;
-        localPoseFromGps(localPoseGPS, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&HAL::originGPS_));
-        
-        // 666 TODO: CHANGE GPS FUSED ALTITUDE
-
-        // Get initial offset. We will update this in a loop later.
-        double xOffset = _x - localPoseGPS[0];
-        double yOffset = _y - localPoseGPS[1];
-        double zOffset = _z - localPoseGPS[2];
-
-        // 0.1 m or 10 cms is the minimum error to reach target in x, y and z axes.
-        // This error threshold will have to change depending on aircraft / payload / wind conditions
-        double xCmd, yCmd, zCmd;
-        if(((std::abs(xOffset)) < 0.1) && ((std::abs(yOffset)) < 0.1) && (localPoseGPS(2) > (zOffset - 0.1)) && (localPoseGPS(2) < (zOffset + 0.1))){
-            xCmd = 0;
-            yCmd = 0;
-            zCmd = 0;
-        }else{
-            xCmd = xOffset;
-            yCmd = yOffset;
-            zCmd = _z;
-        }
-
-        // 666 TODO: YAW NOT IMPLEMENTED!
-
-        HAL::vehicle_->control->positionAndYawCtrl(xCmd, yCmd, zCmd, _yaw);
-
-        controlAct_ = false;
-
-        return true;
-    }
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::velocity(float _vx, float _vy, float _vz, float _yawRate){
-        
-        uint flag = DJI::OSDK::Control::HorizontalLogic::HORIZONTAL_VELOCITY |
-                    DJI::OSDK::Control::VerticalLogic::VERTICAL_VELOCITY |
-                    DJI::OSDK::Control::YawLogic::YAW_RATE |
-                    DJI::OSDK::Control::HorizontalCoordinate::HORIZONTAL_BODY |
-                    DJI::OSDK::Control::StableMode::STABLE_ENABLE;
-
-        return customControl(flag, _vx, _vy, _vz, _yawRate);
-    }    
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::rpyThrust(float _roll, float _pitch, float _yawRate, float _thrust){
-        
-        // uint8_t mode =  (0 << 0)+               // bit 0 non stable mode
-        //                 (1 << 1) + (0 << 2)+    // bit 2:1 body frame
-        //                 (1 << 3)+               // bit 3 yaw rate
-        //                 (0 << 4) + (1 << 5)+    // bit 5:4 vertical thrust
-        //                 (0 << 6);               // bit 7:6 horizontal atti
-        uint flag = DJI::OSDK::Control::HorizontalLogic::HORIZONTAL_ANGLE |
-                    DJI::OSDK::Control::VerticalLogic::VERTICAL_THRUST |
-                    DJI::OSDK::Control::YawLogic::YAW_RATE |
-                    DJI::OSDK::Control::HorizontalCoordinate::HORIZONTAL_BODY |
-                    DJI::OSDK::Control::StableMode::STABLE_DISABLE;
-
-        return customControl(flag, _roll, _pitch, _thrust, _yawRate);
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::customControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP){
-
-        if(controlAct_){
-            std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
-            return false;
-        }
-        controlAct_ = true;
-
-        if(HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_P_GPS &&
-        HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_ATTITUDE &&
-        HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>() != DJI::OSDK::VehicleStatus::DisplayMode::MODE_NAVI_SDK_CTRL){
-            
-            int mode = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
-            std::cout << "\033[31mError vehicle not in mode to control with API SDK, mode: \033[m" + std::to_string(mode) << std::endl;
-            return false;
-        }
-        
-        // FROM DJI ROS ONBOARD SDK
-        uint8_t HORI  = (_flag & 0xC0);
-        uint8_t VERT  = (_flag & 0x30);
-        uint8_t YAW   = (_flag & 0x08);
-        uint8_t FRAME = (_flag & 0x06);
-        // uint8_t HOLD  = (_flag & 0x01);
-
-        double xCmd, yCmd, zCmd, yawCmd;
-        if (FRAME == DJI::OSDK::Control::HORIZONTAL_GROUND)
-        {
-            // 1.1 Horizontal channels
-            if ( (HORI == DJI::OSDK::Control::HORIZONTAL_VELOCITY) || (HORI == DJI::OSDK::Control::HORIZONTAL_POSITION) )
-            {
-            xCmd = _ySP;
-            yCmd = _xSP;
-            }
-            else
-            {
-            xCmd = RAD2DEG(_xSP);
-            yCmd = RAD2DEG(-_ySP);
-            }
-
-            // 1.2 Verticle Channel
-            if ( (VERT == DJI::OSDK::Control::VERTICAL_VELOCITY) || (VERT == DJI::OSDK::Control::VERTICAL_POSITION) )
-            {
-            zCmd = _zSP;
-            }
-            else
-            {
-            zCmd = _zSP;
-            }
-        }
-        else if(FRAME == DJI::OSDK::Control::HORIZONTAL_BODY)
-        {
-            // 2.1 Horizontal channels
-            if ( (HORI == DJI::OSDK::Control::HORIZONTAL_VELOCITY) || (HORI == DJI::OSDK::Control::HORIZONTAL_POSITION) )
-            {
-            // The X and Y Vel and Pos should be only based on rotation after Yaw,
-            // whithout roll and pitch. Otherwise the behavior will be weird.
-
-            // Transform from F-R to F-L
-            xCmd = _xSP;
-            yCmd = -_ySP;
-            }
-            else
-            {
-            xCmd = RAD2DEG(_xSP);
-            yCmd = RAD2DEG(-_ySP);
-            }
-
-            // 2.2 Vertical channel
-            if ( (VERT == DJI::OSDK::Control::VERTICAL_VELOCITY) || (VERT == DJI::OSDK::Control::VERTICAL_POSITION)  )
-            {
-            zCmd = _zSP;
-            }
-            else
-            {
-            zCmd = _zSP;
-            }
-        }
-
-        // The behavior of yaw should be the same in either frame
-        if ( YAW == DJI::OSDK::Control::YAW_ANGLE )
-        {
-            Eigen::Matrix3d R_FLU2FRD;
-            R_FLU2FRD << 1,  0,  0, 0, -1,  0, 0,  0, -1;
-            Eigen::Matrix3d R_ENU2NED;
-            R_ENU2NED << 0,  1,  0, 1,  0,  0, 0,  0, -1;  
-            
-            Eigen::AngleAxisd rollAngle(0.0  , Eigen::Vector3d::UnitX());
-            Eigen::AngleAxisd pitchAngle(0.0 , Eigen::Vector3d::UnitY());
-            Eigen::AngleAxisd yawAngle(_yawSP, Eigen::Vector3d::UnitZ());
-
-            Eigen::Quaternion<double> q = rollAngle * pitchAngle * yawAngle;
-            Eigen::Matrix3d rotationSrc = q.matrix();
-
-            //The last term should be transpose, but since it's symmetric ...
-            Eigen::Matrix3d rotationDes;
-            rotationDes = R_ENU2NED * rotationSrc * R_FLU2FRD;
-
-            Eigen::Vector3d ea = rotationDes.eulerAngles(0,1,2);
-            yawCmd = ea[2];
-
-            yawCmd = RAD2DEG(yawCmd);
-        }
-        else if (YAW == DJI::OSDK::Control::YAW_RATE)
-        {
-            yawCmd = RAD2DEG(-_yawSP);
-        }
-
-        DJI::OSDK::Control::CtrlData ctrlData(_flag, xCmd, yCmd, zCmd, yawCmd);
-        HAL::vehicle_->control->flightCtrl(ctrlData);
-
-        controlAct_ = false;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    // PRIVATE FUNCTIONS
-    //---------------------------------------------------------------------------------------------------------------------
-
-    //---------------------------------------------------------------------------------------------------------------------
-    void ControlDJI::localPoseFromGps(Eigen::Vector3f& _delta, void* _target, void* _origin){
-    
-        DJI::OSDK::Telemetry::GPSFused* subscriptionTarget = (DJI::OSDK::Telemetry::GPSFused*)_target;
-        DJI::OSDK::Telemetry::GPSFused*  subscriptionOrigin = (DJI::OSDK::Telemetry::GPSFused*)_origin;
-        
-        double t_lon = subscriptionTarget->longitude * 180.0 / C_PI;
-        double r_lon = subscriptionOrigin->longitude * 180.0 / C_PI;
-        
-        double t_lat = subscriptionTarget->latitude * 180.0 / C_PI;
-        double r_lat = subscriptionOrigin->latitude * 180.0 / C_PI;
-
-        double deltaLon   = t_lon - r_lon;
-        double deltaLat   = t_lat - r_lat;
-
-        // NEU -> North East Up
-        _delta[0] = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
-        _delta[1] = DEG2RAD(deltaLat) * C_EARTH;
-        _delta[2] = subscriptionTarget->altitude - subscriptionOrigin->altitude;
-    }
-
 }
 */

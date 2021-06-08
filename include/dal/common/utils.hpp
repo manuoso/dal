@@ -23,6 +23,8 @@
 
 #include <string>
 #include <sstream>
+#include <vector>
+#include <math.h>
 
 #include <dal/common/types.hpp>
 
@@ -31,10 +33,33 @@ namespace common {
 namespace utils  {
 
     using namespace types;
+    
+    using namespace DJI::OSDK::Telemetry;
 
     // ----------------------------------------------------------------------
     #define DEG2RAD(DEG) ((DEG) * ((C_PI) / (180.0)))
     #define RAD2DEG(RAD) ((RAD) * ((180.0) / (C_PI)))
+
+    // ----------------------------------------------------------------------
+    inline void localPoseFromGps(std::vector<float>& _delta, void* _target, void* _origin)
+    {
+        GPSFused* subscriptionTarget = (GPSFused*)_target;
+        GPSFused*  subscriptionOrigin = (GPSFused*)_origin;
+        
+        double t_lon = subscriptionTarget->longitude * 180.0 / C_PI;
+        double r_lon = subscriptionOrigin->longitude * 180.0 / C_PI;
+        
+        double t_lat = subscriptionTarget->latitude * 180.0 / C_PI;
+        double r_lat = subscriptionOrigin->latitude * 180.0 / C_PI;
+
+        double deltaLon   = t_lon - r_lon;
+        double deltaLat   = t_lat - r_lat;
+
+        // NEU -> North East Up
+        _delta[0] = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
+        _delta[1] = DEG2RAD(deltaLat) * C_EARTH;
+        _delta[2] = subscriptionTarget->altitude - subscriptionOrigin->altitude;
+    }
 
     // ----------------------------------------------------------------------
     template <class T>

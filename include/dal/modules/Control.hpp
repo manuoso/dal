@@ -33,8 +33,49 @@ namespace modules {
             Control(std::shared_ptr<HAL> & _hal);
             ~Control();
 
+            // ----------------------------------------------------------------------
+            bool recoverFromManual();
+            bool releaseAuthority();
+
+            // ----------------------------------------------------------------------
+            void emergencyBrake();
+            bool arm();
+            bool disarm();
+
+            // ----------------------------------------------------------------------
+            bool takeOff(bool _block);
+            bool land(bool _block);
+
+            // ----------------------------------------------------------------------
+            /// \param _x: desired x in NEU coordinates (m).
+            /// \param _y: desired y in NEU coordinates (m).
+            /// \param _z: desired z in NEU coordinates (m).
+            /// \param _yaw: desired yaw (deg).
+            bool position(float _x, float _y, float _z, float _yaw);
+
+            /// \param _x: desired Vx in NEU coordinates (m/s).
+            /// \param _y: desired Vy in NEU coordinates (m/s).
+            /// \param _z: desired Vz in NEU coordinates (m/s).
+            /// \param _yaw: desired yaw rate (deg/s).
+            bool velocity(float _vx, float _vy, float _vz, float _yawRate);
+
+            /// \param _roll: attitude set-point in x axis of body frame in FRU coordinates (deg).
+            /// \param _pitch: attitude set-point in y axis of body frame in FRU coordinates (deg).
+            /// \param _yawRate: attitude rate set-point in z axis of body frame FRU coordinates (deg/s).
+            /// \param _thrust: 0-100 value for altitude stabilization.
+            bool rpyThrust(float _roll, float _pitch, float _yawRate, float _thrust);
+
+            bool customControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP);
+
+        private:
+            void launchTakeoff();
+            void launchLand();
+
         private:
             std::shared_ptr<HAL> hal_;
+            int functionTimeout_;
+            std::atomic<bool> controlAct_;
+
     };
     
 }
