@@ -19,93 +19,102 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
+#pragma once
 
-#include <dal/dal.hpp>
+#include <thread>
+#include <memory>
+#include <mutex>
+#include <atomic>
+#include <condition_variable>
 
-namespace dal {
-
-    // ----------------------------------------------------------------------
-    DAL::DAL() 
-        : started_(false)
-        , hal_(nullptr)
-        , control_(nullptr)
-        , telemetry_(nullptr)
-        , missions_(nullptr)
-        , io_(nullptr)
-    {
-
-    }
+namespace dal       {
+namespace common    {
+namespace patterns  {
 
     // ----------------------------------------------------------------------
-    DAL::~DAL()
+    template<class T>
+    class NotCopy
     {
-        if (started_)
-        {
-            started_ = false;
+        protected:
+            NotCopy() {}
+            ~NotCopy() {}
 
-            control_.reset();
-            telemetry_.reset();
-            missions_.reset();
-            io_.reset();
-
-            hal_.reset();
-        }
-    }
+        private: 
+            NotCopy(const NotCopy &);
+            NotCopy & operator = (const NotCopy &);
+    };
 
     // ----------------------------------------------------------------------
-    bool DAL::isInit()
+    template <typename T>
+    class Singleton
     {
-        return started_;
-    }
+        public:
+            ~Singleton();
+            static T* instance()
+            {  
+                static std::shared_ptr<Singleton<T> > instance = nullptr;
+    
+                if (!instance)
+                    instance.reset(new T());
+
+                return instance.get();
+            };
+
+        protected:
+            Singleton(void);
+
+        private:
+            Singleton(const Singleton &) = delete;
+            Singleton(Singleton &&) = delete;
+            Singleton& operator = (const Singleton&) = delete;
+            Singleton& operator = (Singleton&&) = delete;
+    };
 
     // ----------------------------------------------------------------------
-    void DAL::buildModulesAll()
+    class Builder
     {
-        if (started_)
-            return;
-        
-        hal_ = std::shared_ptr<HAL> (new HAL());
-        this->setBuilder(hal_.get());
+        public:
+            virtual ~Builder()
+            {
+                // Left in blank intentionally
+            }
 
-        if (!this->buildAll())
-            return;
-        
-        control_ = std::unique_ptr<Control> (new Control(hal_));
-        telemetry_ = std::unique_ptr<Telemetry> (new Telemetry(hal_));
-        missions_ = std::unique_ptr<Missions> (new Missions(hal_));
-        io_ = std::unique_ptr<IOFunctions> (new IOFunctions(hal_));
+            virtual bool produceMinimal() = 0;
 
-        started_ = true;
-    }
+            virtual bool produceAll() = 0;
+    };
 
     // ----------------------------------------------------------------------
-    void DAL::buildModulesCustom(std::function<void(std::shared_ptr<HAL>)> _fun)
+    class Director
     {
-        if (started_)
-            return;
-        
-        hal_ = std::shared_ptr<HAL> (new HAL());
-        this->setBuilder(hal_.get());
+        public:
+            ~Director()
+            {
+                delete builder_;
+            }
 
-        if (!this->buildAll())
-            return;
-        
-        _fun(hal_);
+            void setBuilder(Builder *_builder)
+            {
+                if (this->builder_)
+                    this->builder_ = nullptr;
 
-        started_ = true;
-    }
+                this->builder_ = _builder;
+            }
 
-    // ----------------------------------------------------------------------
-    void DAL::buildHalAndModules(std::shared_ptr<HAL> _hal, std::function<void(std::shared_ptr<HAL>)> _fun)
-    {
-        if (started_)
-            return;
+            bool buildMinimal()
+            {
+                return this->builder_->produceMinimal();
+            }
 
-        hal_ = _hal;
+            bool buildAll()
+            {
+                return this->builder_->produceAll();
+            }
 
-        _fun(hal_);
+        private:
+            Builder* builder_;
+    };
 
-        started_ = true;
-    }
-
+}
+}
 }

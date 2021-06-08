@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<config_dal>
+    <uav>
+        <app_id value="1"></app_id>
+        <app_key value="pepe"></app_key>
+        <device value="device"></device>
+        <baudrate value="2"></baudrate>
+        <m600 value="false"></m600>
+        <advanced_sensing value="false"></advanced_sensing>
+    </uav>
+    <logs>
+        <use_log value="false"></use_log>
+        <dji_log value="true"></dji_log>
+    </logs>
+</config_dal>

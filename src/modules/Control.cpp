@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
 //  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
+//  Copyright 2021 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -19,8 +19,28 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
-#include <dal/dji/ControlDJI.h>
+#include <dal/modules/Control.hpp>
 
+namespace dal {
+namespace modules {
+
+    // ----------------------------------------------------------------------
+    Control::Control(std::shared_ptr<HAL> & _hal) 
+    {
+        hal_ = _hal;
+    }
+
+    // ----------------------------------------------------------------------
+    Control::~Control()
+    {
+        
+    }
+
+
+}
+}
+
+/*
 namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     // PUBLIC FUNCTIONS
@@ -451,3 +471,4 @@ namespace dal{
     }
 
 }
+*/

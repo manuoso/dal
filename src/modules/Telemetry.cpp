@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
 //  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
+//  Copyright 2021 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -19,8 +19,28 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
-#include <dal/dji/TelemetryDJI.h>
+#include <dal/modules/Telemetry.hpp>
 
+namespace dal {
+namespace modules {
+
+    // ----------------------------------------------------------------------
+    Telemetry::Telemetry(std::shared_ptr<HAL> & _hal) 
+    {
+        hal_ = _hal;
+    }
+
+    // ----------------------------------------------------------------------
+    Telemetry::~Telemetry()
+    {
+        
+    }
+
+
+}
+}
+
+/*
 namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     // PUBLIC FUNCTIONS
@@ -390,3 +410,4 @@ namespace dal{
     }
 
 }
+*/
