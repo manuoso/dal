@@ -24,8 +24,10 @@
 
 #include <dal/hal.hpp>
 
-namespace dal {
+namespace dal     {
 namespace modules {
+
+    using namespace DJI::OSDK;
 
     class IOFunctions
     {
@@ -36,78 +38,18 @@ namespace modules {
             // ----------------------------------------------------------------------
             void stop();
 
+            // ----------------------------------------------------------------------
+            bool configureChannels(Channels _channels);
+
+            bool setPWM(MFIO::CHANNEL _channel, uint32_t _value);
+
         private:
             std::shared_ptr<HAL> hal_;
 
             std::atomic<bool> started_;
             int functionTimeout_;
-            
+
     };
     
 }
 }
-
-/*
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-//
-// ¡¡¡ IMPORTANT !!! 
-//
-// This backend is developed for the DJI A3 controller. 
-// So the implemented functions may vary for another model like the M210 and M600.
-//
-// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-namespace dal{
-    class IOFunctionsDJI{
-        public:
-            //---------------------------------------------------------------------------------------------------------------------
-            // METHODS FOR INITIALIZATION
-	        //---------------------------------------------------------------------------------------------------------------------
-
-            /// Constructor
-            IOFunctionsDJI();
-
-            /// Destructor
-            ~IOFunctionsDJI();
-
-            /// This method configure the function channels used in GPIO using DJI SDK.
-            /// \param _height: .
-            /// \return true if params are good or set without errors, false if something failed.
-            bool configureChannels(std::map<DJI::OSDK::MFIO::CHANNEL, DJI::OSDK::MFIO::MODE> _channels);
-
-            /// Map config can be
-            /// CHANNELS:
-            // CHANNEL_0    |   SDK1
-            // CHANNEL_1    |   SDK2    
-            // CHANNEL_2    |   SDK3
-            // CHANNEL_3    |   SDK4
-            // CHANNEL_4    |   SDK5
-            // CHANNEL_5    |   SDK6
-            // CHANNEL_6    |   SDK7
-            // CHANNEL_7    |   SDK8
-
-            /// MODE:
-            // MODE_PWM_OUT 
-            // MODE_PWM_IN  
-            // MODE_GPIO_OUT
-            // MODE_GPIO_IN 
-            // MODE_ADC    
-
-            //---------------------------------------------------------------------------------------------------------------------
-            // METHODS FOR OUTPUT
-	        //---------------------------------------------------------------------------------------------------------------------
-            
-            /// This method is the implementation of set PWM using DJI MFIO SDK.
-            /// \param _channel: desired channel.
-            /// \param _value: desired value.
-            /// \return true if params are good or set without errors, false if something failed.
-            bool setPWM(DJI::OSDK::MFIO::CHANNEL _channel, uint32_t _value);
-
-            //---------------------------------------------------------------------------------------------------------------------
-            // METHODS FOR INPUT
-	        //---------------------------------------------------------------------------------------------------------------------
-
-    };
-}
-
-*/

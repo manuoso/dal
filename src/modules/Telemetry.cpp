@@ -21,7 +21,7 @@
 
 #include <dal/modules/Telemetry.hpp>
 
-namespace dal {
+namespace dal     {
 namespace modules {
 
     // ----------------------------------------------------------------------

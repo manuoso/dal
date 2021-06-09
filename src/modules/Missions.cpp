@@ -19,9 +19,11 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
+#include <iostream> // TODO: DELETE THIS
+
 #include <dal/modules/Missions.hpp>
 
-namespace dal {
+namespace dal     {
 namespace modules {
 
     // ----------------------------------------------------------------------
@@ -50,34 +52,13 @@ namespace modules {
         }
     }
 
+    // ----------------------------------------------------------------------
+    bool Missions::positionGPS(std::vector<float> _wayPoint, dataMission _config)
+    {
+        if (!started_)
+            return false;
 
-}
-}
-
-/*
-namespace dal{
-    //---------------------------------------------------------------------------------------------------------------------
-    // PUBLIC FUNCTIONS
-    //---------------------------------------------------------------------------------------------------------------------
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    // METHODS FOR INITIALIZATION
-    //---------------------------------------------------------------------------------------------------------------------
-
-    //---------------------------------------------------------------------------------------------------------------------
-    MissionsDJI::MissionsDJI(){}
-
-    //---------------------------------------------------------------------------------------------------------------------
-    MissionsDJI::~MissionsDJI(){}
-
-    //---------------------------------------------------------------------------------------------------------------------
-    // METHODS FOR MISSIONS
-    //---------------------------------------------------------------------------------------------------------------------
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool MissionsDJI::positionGPS(Eigen::Vector3f _wayPoint, dataMission _config){
-
-        DJI::OSDK::WayPointInitSettings fdata;
+        WayPointInitSettings fdata;
         setWaypointInitDefaults(&fdata);
 
         fdata.maxVelocity = _config.maxVelWP;
@@ -89,21 +70,22 @@ namespace dal{
         fdata.RCLostAction = _config.rcLostWP;
         fdata.indexNumber = 2;
 
-        DJI::OSDK::ACK::ErrorCode initAck = HAL::vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, HAL::functionTimeout_, &fdata);
-        if (DJI::OSDK::ACK::getError(initAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
+        ACK::ErrorCode initAck = hal_->getVehicle()->missionManager->init(DJI_MISSION_TYPE::WAYPOINT, functionTimeout_, &fdata);
+        if (ACK::getError(initAck))
+        {
+            ACK::getErrorCodeMessage(initAck, __func__);
             std::cout << "\033[31mError at init waypoint GPS, exiting \033[m" << std::endl;
             return false;
         }
         
         // Get actual Lat and Lon
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type gps = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+        TypeMap<TOPIC_GPS_FUSED>::type gps = hal_->getVehicle()->subscribe->getValue<TOPIC_GPS_FUSED>();
 
-        float altitude = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
-        float altitudeWP = altitude - HAL::originAltitude_;
+        float altitude = hal_->getVehicle()->subscribe->getValue<TOPIC_ALTITUDE_FUSIONED>();
+        float altitudeWP = altitude - hal_->getOriginAltitude();
         
         // Create Waypoints
-        DJI::OSDK::WayPointSettings wp1;
+        WayPointSettings wp1;
         setWaypointDefaults(&wp1);
 
         wp1.turnMode = _config.turnModeWP;
@@ -112,7 +94,7 @@ namespace dal{
         wp1.longitude = gps.longitude;
         wp1.altitude  = altitudeWP;
         
-        DJI::OSDK::WayPointSettings wp2;
+        WayPointSettings wp2;
         setWaypointDefaults(&wp2);
 
         wp2.turnMode = _config.turnModeWP;
@@ -121,36 +103,42 @@ namespace dal{
         wp2.longitude = _wayPoint[1];
         wp2.altitude  = _wayPoint[2];
 
-        std::vector<DJI::OSDK::WayPointSettings> generatedWaypts;
+        std::vector<WayPointSettings> generatedWaypts;
         generatedWaypts.push_back(wp1);
         generatedWaypts.push_back(wp2);
 
         // Upload Waypoints
         uploadWaypoints(generatedWaypts);
 
-        HAL::vehicle_->missionManager->printInfo();
+        hal_->getVehicle()->missionManager->printInfo();
 
-        DJI::OSDK::ACK::ErrorCode startAck = HAL::vehicle_->missionManager->wpMission->start(HAL::functionTimeout_);
-        if (DJI::OSDK::ACK::getError(startAck)){
-            DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
+        ACK::ErrorCode startAck = hal_->getVehicle()->missionManager->wpMission->start(functionTimeout_);
+        if (ACK::getError(startAck))
+        {
+            ACK::getErrorCodeMessage(startAck, __func__);
             std::cout << "\033[31mError at start waypoint GPS, exiting \033[m" << std::endl;
             return false;
-        }else{
+        }
+        else
+        {
             std::cout << "\033[32mGoing to waypoint GPS \033[m" << std::endl;
         }
         return true;
     }
+            
+    // ----------------------------------------------------------------------
+    bool Missions::mission(std::map<int, std::vector<float>> _wayPoints, dataMission _config)
+    {
+        if (!started_)
+            return false;
 
-    //---------------------------------------------------------------------------------------------------------------------
-    bool MissionsDJI::mission(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){
-
-        if(_config.missionType == "waypoint"){
-
+        if(_config.missionType == "waypoint")
+        {
             // WAYPOINTS MISSION
             missionType_ = "waypoint";
 
             // Waypoint Mission : Initialization
-            DJI::OSDK::WayPointInitSettings fdata;
+            WayPointInitSettings fdata;
             setWaypointInitDefaults(&fdata);
 
             fdata.maxVelocity = _config.maxVelWP;
@@ -162,9 +150,10 @@ namespace dal{
             fdata.RCLostAction = _config.rcLostWP;
             fdata.indexNumber = _wayPoints.size() + 2; // We add 1 to get the aircarft back to the start and pose from init
 
-            DJI::OSDK::ACK::ErrorCode initAck = HAL::vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::WAYPOINT, HAL::functionTimeout_, &fdata);
-            if (DJI::OSDK::ACK::getError(initAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(initAck, __func__);
+            ACK::ErrorCode initAck = hal_->getVehicle()->missionManager->init(DJI_MISSION_TYPE::WAYPOINT, functionTimeout_, &fdata);
+            if (ACK::getError(initAck))
+            {
+                ACK::getErrorCodeMessage(initAck, __func__);
                 std::cout << "\033[31mError at init mission manager, exiting \033[m" << std::endl;
                 return false;
             }
@@ -179,162 +168,202 @@ namespace dal{
             uploadWaypoints(generatedWaypts);
             std::cout << "\033[32mUploading Waypoints... \033[m" << std::endl;
 
-            HAL::vehicle_->missionManager->printInfo();
-
-        }else if(_config.missionType == "hotpoint"){
-
+            hal_->getVehicle()->missionManager->printInfo();
+        }
+        else if(_config.missionType == "hotpoint")
+        {
             // HOTPOINT MISSION
             missionType_ = "hotpoint";
 
             // Hotpoint Mission Initialize
-            HAL::vehicle_->missionManager->init(DJI::OSDK::DJI_MISSION_TYPE::HOTPOINT, HAL::functionTimeout_, NULL);
+            hal_->getVehicle()->missionManager->init(DJI_MISSION_TYPE::HOTPOINT, functionTimeout_, NULL);
 
-            HAL::vehicle_->missionManager->hpMission->setHotPoint(_wayPoints[0][1], _wayPoints[0][0], _wayPoints[0][2]);
+            hal_->getVehicle()->missionManager->hpMission->setHotPoint(_wayPoints[0][1], _wayPoints[0][0], _wayPoints[0][2]);
 
-            HAL::vehicle_->missionManager->hpMission->setRadius(_config.radiusHP);
+            hal_->getVehicle()->missionManager->hpMission->setRadius(_config.radiusHP);
 
-            HAL::vehicle_->missionManager->printInfo();
-
-        }else{
+            hal_->getVehicle()->missionManager->printInfo();
+        }
+        else
+        {
             std::cout << "\033[31mUnrecognised mission type, exiting \033[m" << std::endl;
             return false;
         }
         return true;        
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    bool MissionsDJI::start_mission(){
+    // ----------------------------------------------------------------------
+    bool Missions::start_mission()
+    {
+        if (!started_)
+            return false;
 
-        if(missionType_ == "waypoint"){
-
-            DJI::OSDK::ACK::ErrorCode startAck = HAL::vehicle_->missionManager->wpMission->start(HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(startAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
+        if(missionType_ == "waypoint")
+        {
+            ACK::ErrorCode startAck = hal_->getVehicle()->missionManager->wpMission->start(functionTimeout_);
+            if (ACK::getError(startAck))
+            {
+                ACK::getErrorCodeMessage(startAck, __func__);
                 std::cout << "\033[31mError at start mission, exiting \033[m" << std::endl;
                 return false;
-            }else{
+            }
+            else
+            {
                 std::cout << "\033[32mStarting Waypoint Mission... \033[m" << std::endl;
             }
 
-        }else if(missionType_ == "hotpoint"){
-
-            DJI::OSDK::ACK::ErrorCode startAck = HAL::vehicle_->missionManager->hpMission->start(HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(startAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(startAck, __func__);
+        }
+        else if(missionType_ == "hotpoint")
+        {
+            ACK::ErrorCode startAck = hal_->getVehicle()->missionManager->hpMission->start(functionTimeout_);
+            if (ACK::getError(startAck))
+            {
+                ACK::getErrorCodeMessage(startAck, __func__);
                 std::cout << "\033[31mError at start mission, exiting \033[m" << std::endl;
                 return false;
-            }else{
+            }
+            else
+            {
                 std::cout << "\033[32mStarting Hotpoint Mission... \033[m" << std::endl;
             }
-
-        }else{
+        }
+        else
+        {
             std::cout << "\033[31mUnrecognised mission type, exiting \033[m" << std::endl;
             return false;
         }
         return true;        
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    bool MissionsDJI::pause_mission(){
+    // ----------------------------------------------------------------------
+    bool Missions::pause_mission()
+    {
+        if (!started_)
+            return false;
 
-        if(missionType_ == "waypoint"){
-            
-            DJI::OSDK::ACK::ErrorCode pauseAck = HAL::vehicle_->missionManager->wpMission->pause(HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(pauseAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
+        if(missionType_ == "waypoint")
+        {
+            ACK::ErrorCode pauseAck = hal_->getVehicle()->missionManager->wpMission->pause(functionTimeout_);
+            if (ACK::getError(pauseAck))
+            {
+                ACK::getErrorCodeMessage(pauseAck, __func__);
                 std::cout << "\033[31mError at pause mission, exiting \033[m" << std::endl;
                 return false;
-            }else{
+            }
+            else
+            {
                 std::cout << "\033[32mPause Waypoint Mission... \033[m" << std::endl;
             }
-
-        }else if(missionType_ == "hotpoint"){
-
-            DJI::OSDK::ACK::ErrorCode pauseAck = HAL::vehicle_->missionManager->hpMission->pause(HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(pauseAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(pauseAck, __func__);
+        }
+        else if(missionType_ == "hotpoint")
+        {
+            ACK::ErrorCode pauseAck = hal_->getVehicle()->missionManager->hpMission->pause(functionTimeout_);
+            if (ACK::getError(pauseAck))
+            {
+                ACK::getErrorCodeMessage(pauseAck, __func__);
                 std::cout << "\033[31mError at pause mission, exiting \033[m" << std::endl;
                 return false;
-            }else{
+            }
+            else
+            {
                 std::cout << "\033[32mPause Hotpoint Mission... \033[m" << std::endl;
             }
-
-        }else{
+        }
+        else
+        {
             std::cout << "\033[31mUnrecognised mission type, exiting \033[m" << std::endl;
             return false;
         }
-        return true;        
+        return true; 
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    bool MissionsDJI::stop_mission(){
+    // ----------------------------------------------------------------------
+    bool Missions::stop_mission()
+    {
+        if (!started_)
+            return false;
 
-        if(missionType_ == "waypoint"){
-
-            DJI::OSDK::ACK::ErrorCode stopAck = HAL::vehicle_->missionManager->wpMission->stop(HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(stopAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
+        if(missionType_ == "waypoint")
+        {
+            ACK::ErrorCode stopAck = hal_->getVehicle()->missionManager->wpMission->stop(functionTimeout_);
+            if (ACK::getError(stopAck))
+            {
+                ACK::getErrorCodeMessage(stopAck, __func__);
                 std::cout << "\033[31mError at stop mission, exiting \033[m" << std::endl;
                 return false;
-            }else{
+            }
+            else
+            {
                 std::cout << "\033[32mStop Waypoint Mission... \033[m" << std::endl;
             }
-        }else if(missionType_ == "hotpoint"){
-            
-            DJI::OSDK::ACK::ErrorCode stopAck = HAL::vehicle_->missionManager->hpMission->stop(HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(stopAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(stopAck, __func__);
+        }
+        else if(missionType_ == "hotpoint")
+        {
+            ACK::ErrorCode stopAck = hal_->getVehicle()->missionManager->hpMission->stop(functionTimeout_);
+            if (ACK::getError(stopAck))
+            {
+                ACK::getErrorCodeMessage(stopAck, __func__);
                 std::cout << "\033[31mError at stop mission, exiting \033[m" << std::endl;
                 return false;
-            }else{
+            }
+            else
+            {
                 std::cout << "\033[32mStop Hotpoint Mission... \033[m" << std::endl;
             }
-
-        }else{
+        }
+        else
+        {
             std::cout << "\033[31mUnrecognised mission type, exiting \033[m" << std::endl;
             return false;
         }
-        return true;        
+        return true; 
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    bool MissionsDJI::resume_mission(){
+    // ----------------------------------------------------------------------
+    bool Missions::resume_mission()
+    {
+        if (!started_)
+            return false;
 
-        if(missionType_ == "waypoint"){
-
-            DJI::OSDK::ACK::ErrorCode resumeAck = HAL::vehicle_->missionManager->wpMission->resume(HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(resumeAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
+        if(missionType_ == "waypoint")
+        {
+            ACK::ErrorCode resumeAck = hal_->getVehicle()->missionManager->wpMission->resume(functionTimeout_);
+            if (ACK::getError(resumeAck))
+            {
+                ACK::getErrorCodeMessage(resumeAck, __func__);
                 std::cout << "\033[31mError at resume mission, exiting \033[m" << std::endl;
                 return false;
-            }else{
+            }
+            else
+            {
                 std::cout << "\033[32mResume Waypoint Mission... \033[m" << std::endl;
             }
-        }else if(missionType_ == "hotpoint"){
-
-            DJI::OSDK::ACK::ErrorCode resumeAck = HAL::vehicle_->missionManager->hpMission->resume(HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(resumeAck)){
-                DJI::OSDK::ACK::getErrorCodeMessage(resumeAck, __func__);
+        }
+        else if(missionType_ == "hotpoint")
+        {
+            ACK::ErrorCode resumeAck = hal_->getVehicle()->missionManager->hpMission->resume(functionTimeout_);
+            if (ACK::getError(resumeAck))
+            {
+                ACK::getErrorCodeMessage(resumeAck, __func__);
                 std::cout << "\033[31mError at resume mission, exiting \033[m" << std::endl;
                 return false;
-            }else{
-                std::cout << "\033[32mResume Hotpoint Mission... \033[m" << std::endl;
-
             }
-        }else{
+            else
+            {
+                std::cout << "\033[32mResume Hotpoint Mission... \033[m" << std::endl;
+            }
+        }
+        else
+        {
             std::cout << "\033[31mUnrecognised mission type, exiting \033[m" << std::endl;
             return false;
         }
-        return true;        
+        return true; 
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    // PRIVATE FUNCTIONS
-    //---------------------------------------------------------------------------------------------------------------------
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    void MissionsDJI::setWaypointDefaults(DJI::OSDK::WayPointSettings* _wp){
-
+    // ----------------------------------------------------------------------
+    void Missions::setWaypointDefaults(WayPointSettings* _wp)
+    {
         _wp->damping         = 0;
         _wp->yaw             = 0;
         _wp->gimbalPitch     = 0;
@@ -343,15 +372,16 @@ namespace dal{
         _wp->actionTimeLimit = 100;
         _wp->actionNumber    = 0;
         _wp->actionRepeat    = 0;
-        for (int i = 0; i < 16; ++i){
+        for (int i = 0; i < 16; ++i)
+        {
             _wp->commandList[i]      = 0;
             _wp->commandParameter[i] = 0;
         }
     }
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    void MissionsDJI::setWaypointInitDefaults(DJI::OSDK::WayPointInitSettings* _fdata){
 
+    // ----------------------------------------------------------------------
+    void Missions::setWaypointInitDefaults(WayPointInitSettings* _fdata)
+    {
         _fdata->maxVelocity    = 2;
         _fdata->idleVelocity   = 1;
         _fdata->finishAction   = 0;
@@ -365,56 +395,57 @@ namespace dal{
         _fdata->altitude       = 0;
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    std::vector<DJI::OSDK::WayPointSettings> MissionsDJI::createWaypoints(std::vector<Eigen::Vector3f> _wayPoints, dataMission _config){
-        
+    // ----------------------------------------------------------------------
+    std::vector<WayPointSettings> Missions::createWaypoints(std::map<int, std::vector<float>> _wayPoints, dataMission _config)
+    {
         // Get actual Lat and Lon
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type gps = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
+        TypeMap<TOPIC_GPS_FUSED>::type gps = hal_->getVehicle()->subscribe->getValue<TOPIC_GPS_FUSED>();
 
         // Let's create a vector to store our waypoints in
-        std::vector<DJI::OSDK::WayPointSettings> wp_list;
+        std::vector<WayPointSettings> wp_list;
 
         // Init wp
-        DJI::OSDK::WayPointSettings init_wp;
+        WayPointSettings init_wp;
         setWaypointDefaults(&init_wp);
 
+        auto initWP = _wayPoints[0];
         init_wp.turnMode = _config.turnModeWP;
         init_wp.index     = 0;
         init_wp.latitude  = gps.latitude;
         init_wp.longitude = gps.longitude;
-        init_wp.altitude  = _wayPoints[0][2];
+        init_wp.altitude  = initWP[2];
 
         wp_list.push_back(init_wp);   
 
-        for (unsigned i = 0; i < _wayPoints.size(); i++){
-
-            DJI::OSDK::WayPointSettings  wp;
+        for (auto it : _wayPoints)
+        {
+            WayPointSettings  wp;
             setWaypointDefaults(&wp);
 
             wp.turnMode = _config.turnModeWP;
-            wp.index     = i+1;
-            wp.latitude  = _wayPoints[i][0];
-            wp.longitude = _wayPoints[i][1];
-            wp.altitude  = _wayPoints[i][2];
+            wp.index     = it.first;
+            wp.latitude  = it.second[0];
+            wp.longitude = it.second[1];
+            wp.altitude  = it.second[2];
             wp_list.push_back(wp);
-
         }
-
         return wp_list;
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    void MissionsDJI::uploadWaypoints(std::vector<DJI::OSDK::WayPointSettings>& _wpList){
-
-        for (std::vector<DJI::OSDK::WayPointSettings>::iterator wp = _wpList.begin(); wp != _wpList.end(); ++wp){
+    // ----------------------------------------------------------------------
+    void Missions::uploadWaypoints(std::vector<WayPointSettings>& _wpList)
+    {
+        for (std::vector<WayPointSettings>::iterator wp = _wpList.begin(); wp != _wpList.end(); ++wp)
+        {
             std::cout << "\033[32mWaypoint created at (LLA): \033[m" << std::to_string(wp->latitude) + "\033[32m | \033[m" + std::to_string(wp->longitude) + "\033[32m | \033[m" + std::to_string(wp->altitude) << std::endl;
 
-            DJI::OSDK::ACK::WayPointIndex wpDataACK = HAL::vehicle_->missionManager->wpMission->uploadIndexData(&(*wp), HAL::functionTimeout_);
-            if (DJI::OSDK::ACK::getError(wpDataACK.ack)){
-                DJI::OSDK::ACK::getErrorCodeMessage(wpDataACK.ack, __func__);
+            ACK::WayPointIndex wpDataACK = hal_->getVehicle()->missionManager->wpMission->uploadIndexData(&(*wp), functionTimeout_);
+            if (ACK::getError(wpDataACK.ack))
+            {
+                ACK::getErrorCodeMessage(wpDataACK.ack, __func__);
             }
         }
     }
 
 }
-*/
+}

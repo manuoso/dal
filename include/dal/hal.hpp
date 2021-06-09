@@ -34,6 +34,7 @@
 #include <djiosdk/dji_status.hpp>
 #include <djiosdk/dji_vehicle.hpp>
 #include <djiosdk/dji_telemetry.hpp>
+#include <djiosdk/dji_mfio.hpp>
 
 namespace dal {
 

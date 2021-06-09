@@ -19,9 +19,11 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
+#include <iostream> // TODO: DELETE THIS
+
 #include <dal/modules/IOFunctions.hpp>
 
-namespace dal {
+namespace dal     {
 namespace modules {
 
     // ----------------------------------------------------------------------
@@ -50,29 +52,12 @@ namespace modules {
         }
     }
 
+    // ----------------------------------------------------------------------
+    bool IOFunctions::configureChannels(Channels _channels)
+    {
+        if (!started_)
+            return false;
 
-}
-}
-
-/*
-namespace dal{
-    //---------------------------------------------------------------------------------------------------------------------
-    // PUBLIC FUNCTIONS
-    //---------------------------------------------------------------------------------------------------------------------
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    // METHODS FOR INITIALIZATION
-    //---------------------------------------------------------------------------------------------------------------------
-
-    //---------------------------------------------------------------------------------------------------------------------
-    IOFunctionsDJI::IOFunctionsDJI(){}
-
-    //---------------------------------------------------------------------------------------------------------------------
-    IOFunctionsDJI::~IOFunctionsDJI(){}
-
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool IOFunctionsDJI::configureChannels(std::map<DJI::OSDK::MFIO::CHANNEL, DJI::OSDK::MFIO::MODE> _channels){
         // PREDEFINED CONFIG. TODO 666: PLEASE CHANGE THIS IN FUTURE
         // Parameters: initialValue - duty cycle
         //             freq         - PWM freq
@@ -80,32 +65,35 @@ namespace dal{
         uint16_t pwmFreq      = 50;     // Hz
 
         std::cout << "\033[32mConfiguring channels \033[m" << std::endl;
-        for(const auto &ch: _channels){
-            HAL::vehicle_->mfio->config(ch.second, ch.first, initOnTimeUs, pwmFreq, HAL::functionTimeout_);
+        for(const auto &ch: _channels)
+        {
+            ACK::ErrorCode errConfigCh = hal_->getVehicle()->mfio->config(ch.second, ch.first, initOnTimeUs, pwmFreq, functionTimeout_);
+            if (ACK::getError(errConfigCh) != ACK::SUCCESS)
+            {
+                ACK::getErrorCodeMessage(errConfigCh, __func__);
+                std::cout << "\033[31mError in Configure Channel: " << toString(ch.first) <<" \033[m" << std::endl;
+                return false;
+            }
         }    
-
         return true;
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    // METHODS FOR OUTPUT
-    //---------------------------------------------------------------------------------------------------------------------
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    bool IOFunctionsDJI::setPWM(DJI::OSDK::MFIO::CHANNEL _channel, uint32_t _value){
+    // ----------------------------------------------------------------------
+    bool IOFunctions::setPWM(MFIO::CHANNEL _channel, uint32_t _value)
+    {
+        if (!started_)
+            return false;
+
         std::cout << "\033[32mSet Value PWM \033[m" << std::endl;
-        HAL::vehicle_->mfio->setValue(_channel, _value, HAL::functionTimeout_);
-
+        ACK::ErrorCode errSetValue = hal_->getVehicle()->mfio->setValue(_channel, _value, functionTimeout_);
+        if (ACK::getError(errSetValue) != ACK::SUCCESS)
+        {
+            ACK::getErrorCodeMessage(errSetValue, __func__);
+            std::cout << "\033[31mError in Set PWM Value \033[m" << std::endl;
+            return false;
+        }
         return true;
     }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    // METHODS FOR INPUT
-    //---------------------------------------------------------------------------------------------------------------------
-
-    //---------------------------------------------------------------------------------------------------------------------
-    // PRIVATE FUNCTIONS
-    //---------------------------------------------------------------------------------------------------------------------
 
 }
-*/
+}

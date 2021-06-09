@@ -23,7 +23,7 @@
 
 #include <dal/modules/Control.hpp>
 
-namespace dal {
+namespace dal     {
 namespace modules {
 
     using namespace DJI::OSDK;

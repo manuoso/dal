@@ -24,43 +24,31 @@
 #include <map>
 
 #include <djiosdk/dji_telemetry.hpp>
+#include <djiosdk/dji_mfio.hpp>
 
 namespace dal    {
 namespace common {
 namespace types  {
 
+    using namespace DJI::OSDK;
+    
     const double C_EARTH = 6378137.0;
     const double C_PI = 3.141592653589793;
 
     struct Config
     {
-        /// ID of DJI APP
-        int app_id;
-        
-        /// KEY of DJI APP
+        int app_id = 0;
         std::string app_key = "";
-
-        /// Use logging
         bool useLog = false;
-
-        /// Use DJI logging
         bool useLogDJI = true;
-
-        /// Use advance sensing for DJI
         bool useAdvancedSensing = false;
-
-        /// Device port of the controller
         std::string device = "";
-
-        /// Baudrate to connect to the controller
-        unsigned int baudrate;
-
-        /// Is DJI Matrice 600
+        unsigned int baudrate = 0;
         bool isM600 = false;
     };
 
     typedef std::map<DJI::OSDK::Telemetry::TopicName, int> Topics;
-    // TopicName element must be equal to:
+    /// TopicName element must be equal to:
     // DJI::OSDK::Telemetry::TOPIC_POSITION_VO
     // DJI::OSDK::Telemetry::TOPIC_GPS_FUSED
     // DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS
@@ -81,6 +69,36 @@ namespace types  {
     // DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW
     // DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE
     
+    struct dataMission{
+        // Hotpoint config
+        float               radiusHP            = 0.0;  // 5 - 500 m
+        float               yawRateHP           = 0.0;  // 0 - 30 /s
+        int                 clockWiseHP         = 0;    // 0 -> counter clockwise, 1-> clockwise
+        int                 startPointHP        = 0;    // 0 -> North, 1 -> South, 2 -> West, 3 -> East, 4 -> Current pos to nearest on the hotpoint
+        // Waypoint config
+        float               maxVelWP            = 2.0;     
+        float               idleVelWP           = 1.0;
+        int                 finishActionWP      = 0;    // 0 -> no act, 1 -> return home, 2 -> landing, 3 -> return to point 0, 4 -> infinite mode
+        int                 executiveTimesWP    = 0;    // 0 -> once, 1 -> twice
+        int                 traceModeWP         = 0;    // 0 -> point by point, 1 -> smooth transition
+        int                 rcLostWP            = 0;    // 0 -> exit, 1 -> continue
+        int                 turnModeWP          = 0;    // 0 -> clockwise, 1 -> counter clockwise
+        // Global config                                // Hotpoint: 0 -> point to velocity direction, 1 -> face inside, 2 -> face outside, 3 -> controlled by RC, 4 -> same starting
+        int                 yawMode             = 0;    // Waypoint: 0 -> auto, 1 -> lock initial, 2 -> by RC, 3 -> waypoints yaw 
+        std::string         missionType         = "";
+    };
+
+    typedef std::map<MFIO::CHANNEL, MFIO::MODE> Channels;
+    /// CHANNELS:               | MODE:
+    // CHANNEL_0    |   SDK1    | MODE_PWM_OUT  
+    // CHANNEL_1    |   SDK2    | MODE_PWM_IN   
+    // CHANNEL_2    |   SDK3    | MODE_GPIO_OUT 
+    // CHANNEL_3    |   SDK4    | MODE_GPIO_IN 
+    // CHANNEL_4    |   SDK5    | MODE_ADC 
+    // CHANNEL_5    |   SDK6    | 
+    // CHANNEL_6    |   SDK7    |
+    // CHANNEL_7    |   SDK8    |
+
 }
 }
 }
