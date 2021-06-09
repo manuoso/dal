@@ -33,8 +33,15 @@ namespace modules {
             Telemetry(std::shared_ptr<HAL> & _hal);
             ~Telemetry();
 
+            // ----------------------------------------------------------------------
+            void stop();
+
         private:
             std::shared_ptr<HAL> hal_;
+
+            std::atomic<bool> started_;
+            int functionTimeout_;
+            
     };
 }
 }

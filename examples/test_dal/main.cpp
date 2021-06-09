@@ -29,10 +29,13 @@ using namespace dal;
 
 bool fin = false;
 
+std::unique_ptr<DAL> dal_;
+
 // Replacement handler
 void finishHandler(int _sig)
 {
     std::cout << "Finish Handler: Catch signal " << _sig << std::endl;
+    dal_->stop();
     fin = true;
 }
 
@@ -41,10 +44,11 @@ int main(int _argc, char **_argv)
     signal(SIGINT, finishHandler);
     signal(SIGTERM, finishHandler);
 
-    std::unique_ptr<DAL> dal;
-    dal = std::unique_ptr<DAL>(new DAL);
+    dal_ = std::unique_ptr<DAL>(new DAL);
 
-    dal->buildModulesAll();
+    dal_->buildModulesAll();
+
+    // dal_->control()->takeOff(false);
 
     while (!fin)
     {

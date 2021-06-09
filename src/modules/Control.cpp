@@ -35,17 +35,34 @@ namespace modules {
         , controlAct_(false)
     {
         hal_ = _hal;
+        if (hal_ != nullptr)
+            started_ = true;
+        else
+            started_ = false;
     }
 
     // ----------------------------------------------------------------------
     Control::~Control()
     {
-        
+        this->stop();
+    }
+
+    // ----------------------------------------------------------------------
+    void Control::stop()
+    {
+        if (started_)
+        {
+            started_ = false;
+            condVar_.notify_all();
+        }
     }
 
     // ----------------------------------------------------------------------
     bool Control::recoverFromManual()
     {
+        if (!started_)
+            return false;
+
         ACK::ErrorCode ctrlStatus = hal_->getVehicle()->obtainCtrlAuthority(functionTimeout_);
         if (ACK::getError(ctrlStatus) != ACK::SUCCESS)
         {
@@ -60,6 +77,9 @@ namespace modules {
     // ----------------------------------------------------------------------
     bool Control::releaseAuthority()
     {
+        if (!started_)
+            return false;
+
         ACK::ErrorCode ctrlStatus = hal_->getVehicle()->releaseCtrlAuthority(functionTimeout_);
         if (ACK::getError(ctrlStatus) != ACK::SUCCESS)
         {
@@ -74,12 +94,18 @@ namespace modules {
     // ----------------------------------------------------------------------
     void Control::emergencyBrake()
     {
+        if (!started_)
+            return;
+
         hal_->getVehicle()->control->emergencyBrake();
     }
 
     // ----------------------------------------------------------------------
     bool Control::arm()
     {
+        if (!started_)
+            return false;
+
         std::cout << "\033[32mArming motors \033[m" << std::endl;
 
         ACK::ErrorCode armStatus = hal_->getVehicle()->control->armMotors(functionTimeout_);
@@ -95,6 +121,9 @@ namespace modules {
     // ----------------------------------------------------------------------
     bool Control::disarm()
     {
+        if (!started_)
+            return false;
+
         std::cout << "\033[32mDisarming motors \033[m" << std::endl;
 
         ACK::ErrorCode disarmStatus = hal_->getVehicle()->control->disArmMotors(functionTimeout_);
@@ -110,6 +139,19 @@ namespace modules {
     // ----------------------------------------------------------------------
     bool Control::takeOff(bool _block)
     {
+        if (!started_)
+            return false;
+
+        if (_block)
+        {
+            launchTakeoff(nullptr);
+        }
+        else
+        {
+            SET_ACTION_CALLBACK(cb, condVar_)
+            auto nonBlock = std::async(std::launch::async, &Control::launchTakeoff, this, std::move(cb));
+            WAIT_ACTION(condVar_, started_)
+        }
 
         return true;
     }
@@ -117,6 +159,19 @@ namespace modules {
     // ----------------------------------------------------------------------
     bool Control::land(bool _block)
     {
+        if (!started_)
+            return false;
+        
+        if (_block)
+        {
+            launchLand(nullptr);
+        }
+        else
+        {
+            SET_ACTION_CALLBACK(cb, condVar_)
+            auto nonBlock = std::async(std::launch::async, &Control::launchLand, this, std::move(cb));
+            WAIT_ACTION(condVar_, started_)
+        }
 
         return true;
     }
@@ -124,6 +179,9 @@ namespace modules {
     // ----------------------------------------------------------------------
     bool Control::position(float _x, float _y, float _z, float _yaw)
     {
+        if (!started_)
+            return false;
+
         if(controlAct_)
         {
             std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
@@ -184,6 +242,9 @@ namespace modules {
     // ----------------------------------------------------------------------
     bool Control::velocity(float _vx, float _vy, float _vz, float _yawRate)
     {
+        if (!started_)
+            return false;
+
         uint flag = ::Control::HorizontalLogic::HORIZONTAL_VELOCITY |
                     ::Control::VerticalLogic::VERTICAL_VELOCITY |
                     ::Control::YawLogic::YAW_RATE |
@@ -196,6 +257,9 @@ namespace modules {
     // ----------------------------------------------------------------------
     bool Control::rpyThrust(float _roll, float _pitch, float _yawRate, float _thrust)
     {
+        if (!started_)
+            return false;
+
         // uint8_t mode =  (0 << 0)+               // bit 0 non stable mode
         //                 (1 << 1) + (0 << 2)+    // bit 2:1 body frame
         //                 (1 << 3)+               // bit 3 yaw rate
@@ -213,6 +277,9 @@ namespace modules {
     // ----------------------------------------------------------------------
     bool Control::customControl(uint8_t _flag, float _xSP, float _ySP, float _zSP, float _yawSP)
     {
+        if (!started_)
+            return false;
+
         if(controlAct_)
         {
             std::cout << "\033[31mError, you are trying to use several control functions at the same time\033[m" << std::endl;
@@ -338,102 +405,40 @@ namespace modules {
     }
 
     // ----------------------------------------------------------------------
-    void launchTakeoff()
+    void Control::launchTakeoff(std::function<void(int)> _cb)
     {
-
-    }
-
-    // ----------------------------------------------------------------------
-    void launchLand()
-    {
-
-    }
-
-}
-}
-
-/*
-namespace dal{
-    //---------------------------------------------------------------------------------------------------------------------
-    // PUBLIC FUNCTIONS
-    //---------------------------------------------------------------------------------------------------------------------
-    
-    //---------------------------------------------------------------------------------------------------------------------
-    // METHODS FOR INITIALIZATION
-    //---------------------------------------------------------------------------------------------------------------------
-
-    //---------------------------------------------------------------------------------------------------------------------
-    ControlDJI::ControlDJI()
-        : controlAct_(false)
-    {
-
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    ControlDJI::~ControlDJI()
-    {
-        
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    // METHODS FOR CONTROL
-    //---------------------------------------------------------------------------------------------------------------------
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::recoverFromManual(){
-
-        
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::releaseAuthority(){
-        
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::emergencyBrake(){
-
-           
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::arm(){
-        
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::disarm(){
-        
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::takeOff(const float _height){
-        
         std::cout << "\033[32mStart takeoff \033[m" << std::endl;
-        // Start takeoff
         ACK::ErrorCode takeoffStatus = hal_->getVehicle()->control->takeoff(functionTimeout_);
-        if(ACK::getError(takeoffStatus) != ACK::SUCCESS){
+        if (ACK::getError(takeoffStatus) != ACK::SUCCESS)
+        {
             ACK::getErrorCodeMessage(takeoffStatus, __func__);
             std::cout << "\033[31mError at start takeoff, exiting \033[m" << std::endl;
-            return false;
+            if (_cb)
+                _cb(0);
+            return;
         }
 
         // First check: Motors started
         int motorsNotStarted = 0;
         int timeoutCycles    = 20;
 
-        while(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() != VehicleStatus::FlightStatus::ON_GROUND &&
+        while (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() != VehicleStatus::FlightStatus::ON_GROUND &&
             hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ENGINE_START &&
-            motorsNotStarted < timeoutCycles){
-                
-                motorsNotStarted++;
-                usleep(100000);
+            motorsNotStarted < timeoutCycles)
+        {
+            motorsNotStarted++;
+            usleep(100000);
         }
 
-        if(motorsNotStarted == timeoutCycles){
+        if (motorsNotStarted == timeoutCycles)
+        {
             std::cout << "\033[31mTakeoff failed. Motors are not spinning, exiting \033[m" << std::endl;
-            return false; 
-        }else{
+            if (_cb)
+                _cb(0);
+            return; 
+        }
+        else
+        {
             std::cout << "\033[32mMotors spinning... \033[m" << std::endl;
         }
       
@@ -441,52 +446,62 @@ namespace dal{
         int stillOnGround = 0;
         timeoutCycles     = 110;
 
-        while(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() != VehicleStatus::FlightStatus::IN_AIR &&
+        while (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() != VehicleStatus::FlightStatus::IN_AIR &&
             (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
             hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF) &&
-            stillOnGround < timeoutCycles){
-            
+            stillOnGround < timeoutCycles)
+        {    
             stillOnGround++;
             usleep(100000);
         }
 
-        if(stillOnGround == timeoutCycles){
+        if (stillOnGround == timeoutCycles)
+        {
             std::cout << "\033[31mTakeoff failed. Aircraft is still on the ground, but the motors are spinning, exiting \033[m" << std::endl;
-            return false;
-        }else{
+            if (_cb)
+                _cb(0);
+            return;
+        }
+        else
+        {
             std::cout << "\033[32mAscending... \033[m" << std::endl;
         }
 
         // Final check: Finished takeoff
-        while(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() == VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
-            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() == VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF){
-                
+        while (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() == VehicleStatus::DisplayMode::MODE_ASSISTED_TAKEOFF ||
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() == VehicleStatus::DisplayMode::MODE_AUTO_TAKEOFF)
+        {        
                 sleep(1);
         }
 
-        if(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_P_GPS ||
-            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ATTITUDE){
-                
+        if (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_P_GPS ||
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ATTITUDE)
+        {        
                 std::cout << "\033[32mSuccessful takeoff! \033[m" << std::endl;
-        }else{
-            std::cout << "\033[31mTakeoff finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting \033[m" << std::endl;
-            return false;
         }
-
-        
-        return true;        
+        else
+        {
+            std::cout << "\033[31mTakeoff finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting \033[m" << std::endl;
+            if (_cb)
+                _cb(0);
+            return;
+        }
+        if (_cb)
+            _cb(1);
     }
 
-    //---------------------------------------------------------------------------------------------------------------------
-    bool ControlDJI::land(){
-        
+    // ----------------------------------------------------------------------
+    void Control::launchLand(std::function<void(int)> _cb)
+    {
         std::cout << "\033[32mStart land \033[m" << std::endl;
-        // Start landing
         ACK::ErrorCode landingStatus = hal_->getVehicle()->control->land(functionTimeout_);
-        if(ACK::getError(landingStatus) != ACK::SUCCESS){
+        if (ACK::getError(landingStatus) != ACK::SUCCESS)
+        {
             ACK::getErrorCodeMessage(landingStatus, __func__);
             std::cout << "\033[31mError at land, exiting \033[m" << std::endl;
-            return false;
+            if (_cb)
+                _cb(0);
+            return;
         }
 
         // First check: Landing started
@@ -494,36 +509,46 @@ namespace dal{
         int timeoutCycles     = 20;
 
         while (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
-            landingNotStarted < timeoutCycles){
-                
+            landingNotStarted < timeoutCycles)
+        {        
                 landingNotStarted++;
                 usleep(100000);
         }
 
-        if(landingNotStarted == timeoutCycles){
+        if (landingNotStarted == timeoutCycles)
+        {
             std::cout << "\033[31mLanding failed. Aircraft is still in the air, exiting \033[m" << std::endl;
-            return false;
-        }else{
+            if (_cb)
+                _cb(0);
+            return;
+        }
+        else
+        {
             std::cout << "\033[32mLanding... \033[m" << std::endl;
         }
 
         // Second check: Finished landing
         while (hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() == VehicleStatus::DisplayMode::MODE_AUTO_LANDING &&
-            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() == VehicleStatus::FlightStatus::IN_AIR){
-                
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>() == VehicleStatus::FlightStatus::IN_AIR)
+        {  
                 sleep(1);
         }
 
         if(hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_P_GPS ||
-            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ATTITUDE){
-                
+            hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>() != VehicleStatus::DisplayMode::MODE_ATTITUDE)
+        {        
                 std::cout << "\033[32mSuccessful landing! \033[m" << std::endl;
-        }else{
-            std::cout << "\033[31mLanding finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting \033[m" << std::endl;
-            return false;
         }
-        
-        return true;        
+        else
+        {
+            std::cout << "\033[31mLanding finished, but the aircraft is in an unexpected mode. Please connect DJI GO, exiting \033[m" << std::endl;
+            if (_cb)
+                _cb(0);
+            return;
+        }
+        if (_cb)
+            _cb(1);
     }
+
 }
-*/
+}

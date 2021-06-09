@@ -37,6 +37,31 @@ namespace utils  {
     using namespace DJI::OSDK::Telemetry;
 
     // ----------------------------------------------------------------------
+    template <class T>
+    inline std::string toString(const T& _convert)
+    {
+        std::stringstream ss;
+        ss << _convert;
+        return ss.str();
+    }
+
+    // ----------------------------------------------------------------------
+    #define SET_ACTION_CALLBACK(Cb, CondVar)   \
+    std::mutex mtx;                            \
+    std::atomic<int> resultAct{-1};            \
+    auto Cb = [&](int _result)                 \
+    {                                          \
+        resultAct = static_cast<int>(_result); \
+        CondVar.notify_all();                  \
+    };                                         \
+
+    #define WAIT_ACTION(CondVar, Started)                                          \
+    std::unique_lock<std::mutex> lock(mtx);                                       \
+    {                                                                             \
+        CondVar.wait(lock, [&]()->bool{ return ((resultAct != -1) || !Started); }); \
+    }                                                                             \
+
+    // ----------------------------------------------------------------------
     #define DEG2RAD(DEG) ((DEG) * ((C_PI) / (180.0)))
     #define RAD2DEG(RAD) ((RAD) * ((180.0) / (C_PI)))
 
@@ -59,15 +84,6 @@ namespace utils  {
         _delta[0] = DEG2RAD(deltaLon) * C_EARTH * cos(DEG2RAD(t_lat));
         _delta[1] = DEG2RAD(deltaLat) * C_EARTH;
         _delta[2] = subscriptionTarget->altitude - subscriptionOrigin->altitude;
-    }
-
-    // ----------------------------------------------------------------------
-    template <class T>
-    inline std::string toString(const T& _convert)
-    {
-        std::stringstream ss;
-        ss << _convert;
-        return ss.str();
     }
 
 }

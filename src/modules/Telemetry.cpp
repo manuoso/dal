@@ -26,16 +26,29 @@ namespace modules {
 
     // ----------------------------------------------------------------------
     Telemetry::Telemetry(std::shared_ptr<HAL> & _hal) 
+        : functionTimeout_(1)
     {
         hal_ = _hal;
+        if (hal_ != nullptr)
+            started_ = true;
+        else
+            started_ = false;
     }
 
     // ----------------------------------------------------------------------
     Telemetry::~Telemetry()
     {
-        
+        this->stop();
     }
 
+    // ----------------------------------------------------------------------
+    void Telemetry::stop()
+    {
+        if (started_)
+        {
+            started_ = false;
+        }
+    }
 
 }
 }

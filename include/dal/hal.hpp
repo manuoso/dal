@@ -51,6 +51,9 @@ namespace dal {
             ~HAL();
 
             // ----------------------------------------------------------------------
+            void stop();
+
+            // ----------------------------------------------------------------------
             bool produceMinimal();
             bool produceAll();
             bool produceCustom(Config _cfg, Topics _topics);
@@ -86,7 +89,7 @@ namespace dal {
             std::mutex mtx_;
             std::atomic<int> pkgIndex_;
 
-            DJI::OSDK::Vehicle* vehicle_;
+            Vehicle* vehicle_;
             int functionTimeout_;
             Config cfg_;
 

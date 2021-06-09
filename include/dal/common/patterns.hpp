@@ -90,7 +90,7 @@ namespace patterns  {
         public:
             ~Director()
             {
-                delete builder_;
+                // Left in blank intentionally
             }
 
             void setBuilder(Builder *_builder)

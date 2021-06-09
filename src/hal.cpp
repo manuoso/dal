@@ -44,11 +44,17 @@ namespace dal {
     // ----------------------------------------------------------------------
     HAL::~HAL()
     {
+        this->stop();
+    }
+
+    // ----------------------------------------------------------------------
+    void HAL::stop()
+    {
         if (started_)
         {
             started_ = false;
-            unsubscribeAllTopics();
-            delete vehicle_;
+            //unsubscribeAllTopics();
+            //delete vehicle_;
         }
     }
 
@@ -85,11 +91,11 @@ namespace dal {
             return false;
         
         showCfg(cfg_);
-        if (!init(cfg_))
-            return false;
+        // if (!init(cfg_))
+        //     return false;
 
-        if (!topicsAll())
-            return false;
+        // if (!topicsAll())
+        //     return false;
 
         started_ = true;
 
@@ -451,7 +457,8 @@ namespace dal {
     // ----------------------------------------------------------------------
     void HAL::showLogo()
     {
-        std::cout <<    "\033[34m     ........               ........    \n"
+        std::cout <<    "\n"
+                        "\033[34m     ........               ........    \n"
                         "  .............           ............. \n"
                         " ...............         ...............\n"
                         " .......▄........       ........▄.......\n"

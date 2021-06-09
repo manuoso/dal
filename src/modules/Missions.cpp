@@ -26,14 +26,28 @@ namespace modules {
 
     // ----------------------------------------------------------------------
     Missions::Missions(std::shared_ptr<HAL> & _hal) 
+        : functionTimeout_(1)
     {
         hal_ = _hal;
+        if (hal_ != nullptr)
+            started_ = true;
+        else
+            started_ = false;
     }
 
     // ----------------------------------------------------------------------
     Missions::~Missions()
     {
-        
+        this->stop();
+    }
+
+    // ----------------------------------------------------------------------
+    void Missions::stop()
+    {
+        if (started_)
+        {
+            started_ = false;
+        }
     }
 
 

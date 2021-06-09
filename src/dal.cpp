@@ -19,7 +19,6 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
-
 #include <dal/dal.hpp>
 
 namespace dal {
@@ -39,23 +38,36 @@ namespace dal {
     // ----------------------------------------------------------------------
     DAL::~DAL()
     {
-        if (started_)
-        {
-            started_ = false;
-
-            control_.reset();
-            telemetry_.reset();
-            missions_.reset();
-            io_.reset();
-
-            hal_.reset();
-        }
+        this->stop();
     }
 
     // ----------------------------------------------------------------------
     bool DAL::isInit()
     {
         return started_;
+    }
+
+    // ----------------------------------------------------------------------
+    void DAL::stop()
+    {
+        if (started_)
+        {
+            started_ = false;
+
+            if (control_)
+                control_->stop();
+
+            if (telemetry_)
+                telemetry_->stop();
+
+            if (missions_)
+                missions_->stop();
+
+            if (io_)
+                io_->stop();
+
+            hal_->stop();
+        }
     }
 
     // ----------------------------------------------------------------------
@@ -70,7 +82,7 @@ namespace dal {
         if (!this->buildAll())
             return;
         
-        control_ = std::unique_ptr<Control> (new Control(hal_));
+        // control_ = std::unique_ptr<Control> (new Control(hal_));
         telemetry_ = std::unique_ptr<Telemetry> (new Telemetry(hal_));
         missions_ = std::unique_ptr<Missions> (new Missions(hal_));
         io_ = std::unique_ptr<IOFunctions> (new IOFunctions(hal_));

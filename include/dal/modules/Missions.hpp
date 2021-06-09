@@ -33,8 +33,15 @@ namespace modules {
             Missions(std::shared_ptr<HAL> & _hal);
             ~Missions();
 
+            // ----------------------------------------------------------------------
+            void stop();
+
         private:
             std::shared_ptr<HAL> hal_;
+            
+            std::atomic<bool> started_;
+            int functionTimeout_;
+
     };
     
 }

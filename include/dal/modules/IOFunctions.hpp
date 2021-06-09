@@ -33,8 +33,15 @@ namespace modules {
             IOFunctions(std::shared_ptr<HAL> & _hal);
             ~IOFunctions();
 
+            // ----------------------------------------------------------------------
+            void stop();
+
         private:
             std::shared_ptr<HAL> hal_;
+
+            std::atomic<bool> started_;
+            int functionTimeout_;
+            
     };
     
 }

@@ -26,14 +26,28 @@ namespace modules {
 
     // ----------------------------------------------------------------------
     IOFunctions::IOFunctions(std::shared_ptr<HAL> & _hal) 
+        : functionTimeout_(1)
     {
         hal_ = _hal;
+        if (hal_ != nullptr)
+            started_ = true;
+        else
+            started_ = false;
     }
 
     // ----------------------------------------------------------------------
     IOFunctions::~IOFunctions()
     {
-        
+        this->stop();
+    }
+
+    // ----------------------------------------------------------------------
+    void IOFunctions::stop()
+    {
+        if (started_)
+        {
+            started_ = false;
+        }
     }
 
 
