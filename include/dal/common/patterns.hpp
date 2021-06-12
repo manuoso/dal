@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <unistd.h>
 #include <thread>
 #include <memory>
 #include <mutex>
@@ -45,30 +46,36 @@ namespace patterns  {
     };
 
     // ----------------------------------------------------------------------
-    template <typename T>
-    class Singleton
-    {
+    class Task {
         public:
-            ~Singleton();
-            static T* instance()
-            {  
-                static std::shared_ptr<Singleton<T> > instance = nullptr;
-    
-                if (!instance)
-                    instance.reset(new T());
-
-                return instance.get();
-            };
-
-        protected:
-            Singleton(void);
+            Task(unsigned int _duration);
+            virtual ~Task();
+            void setDuration(unsigned int _duration);
+            virtual void run();
+            virtual void stop();
+            virtual void step() = 0;
 
         private:
-            Singleton(const Singleton &) = delete;
-            Singleton(Singleton &&) = delete;
-            Singleton& operator = (const Singleton&) = delete;
-            Singleton& operator = (Singleton&&) = delete;
-    };
+            class Runnable
+            {
+            public:
+                Runnable(Task* _task);
+                virtual ~Runnable();
+                void run();
+
+            private:
+                Task* task_;
+            };
+        
+        private:
+            std::atomic<bool> run_;
+
+            std::chrono::microseconds duration_;
+
+            std::mutex lock_;
+            std::shared_ptr<std::thread> thread_;
+            std::shared_ptr<Runnable> taskRunner_;
+        };
 
     // ----------------------------------------------------------------------
     class Builder
@@ -80,7 +87,6 @@ namespace patterns  {
             }
 
             virtual bool produceMinimal() = 0;
-
             virtual bool produceAll() = 0;
     };
 

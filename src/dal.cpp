@@ -82,8 +82,9 @@ namespace dal {
         if (!this->buildAll())
             return;
         
-        // control_ = std::unique_ptr<Control> (new Control(hal_));
+        control_ = std::unique_ptr<Control> (new Control(hal_));
         telemetry_ = std::unique_ptr<Telemetry> (new Telemetry(hal_));
+        telemetry_->init();
         missions_ = std::unique_ptr<Missions> (new Missions(hal_));
         io_ = std::unique_ptr<IOFunctions> (new IOFunctions(hal_));
 

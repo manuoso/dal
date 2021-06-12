@@ -19,12 +19,10 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
-
 #pragma once
 
 #include <chrono>
-#include <vector>
-#include <map>
+#include <algorithm>
 
 #include <dal/common/patterns.hpp>
 #include <dal/common/utils.hpp>
@@ -64,7 +62,12 @@ namespace dal {
 
             float32_t getOriginAltitude() const { return originAltitude_; }
             GPSFused getOriginGPS() const { return originGPS_; }
-        
+            Topics getTopics() const { return topics_; }
+            Topics getTopics400hz() const { return topicsExtract400hz_; }
+            Topics getTopics200hz() const { return topicsExtract200hz_; }
+            Topics getTopics50hz() const { return topicsExtract50hz_; }
+            Topics getTopics5hz() const { return topicsExtract5hz_; }
+
         private:
             bool init(Config _cfg);
             bool extract(Config& _cfg);
@@ -78,7 +81,7 @@ namespace dal {
             bool setLocalPosition();
             
             bool extractTopics(Topics _topics);
-            bool subscribeToTopic(std::vector<TopicName> _topics, int _freq);
+            bool subscribeToTopic(Topics _topics, int _freq);
             void unsubscribeAllTopics();
 
             // ----------------------------------------------------------------------
@@ -96,6 +99,9 @@ namespace dal {
 
             float32_t originAltitude_;
             GPSFused originGPS_;
+            Topics topics_;
+            Topics topicsExtract400hz_, topicsExtract200hz_, topicsExtract50hz_, topicsExtract5hz_;
+
     };
 
 }

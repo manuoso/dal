@@ -50,6 +50,8 @@ int main(int _argc, char **_argv)
 
     // dal_->control()->takeOff(false);
 
+    dal_->telemetry()->setCallbackBattery([](Battery_info _bat){ std::cout << "Battery Voltage: " << _bat.voltage << std::endl; });
+
     while (!fin)
     {
         sleep(1);

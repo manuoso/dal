@@ -21,7 +21,8 @@
 
 #pragma once
 
-#include <map>
+#include <vector>
+#include <functional>
 
 #include <djiosdk/dji_telemetry.hpp>
 #include <djiosdk/dji_mfio.hpp>
@@ -31,7 +32,8 @@ namespace common {
 namespace types  {
 
     using namespace DJI::OSDK;
-    
+    using namespace DJI::OSDK::Telemetry;
+
     const double C_EARTH = 6378137.0;
     const double C_PI = 3.141592653589793;
 
@@ -47,27 +49,32 @@ namespace types  {
         bool isM600 = false;
     };
 
-    typedef std::map<DJI::OSDK::Telemetry::TopicName, int> Topics;
+    typedef std::vector<TopicName> Topics;
     /// TopicName element must be equal to:
-    // DJI::OSDK::Telemetry::TOPIC_POSITION_VO
-    // DJI::OSDK::Telemetry::TOPIC_GPS_FUSED
-    // DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS
-    // DJI::OSDK::Telemetry::TOPIC_GPS_SIGNAL_LEVEL
-    // DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED
-    // DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_FUSIONED
-    // DJI::OSDK::Telemetry::TOPIC_HARD_SYNC
-    // DJI::OSDK::Telemetry::TOPIC_COMPASS
-    // DJI::OSDK::Telemetry::TOPIC_QUATERNION
-    // DJI::OSDK::Telemetry::TOPIC_VELOCITY
-    // DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT
-    // DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE
-    // DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO
-    // DJI::OSDK::Telemetry::TOPIC_RC
-    // DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA
-    // DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA
-    // DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_RAW
-    // DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW
-    // DJI::OSDK::Telemetry::TOPIC_CONTROL_DEVICE
+    // TOPIC_POSITION_VO
+    // TOPIC_GPS_FUSED
+    // TOPIC_GPS_DETAILS
+    // TOPIC_GPS_SIGNAL_LEVEL
+    // TOPIC_ALTITUDE_FUSIONED
+    // TOPIC_ANGULAR_RATE_FUSIONED
+    // TOPIC_HARD_SYNC
+    // TOPIC_COMPASS
+    // TOPIC_QUATERNION
+    // TOPIC_VELOCITY
+    // TOPIC_STATUS_FLIGHT
+    // TOPIC_STATUS_DISPLAYMODE
+    // TOPIC_BATTERY_INFO
+    // TOPIC_RC
+    // TOPIC_RC_WITH_FLAG_DATA
+    // TOPIC_RC_FULL_RAW_DATA
+    // TOPIC_ANGULAR_RATE_RAW
+    // TOPIC_ACCELERATION_RAW
+    // TOPIC_CONTROL_DEVICE
+
+    const Topics DefaultTopics400hz = {TOPIC_HARD_SYNC, TOPIC_ANGULAR_RATE_RAW, TOPIC_ACCELERATION_RAW};
+    const Topics DefaultTopics200hz = {TOPIC_ANGULAR_RATE_FUSIONED, TOPIC_QUATERNION, TOPIC_VELOCITY, TOPIC_ALTITUDE_FUSIONED};
+    const Topics DefaultTopics50hz = {TOPIC_GPS_FUSED, TOPIC_COMPASS, TOPIC_STATUS_FLIGHT, TOPIC_STATUS_DISPLAYMODE, TOPIC_RC, TOPIC_RC_WITH_FLAG_DATA, TOPIC_RC_FULL_RAW_DATA};
+    const Topics DefaultTopics5hz = {TOPIC_GPS_DETAILS, TOPIC_GPS_SIGNAL_LEVEL, TOPIC_BATTERY_INFO};
     
     struct dataMission{
         // Hotpoint config
@@ -98,6 +105,46 @@ namespace types  {
     // CHANNEL_5    |   SDK6    | 
     // CHANNEL_6    |   SDK7    |
     // CHANNEL_7    |   SDK8    |
+
+    typedef TypeMap<TOPIC_GPS_FUSED>::type              LatLon;
+    typedef TypeMap<TOPIC_GPS_DETAILS>::type            GPSDetail;
+    typedef TypeMap<TOPIC_GPS_SIGNAL_LEVEL>::type       GPSSignal;
+    typedef TypeMap<TOPIC_ALTITUDE_FUSIONED>::type      Altitude;
+    typedef TypeMap<TOPIC_ANGULAR_RATE_FUSIONED>::type  AngularRate;
+    typedef TypeMap<TOPIC_ANGULAR_RATE_RAW>::type       AngularRateRaw;
+    typedef TypeMap<TOPIC_ACCELERATION_RAW>::type       AccelerationRaw;
+    typedef TypeMap<TOPIC_HARD_SYNC>::type              HardSync_FC;
+    typedef TypeMap<TOPIC_COMPASS>::type                Compass;
+    typedef TypeMap<TOPIC_QUATERNION>::type             Quaternion;
+    typedef TypeMap<TOPIC_VELOCITY>::type               Velocity;
+    typedef TypeMap<TOPIC_STATUS_FLIGHT>::type          FlightStatus;
+    typedef TypeMap<TOPIC_STATUS_DISPLAYMODE>::type     Mode;
+    typedef TypeMap<TOPIC_BATTERY_INFO>::type           Battery_info;
+    typedef TypeMap<TOPIC_RC>::type                     RcBasic;
+    typedef TypeMap<TOPIC_RC_WITH_FLAG_DATA>::type      Rc;
+    typedef TypeMap<TOPIC_RC_FULL_RAW_DATA>::type       RcRaw;
+    typedef TypeMap<TOPIC_CONTROL_DEVICE>::type         ControlDevice;
+    typedef std::vector<float>                          LocalPoseGPS;
+
+    typedef std::function<void(LatLon)>                 CallbackLatLon;
+    typedef std::function<void(GPSDetail)>              CallbackGPSDetail;
+    typedef std::function<void(GPSSignal)>              CallbackGPSSignal;
+    typedef std::function<void(Altitude)>               CallbackAltitude;
+    typedef std::function<void(AngularRate)>            CallbackAngRate;
+    typedef std::function<void(AngularRateRaw)>         CallbackAngRateRaw;
+    typedef std::function<void(AccelerationRaw)>        CallbackAccRaw;
+    typedef std::function<void(HardSync_FC)>            CallbackIMU;
+    typedef std::function<void(Compass)>                CallbackCompass;
+    typedef std::function<void(Quaternion)>             CallbackQuat;
+    typedef std::function<void(Velocity)>               CallbackVel;
+    typedef std::function<void(FlightStatus)>           CallbackFlighStatus;
+    typedef std::function<void(Mode)>                   CallbackMode;
+    typedef std::function<void(Battery_info)>           CallbackBattery;
+    typedef std::function<void(RcBasic)>                CallbackRcBasic;
+    typedef std::function<void(Rc)>                     CallbackRc;
+    typedef std::function<void(RcRaw)>                  CallbackRcRaw;
+    typedef std::function<void(ControlDevice)>          CallbackControlDevice;
+    typedef std::function<void(LocalPoseGPS)>           CallbackLocalPoseGPS;
 
 }
 }

@@ -26,13 +26,29 @@ namespace modules {
 
     // ----------------------------------------------------------------------
     Telemetry::Telemetry(std::shared_ptr<HAL> & _hal) 
-        : functionTimeout_(1)
+        : started_(false)
+        , functionTimeout_(1)
+        , cbLatLon_(nullptr)
+        , cbGPSDetail_(nullptr)
+        , cbGPSSignal_(nullptr)
+        , cbAltitude_(nullptr)
+        , cbAngRate_(nullptr)
+        , cbAngRateRaw_(nullptr)
+        , cbAccRaw_(nullptr)
+        , cbIMU_(nullptr)
+        , cbCompass_(nullptr)
+        , cbQuat_(nullptr)
+        , cbVel_(nullptr)
+        , cbFlightStatus_(nullptr)
+        , cbMode_(nullptr)
+        , cbBattery_(nullptr)
+        , cbRcBasic_(nullptr)
+        , cbRc_(nullptr)
+        , cbRcRaw_(nullptr)
+        , cbControlDevice_(nullptr)
+        , cbLocalPoseGPS_(nullptr)
     {
         hal_ = _hal;
-        if (hal_ != nullptr)
-            started_ = true;
-        else
-            started_ = false;
     }
 
     // ----------------------------------------------------------------------
@@ -47,6 +63,610 @@ namespace modules {
         if (started_)
         {
             started_ = false;
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    void Telemetry::init()
+    {
+        if (hal_ != nullptr)
+            started_ = true;
+        else
+            started_ = false;
+
+        if (!started_)
+            return;
+
+        topics400hz_ = hal_->getTopics400hz();
+        topics200hz_ = hal_->getTopics200hz();
+        topics50hz_ = hal_->getTopics50hz();
+        topics5hz_ = hal_->getTopics5hz();
+
+        //TODO: debe coincidir el pkgindex con el orden de setup de los callbacks
+        if (topics400hz_.size() > 0)
+            hal_->getVehicle()->subscribe->registerUserPackageUnpackCallback(0, Telemetry::callback400Hz, this);
+        
+        if (topics200hz_.size() > 0)
+            hal_->getVehicle()->subscribe->registerUserPackageUnpackCallback(1, Telemetry::callback200Hz, this);
+        
+        if (topics50hz_.size() > 0)
+            hal_->getVehicle()->subscribe->registerUserPackageUnpackCallback(2, Telemetry::callback50Hz, this);
+        
+        if (topics5hz_.size() > 0)
+            hal_->getVehicle()->subscribe->registerUserPackageUnpackCallback(3, Telemetry::callback5Hz, this);
+    }
+
+    // ----------------------------------------------------------------------
+    void Telemetry::setCallbackGPSCoord(CallbackLatLon _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxGPSCoord_);
+        if (!started_)
+            return;
+        else
+            cbLatLon_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackGPSDetail(CallbackGPSDetail _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxGPSDetail_);
+        if (!started_)
+            return;
+        else
+            cbGPSDetail_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackGPSSignal(CallbackGPSSignal _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxGPSSignal_);
+        if (!started_)
+            return;
+        else
+            cbGPSSignal_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackAltitude(CallbackAltitude _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxAltitude_);
+        if (!started_)
+            return;
+        else
+            cbAltitude_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackAngRate(CallbackAngRate _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxAngRate_);
+        if (!started_)
+            return;
+        else
+            cbAngRate_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackAngRateRaw(CallbackAngRateRaw _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxAngRateRaw_);
+        if (!started_)
+            return;
+        else
+            cbAngRateRaw_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackAccRaw(CallbackAccRaw _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxAccRaw_);
+        if (!started_)
+            return;
+        else
+            cbAccRaw_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackIMU(CallbackIMU _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxIMU_);
+        if (!started_)
+            return;
+        else
+            cbIMU_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackCompass(CallbackCompass _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxCompass_);
+        if (!started_)
+            return;
+        else
+            cbCompass_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackQuat(CallbackQuat _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxQuat_);
+        if (!started_)
+            return;
+        else
+            cbQuat_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackVel(CallbackVel _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxVel_);
+        if (!started_)
+            return;
+        else
+            cbVel_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackFlightStatus(CallbackFlighStatus _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxFlightStatus_);
+        if (!started_)
+            return;
+        else
+            cbFlightStatus_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackMode(CallbackMode _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxMode_);
+        if (!started_)
+            return;
+        else
+            cbMode_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackBattery(CallbackBattery _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxBattery_);
+        if (!started_)
+            return;
+        else
+            cbBattery_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackRcBasic(CallbackRcBasic _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxRcBasic_);
+        if (!started_)
+            return;
+        else
+            cbRcBasic_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackRc(CallbackRc _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxRc_);
+        if (!started_)
+            return;
+        else
+            cbRc_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackRcRaw(CallbackRcRaw _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxRcRaw_);
+        if (!started_)
+            return;
+        else
+            cbRcRaw_ = std::move(_cb);
+    }
+
+    /// ----------
+    void Telemetry::setCallbackControlDevice(CallbackControlDevice _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxControlDevice_);
+        if (!started_)
+            return;
+        else
+            return;
+    }
+
+    /// ----------
+    void Telemetry::setCallbackLocalPoseGPS(CallbackLocalPoseGPS _cb)
+    {
+        std::unique_lock<std::mutex> lock(mtxLocalPoseGPS_);
+        if (!started_)
+            return;
+        else
+            return;
+    }
+
+    // ----------------------------------------------------------------------
+    LatLon Telemetry::getGPSCoord()
+    {
+        std::unique_lock<std::mutex> lock(mtxGPSCoord_);
+        if (!started_)
+            return LatLon{};
+        else
+            return latLon_;
+    }
+
+    /// ----------
+    GPSDetail Telemetry::getGPSDetail()
+    {
+        std::unique_lock<std::mutex> lock(mtxGPSDetail_);
+        if (!started_)
+            return GPSDetail{};
+        else
+            return gpsDetail_;
+    }
+
+    /// ----------
+    GPSSignal Telemetry::getGPSSignal()
+    {
+        std::unique_lock<std::mutex> lock(mtxGPSSignal_);
+        if (!started_)
+            return GPSSignal{};
+        else
+            return gpsSignal_;
+    }
+
+    /// ----------
+    Altitude Telemetry::getAltitude()
+    {
+        std::unique_lock<std::mutex> lock(mtxAltitude_);
+        if (!started_)
+            return Altitude{};
+        else
+            return altitude_;
+    }
+
+    /// ----------
+    AngularRate Telemetry::getAngRate()
+    {
+        std::unique_lock<std::mutex> lock(mtxAngRate_);
+        if (!started_)
+            return AngularRate{};
+        else
+            return angRate_;
+    }
+
+    /// ----------
+    AngularRateRaw Telemetry::getAngRateRaw()
+    {
+        std::unique_lock<std::mutex> lock(mtxAngRateRaw_);
+        if (!started_)
+            return AngularRateRaw{};
+        else
+            return angRateRaw_;
+    }
+
+    /// ----------
+    AccelerationRaw Telemetry::getAccRaw()
+    {
+        std::unique_lock<std::mutex> lock(mtxAccRaw_);
+        if (!started_)
+            return AccelerationRaw{};
+        else
+            return accRaw_;
+    }
+
+    /// ----------
+    HardSync_FC Telemetry::getIMU()
+    {
+        std::unique_lock<std::mutex> lock(mtxIMU_);
+        if (!started_)
+            return HardSync_FC{};
+        else
+            return hs_fc_;
+    }
+
+    /// ----------
+    Compass Telemetry::getCompass()
+    {
+        std::unique_lock<std::mutex> lock(mtxCompass_);
+        if (!started_)
+            return Compass{};
+        else
+            return compass_;
+    }
+
+    /// ----------
+    Quaternion Telemetry::getQuat()
+    {
+        std::unique_lock<std::mutex> lock(mtxQuat_);
+        if (!started_)
+            return Quaternion{};
+        else
+            return quat_;
+    }
+
+    /// ----------
+    Velocity Telemetry::getVel()
+    {
+        std::unique_lock<std::mutex> lock(mtxVel_);
+        if (!started_)
+            return Velocity{};
+        else
+            return vel_;
+    }
+
+    /// ----------
+    FlightStatus Telemetry::getFlightStatus()
+    {
+        std::unique_lock<std::mutex> lock(mtxFlightStatus_);
+        if (!started_)
+            return FlightStatus{};
+        else
+            return fs_;
+    }
+
+    /// ----------
+    Mode Telemetry::getMode()
+    {
+        std::unique_lock<std::mutex> lock(mtxMode_);
+        if (!started_)
+            return Mode{};
+        else
+            return mode_;
+    }
+
+    /// ----------
+    Battery_info Telemetry::getBattery()
+    {
+        std::unique_lock<std::mutex> lock(mtxBattery_);
+        if (!started_)
+            return Battery_info{};
+        else
+            return bat_info_;
+    }
+
+    /// ----------
+    RcBasic Telemetry::getRcBasic()
+    {
+        std::unique_lock<std::mutex> lock(mtxRcBasic_);
+        if (!started_)
+            return RcBasic{};
+        else
+            return rcBasic_;
+    }
+
+    /// ----------
+    Rc Telemetry::getRc()
+    {
+        std::unique_lock<std::mutex> lock(mtxRc_);
+        if (!started_)
+            return Rc{};
+        else
+            return rc_;
+    }
+
+    /// ----------
+    RcRaw Telemetry::getRcRaw()
+    {
+        std::unique_lock<std::mutex> lock(mtxRcRaw_);
+        if (!started_)
+            return RcRaw{};
+        else
+            return rcRaw_;
+    }
+
+    /// ----------
+    ControlDevice Telemetry::getControlDevice()
+    {
+        std::unique_lock<std::mutex> lock(mtxControlDevice_);
+        if (!started_)
+            return ControlDevice{};
+        else
+            return contDevice_;
+    }
+
+    /// ----------
+    LocalPoseGPS Telemetry::getLocalPoseGPS()
+    {
+        std::unique_lock<std::mutex> lock(mtxLocalPoseGPS_);
+        if (!started_)
+            return LocalPoseGPS{};
+        else
+            return localPoseGPS_;
+    }
+
+    // ----------------------------------------------------------------------
+    void Telemetry::callback400Hz(Vehicle* vehicle, RecvContainer recvFrame, UserData userData)
+    {
+        auto self = (Telemetry*)userData;
+        
+        if (self->topics400hz_.size() > 0)
+            return;
+
+        if (std::find(self->topics400hz_.begin(), self->topics400hz_.end(), TOPIC_HARD_SYNC) != self->topics400hz_.end())
+        {
+            std::unique_lock<std::mutex> lockIMU(self->mtxIMU_);
+            self->hs_fc_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_HARD_SYNC>();
+            if (self->cbIMU_)
+                self->cbIMU_(self->hs_fc_);
+            lockIMU.unlock();
+        }
+
+        if (std::find(self->topics400hz_.begin(), self->topics400hz_.end(), TOPIC_ANGULAR_RATE_RAW) != self->topics400hz_.end())
+        {
+            std::unique_lock<std::mutex> lockAngRateRaw(self->mtxAngRateRaw_);
+            self->angRateRaw_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_ANGULAR_RATE_RAW>();
+            if (self->cbAngRateRaw_)
+                self->cbAngRateRaw_(self->angRateRaw_);
+            lockAngRateRaw.unlock();
+        }
+
+        if (std::find(self->topics400hz_.begin(), self->topics400hz_.end(), TOPIC_ACCELERATION_RAW) != self->topics400hz_.end())
+        {
+            std::unique_lock<std::mutex> lockAccRaw(self->mtxAccRaw_);
+            self->accRaw_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_ACCELERATION_RAW>();
+            if (self->cbAccRaw_)
+                self->cbAccRaw_(self->accRaw_);
+            lockAccRaw.unlock();
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    void Telemetry::callback200Hz(Vehicle* vehicle, RecvContainer recvFrame, UserData userData)
+    {
+        auto self = (Telemetry*)userData;
+        
+        if (self->topics200hz_.size() > 0)
+            return;
+
+        if (std::find(self->topics200hz_.begin(), self->topics200hz_.end(), TOPIC_ANGULAR_RATE_FUSIONED) != self->topics200hz_.end())
+        {
+            std::unique_lock<std::mutex> lockAngRate(self->mtxAngRate_);
+            self->angRate_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_ANGULAR_RATE_FUSIONED>();
+            if (self->cbAngRate_)
+                self->cbAngRate_(self->angRate_);
+            lockAngRate.unlock();
+        }
+
+        if (std::find(self->topics200hz_.begin(), self->topics200hz_.end(), TOPIC_QUATERNION) != self->topics200hz_.end())
+        {
+            std::unique_lock<std::mutex> lockQuat(self->mtxQuat_);
+            self->quat_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_QUATERNION>();
+            if (self->cbQuat_)
+                self->cbQuat_(self->quat_);
+            lockQuat.unlock();
+        }
+
+        if (std::find(self->topics200hz_.begin(), self->topics200hz_.end(), TOPIC_VELOCITY) != self->topics200hz_.end())
+        {
+            std::unique_lock<std::mutex> lockVel(self->mtxVel_);
+            self->vel_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_VELOCITY>();
+            if (self->cbVel_)
+                self->cbVel_(self->vel_);
+            lockVel.unlock();
+        }
+
+        if (std::find(self->topics200hz_.begin(), self->topics200hz_.end(), TOPIC_ALTITUDE_FUSIONED) != self->topics200hz_.end())
+        {
+            std::unique_lock<std::mutex> lockAltitude(self->mtxVel_);
+            self->altitude_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_ALTITUDE_FUSIONED>();
+            if (self->cbAltitude_)
+                self->cbAltitude_(self->altitude_);
+            lockAltitude.unlock();
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    void Telemetry::callback50Hz(Vehicle* vehicle, RecvContainer recvFrame, UserData userData)
+    {
+        auto self = (Telemetry*)userData;
+
+        if (self->topics50hz_.size() > 0)
+            return;
+
+        if (std::find(self->topics50hz_.begin(), self->topics50hz_.end(), TOPIC_GPS_FUSED) != self->topics50hz_.end())
+        {
+            std::unique_lock<std::mutex> lockGPSFused(self->mtxGPSCoord_);
+            self->latLon_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_GPS_FUSED>();
+            if (self->cbLatLon_)
+                self->cbLatLon_(self->latLon_);
+
+            auto origin = self->hal_->getOriginGPS();
+            localPoseFromGps(self->localPoseGPS_, static_cast<void*>(&self->latLon_), static_cast<void*>(&origin));
+            if (self->cbLocalPoseGPS_)
+                self->cbLocalPoseGPS_(self->localPoseGPS_);
+            lockGPSFused.unlock();
+        }
+
+        if (std::find(self->topics50hz_.begin(), self->topics50hz_.end(), TOPIC_COMPASS) != self->topics50hz_.end())
+        {
+            std::unique_lock<std::mutex> lockCompass(self->mtxCompass_);
+            self->compass_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_COMPASS>();
+            if (self->cbCompass_)
+                self->cbCompass_(self->compass_);
+            lockCompass.unlock();
+        }
+
+        if (std::find(self->topics50hz_.begin(), self->topics50hz_.end(), TOPIC_STATUS_FLIGHT) != self->topics50hz_.end())
+        {
+            std::unique_lock<std::mutex> lockStatusFlight(self->mtxGPSCoord_);
+            self->fs_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_FLIGHT>();
+            if (self->cbFlightStatus_)
+                self->cbFlightStatus_(self->fs_);
+            lockStatusFlight.unlock();
+        }
+
+        if (std::find(self->topics50hz_.begin(), self->topics50hz_.end(), TOPIC_STATUS_DISPLAYMODE) != self->topics50hz_.end())
+        {
+            std::unique_lock<std::mutex> lockDisplayMode(self->mtxMode_);
+            self->mode_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_STATUS_DISPLAYMODE>();
+            if (self->cbMode_)
+                self->cbMode_(self->mode_);
+            lockDisplayMode.unlock();
+            }
+
+        if (std::find(self->topics50hz_.begin(), self->topics50hz_.end(), TOPIC_RC) != self->topics50hz_.end())
+        {
+            std::unique_lock<std::mutex> lockRcBasic(self->mtxRcBasic_);
+            self->rcBasic_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_RC>();
+            if (self->cbRcBasic_)
+                self->cbRcBasic_(self->rcBasic_);
+            lockRcBasic.unlock();
+        }
+
+        if (std::find(self->topics50hz_.begin(), self->topics50hz_.end(), TOPIC_RC_WITH_FLAG_DATA) != self->topics50hz_.end())
+        {
+            std::unique_lock<std::mutex> lockRc(self->mtxRc_);
+            self->rc_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_RC_WITH_FLAG_DATA>();
+            if (self->cbRc_)
+                self->cbRc_(self->rc_);
+            lockRc.unlock();
+        }
+
+        if (std::find(self->topics50hz_.begin(), self->topics50hz_.end(), TOPIC_RC_FULL_RAW_DATA) != self->topics50hz_.end())
+        {
+            std::unique_lock<std::mutex> lockRcRaw(self->mtxRcRaw_);
+            self->rcRaw_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_RC_FULL_RAW_DATA>();
+            if (self->cbRcRaw_)
+                self->cbRcRaw_(self->rcRaw_);
+            lockRcRaw.unlock();
+        }
+    }
+
+    // ----------------------------------------------------------------------
+    void Telemetry::callback5Hz(Vehicle* vehicle, RecvContainer recvFrame, UserData userData)
+    {
+        auto self = (Telemetry*)userData;
+        
+        if (self->topics5hz_.size() > 0)
+            return;
+
+        if (std::find(self->topics5hz_.begin(), self->topics5hz_.end(), TOPIC_GPS_DETAILS) != self->topics5hz_.end())
+        {
+            std::unique_lock<std::mutex> lockGPSDetails(self->mtxGPSDetail_);
+            self->gpsDetail_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_GPS_DETAILS>();
+            if (self->cbGPSDetail_)
+                self->cbGPSDetail_(self->gpsDetail_);
+            lockGPSDetails.unlock();
+        }
+
+        if (std::find(self->topics5hz_.begin(), self->topics5hz_.end(), TOPIC_GPS_SIGNAL_LEVEL) != self->topics5hz_.end())
+        {
+            std::unique_lock<std::mutex> lockGPSSignal(self->mtxGPSSignal_);
+            self->gpsSignal_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_GPS_SIGNAL_LEVEL>();
+            if (self->cbGPSSignal_)
+                self->cbGPSSignal_(self->gpsSignal_);
+            lockGPSSignal.unlock();
+        }
+
+        if (std::find(self->topics5hz_.begin(), self->topics5hz_.end(), TOPIC_BATTERY_INFO) != self->topics5hz_.end())
+        {
+            std::unique_lock<std::mutex> lockBattery(self->mtxBattery_);
+            self->bat_info_ = self->hal_->getVehicle()->subscribe->getValue<TOPIC_BATTERY_INFO>();
+            if (self->cbBattery_)
+                self->cbBattery_(self->bat_info_);
+            lockBattery.unlock();
         }
     }
 
@@ -73,31 +693,6 @@ namespace dal{
     // METHODS FOR TELEMETRY
     //---------------------------------------------------------------------------------------------------------------------
 
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getPositionVO(VectorPositionVO& _data){
-        
-        position_vo_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_POSITION_VO>();
-
-        _data[0] = position_vo_.x;
-        _data[1] = position_vo_.y;
-        _data[2] = position_vo_.z;
-        _data[3] = position_vo_.xHealth;
-        _data[4] = position_vo_.yHealth;
-        _data[5] = position_vo_.zHealth;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getGPS(VectorGPS& _data){
-
-        latLon_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-
-        _data[0] = latLon_.latitude;
-        _data[1] = latLon_.longitude; 
-
-        return true;
-    }
 
     //---------------------------------------------------------------------------------------------------------------------
     bool TelemetryDJI::getGPSRaw(VectorGPSRaw& _data){
@@ -107,266 +702,6 @@ namespace dal{
         _data[0] = rawLatLonAlt_.x;
         _data[1] = rawLatLonAlt_.y;
         _data[2] = rawLatLonAlt_.z;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getGPSDetail(VectorGPSDetail& _data){
-
-        GPSDetail_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_DETAILS>();
-
-        _data[0] = GPSDetail_.fix;
-        _data[1] = GPSDetail_.gnssStatus;
-        _data[2] = GPSDetail_.hacc;
-        _data[3] = GPSDetail_.sacc;
-        _data[4] = GPSDetail_.usedGPS;
-        _data[5] = GPSDetail_.usedGLN; 
-        _data[6] = GPSDetail_.NSV;
-        _data[7] = GPSDetail_.pdop;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getGPSSignal(int& _data){
-
-        GPSSignal_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_SIGNAL_LEVEL>();
-
-        _data = GPSSignal_;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getAltitude(float& _data){
-        
-        altitude_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ALTITUDE_FUSIONED>();
-
-        _data = altitude_ - HAL::originAltitude_;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getAngularRate(VectorAngularRate& _data){
-        
-        angularRate_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_FUSIONED>();
-
-        _data[0] = angularRate_.x;
-        _data[1] = angularRate_.y;
-        _data[2] = angularRate_.z;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getAngularRateRaw(VectorAngularRateRaw& _data){
-        
-        angularRateRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ANGULAR_RATE_RAW>();
-
-        _data[0] = angularRateRaw_.x;
-        _data[1] = angularRateRaw_.y;
-        _data[2] = angularRateRaw_.z;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getAccelerationRaw(VectorAccelerationRaw& _data){
-        
-        accelerationRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_ACCELERATION_RAW>();
-
-        _data[0] = accelerationRaw_.x;
-        _data[1] = accelerationRaw_.y;
-        _data[2] = accelerationRaw_.z;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getHardSync(VectorHardSync& _data){
-        
-        hardSync_FC_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_HARD_SYNC>();
-
-        _data[0] = hardSync_FC_.w.x;
-        _data[1] = hardSync_FC_.w.y;
-        _data[2] = hardSync_FC_.w.z;
-        _data[3] = hardSync_FC_.a.x;
-        _data[4] = hardSync_FC_.a.y;
-        _data[5] = hardSync_FC_.a.z;
-        _data[6] = hardSync_FC_.q.q0;
-        _data[7] = hardSync_FC_.q.q1;
-        _data[8] = hardSync_FC_.q.q2;
-        _data[9] = hardSync_FC_.q.q3;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getCompass(VectorCompass& _data){
-
-        compass_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_COMPASS>();
-
-        _data[0] = compass_.x;
-        _data[1] = compass_.y;
-        _data[2] = compass_.z;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getQuaternion(VectorQuaternion& _data){
-
-        quaternion_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_QUATERNION>();
-
-        _data[0] = quaternion_.q0; 
-        _data[1] = quaternion_.q1; 
-        _data[2] = quaternion_.q2; 
-        _data[3] = quaternion_.q3; 
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getVelocity(VectorVelocity& _data){
-        
-        velocity_  = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_VELOCITY>();
-
-        _data[0] = velocity_.data.x; 
-        _data[1] = velocity_.data.y; 
-        _data[2] = velocity_.data.z;
-
-        return velocity_.info.health;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getStatusFlight(std::string& _data){
-        
-        flightStatus_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_FLIGHT>();
-
-        std::string sFlightStatus, sMode;
-        if(flightStatus_ == 0){
-            sFlightStatus = "STOPED";
-        }else if(flightStatus_ == 1){
-            sFlightStatus = "ON_GROUND";
-        }else if(flightStatus_ == 2){
-            sFlightStatus = "IN_AIR";
-        }else{
-            sFlightStatus = "UNRECOGNIZED";
-        }
-
-        _data = sFlightStatus; 
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getDisplayMode(std::string& _data){
-        
-        mode_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_STATUS_DISPLAYMODE>();
-
-        std::string sMode;
-        if(mode_ == 0){
-            sMode = "MANUAL";
-        }else if(mode_ == 1){
-            sMode = "ATTITUDE";
-        }else if(mode_ == 6){
-            sMode = "P_GPS";
-        }else if(mode_ == 9){
-            sMode = "HOT_POINT";
-        }else if(mode_ == 10){
-            sMode = "ASSISTED_TAKEOFF";
-        }else if(mode_ == 11){
-            sMode = "AUTO_TAKEOFF";
-        }else if(mode_ == 12){
-            sMode = "ASSISTED_LAND";
-        }else if(mode_ == 15){
-            sMode = "GO_HOME";
-        }else if(mode_ == 17){
-            sMode = "NAVI_SDK_CTMODE_CTRLRL";
-        }else if(mode_ == 33){
-            sMode = "FORCE_AUTO_LANDING";
-        }else if(mode_ == 40){
-            sMode = "SEARCH";
-        }else if(mode_ == 41){
-            sMode = "ENGINE_START";
-        }else{
-            sMode = "UNRECOGNIZED";
-        }
-
-        _data = sMode;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getBatery(int& _data){
-
-        battery_info_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_BATTERY_INFO>();
-
-        _data = battery_info_.voltage;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getBasicRC(VectorBasicRC& _data){
-        rcBasic_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC>();
-        
-        _data[0] = rcBasic_.roll;
-        _data[1] = rcBasic_.pitch;
-        _data[2] = rcBasic_.yaw;
-        _data[3] = rcBasic_.throttle;
-        _data[4] = rcBasic_.mode;
-        _data[5] = rcBasic_.gear;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getRC(VectorRC& _data){
-
-        rc_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC_WITH_FLAG_DATA>();
-
-        _data[0] = rc_.pitch;
-        _data[1] = rc_.roll;
-        _data[2] = rc_.yaw;
-        _data[3] = rc_.throttle;
-        _data[4] = rc_.flag.logicConnected;
-        _data[5] = rc_.flag.skyConnected;
-        _data[6] = rc_.flag.groundConnected;
-        _data[7] = rc_.flag.appConnected;
-
-        return true;
-    }
-
-    //---------------------------------------------------------------------------------------------------------------------
-    bool TelemetryDJI::getRCRaw(VectorRCRaw& _data){
-        rcRaw_ = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_RC_FULL_RAW_DATA>();
-        
-        _data[0] = rcRaw_.lb2.roll;
-        _data[1] = rcRaw_.lb2.pitch;
-        _data[2] = rcRaw_.lb2.yaw;
-        _data[3] = rcRaw_.lb2.throttle;
-        _data[4] = rcRaw_.lb2.mode;
-        _data[5] = rcRaw_.lb2.gear;
-        _data[6] = rcRaw_.lb2.camera;
-        _data[7] = rcRaw_.lb2.video;
-        _data[8] = rcRaw_.lb2.videoPause;
-        _data[9] = rcRaw_.lb2.goHome;
-        _data[10] = rcRaw_.lb2.leftWheel;
-        _data[11] = rcRaw_.lb2.rightWheelButton;
-        _data[12] = rcRaw_.lb2.rcC1;
-        _data[13] = rcRaw_.lb2.rcC2;
-        _data[14] = rcRaw_.lb2.rcD1;
-        _data[15] = rcRaw_.lb2.rcD2;
-        _data[16] = rcRaw_.lb2.rcD3;
-        _data[17] = rcRaw_.lb2.rcD4;
-        _data[18] = rcRaw_.lb2.rcD5;
-        _data[19] = rcRaw_.lb2.rcD6;
-        _data[20] = rcRaw_.lb2.rcD7;
-        _data[21] = rcRaw_.lb2.rcD8;
 
         return true;
     }
@@ -386,13 +721,7 @@ namespace dal{
     //---------------------------------------------------------------------------------------------------------------------
     bool TelemetryDJI::getLocalPositionGPS(VectorLocalPositionGPS& _data){
 
-        DJI::OSDK::Telemetry::TypeMap<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>::type currentSubscriptionGPS = HAL::vehicle_->subscribe->getValue<DJI::OSDK::Telemetry::TOPIC_GPS_FUSED>();
-
-        localPoseFromGps(localPoseGPS_, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&HAL::originGPS_));
-
-        _data[0] = localPoseGPS_[1];
-        _data[1] = localPoseGPS_[0];
-        _data[2] = localPoseGPS_[2];
+        
 
         return true;
     }

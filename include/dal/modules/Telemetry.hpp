@@ -22,6 +22,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include <dal/hal.hpp>
 
 namespace dal     {
@@ -35,13 +37,160 @@ namespace modules {
 
             // ----------------------------------------------------------------------
             void stop();
+            void init();
 
+            // ----------------------------------------------------------------------
+            void setCallbackGPSCoord(CallbackLatLon _cb);
+            /// ----------
+            void setCallbackGPSDetail(CallbackGPSDetail _cb);
+            /// ----------
+            void setCallbackGPSSignal(CallbackGPSSignal _cb);
+            /// ----------
+            void setCallbackAltitude(CallbackAltitude _cb);
+            /// ----------
+            void setCallbackAngRate(CallbackAngRate _cb);
+            /// ----------
+            void setCallbackAngRateRaw(CallbackAngRateRaw _cb);
+            /// ----------
+            void setCallbackAccRaw(CallbackAccRaw _cb);
+            /// ----------
+            void setCallbackIMU(CallbackIMU _cb);
+            /// ----------
+            void setCallbackCompass(CallbackCompass _cb);
+            /// ----------
+            void setCallbackQuat(CallbackQuat _cb);
+            /// ----------
+            void setCallbackVel(CallbackVel _cb);
+            /// ----------
+            void setCallbackFlightStatus(CallbackFlighStatus _cb);
+            /// ----------
+            void setCallbackMode(CallbackMode _cb);
+            /// ----------
+            void setCallbackBattery(CallbackBattery _cb);
+            /// ----------
+            void setCallbackRcBasic(CallbackRcBasic _cb);
+            /// ----------
+            void setCallbackRc(CallbackRc _cb);
+            /// ----------
+            void setCallbackRcRaw(CallbackRcRaw _cb);
+            /// ----------
+            void setCallbackControlDevice(CallbackControlDevice _cb);
+            /// ----------
+            void setCallbackLocalPoseGPS(CallbackLocalPoseGPS _cb);
+
+            // ----------------------------------------------------------------------
+            LatLon getGPSCoord();
+            /// ----------
+            GPSDetail getGPSDetail();
+            /// ----------
+            GPSSignal getGPSSignal();
+            /// ----------
+            Altitude getAltitude();
+            /// ----------
+            AngularRate getAngRate();
+            /// ----------
+            AngularRateRaw getAngRateRaw();
+            /// ----------
+            AccelerationRaw getAccRaw();
+            /// ----------
+            HardSync_FC getIMU();
+            /// ----------
+            Compass getCompass();
+            /// ----------
+            Quaternion getQuat();
+            /// ----------
+            Velocity getVel();
+            /// ----------
+            FlightStatus getFlightStatus();
+            /// ----------
+            Mode getMode();
+            /// ----------
+            Battery_info getBattery();
+            /// ----------
+            RcBasic getRcBasic();
+            /// ----------
+            Rc getRc();
+            /// ----------
+            RcRaw getRcRaw();
+            /// ----------
+            ControlDevice getControlDevice();
+            /// ----------
+            LocalPoseGPS getLocalPoseGPS();
+
+        private:
+            static void callback400Hz(Vehicle* vehicle, RecvContainer recvFrame, UserData userData);
+            static void callback200Hz(Vehicle* vehicle, RecvContainer recvFrame, UserData userData);
+            static void callback50Hz(Vehicle* vehicle, RecvContainer recvFrame, UserData userData);
+            static void callback5Hz(Vehicle* vehicle, RecvContainer recvFrame, UserData userData);
+        
         private:
             std::shared_ptr<HAL> hal_;
 
             std::atomic<bool> started_;
             int functionTimeout_;
-            
+
+            Topics topics400hz_, topics200hz_, topics50hz_, topics5hz_;
+
+            std::mutex mtxGPSCoord_;
+            std::mutex mtxGPSDetail_;
+            std::mutex mtxGPSSignal_;
+            std::mutex mtxAltitude_;
+            std::mutex mtxAngRate_;
+            std::mutex mtxAngRateRaw_;
+            std::mutex mtxAccRaw_;
+            std::mutex mtxIMU_;
+            std::mutex mtxCompass_;
+            std::mutex mtxQuat_;
+            std::mutex mtxVel_;
+            std::mutex mtxFlightStatus_;
+            std::mutex mtxMode_;
+            std::mutex mtxBattery_;
+            std::mutex mtxRcBasic_;
+            std::mutex mtxRc_;
+            std::mutex mtxRcRaw_;
+            std::mutex mtxControlDevice_;
+            std::mutex mtxLocalPoseGPS_;
+
+            LatLon          latLon_;
+            GPSDetail       gpsDetail_;
+            GPSSignal       gpsSignal_;
+            Altitude        altitude_;
+            AngularRate     angRate_;
+            AngularRateRaw  angRateRaw_;
+            AccelerationRaw accRaw_;
+            HardSync_FC     hs_fc_;
+            Compass         compass_;
+            Quaternion      quat_;
+            Velocity        vel_;
+            FlightStatus    fs_;
+            Mode            mode_;
+            Battery_info    bat_info_;
+            RcBasic         rcBasic_;
+            Rc              rc_;
+            RcRaw           rcRaw_;
+            ControlDevice   contDevice_;
+            LocalPoseGPS    localPoseGPS_;
+
+            CallbackLatLon          cbLatLon_;
+            CallbackGPSDetail       cbGPSDetail_;
+            CallbackGPSSignal       cbGPSSignal_;
+            CallbackAltitude        cbAltitude_;
+            CallbackAngRate         cbAngRate_;
+            CallbackAngRateRaw      cbAngRateRaw_;
+            CallbackAccRaw          cbAccRaw_;
+            CallbackIMU             cbIMU_;
+            CallbackCompass         cbCompass_;
+            CallbackQuat            cbQuat_;
+            CallbackVel             cbVel_;
+            CallbackFlighStatus     cbFlightStatus_;
+            CallbackMode            cbMode_;
+            CallbackBattery         cbBattery_;
+            CallbackRcBasic         cbRcBasic_;
+            CallbackRc              cbRc_;
+            CallbackRcRaw           cbRcRaw_;
+            CallbackControlDevice   cbControlDevice_;
+            CallbackLocalPoseGPS    cbLocalPoseGPS_;
+
     };
 }
 }

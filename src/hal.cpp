@@ -53,8 +53,8 @@ namespace dal {
         if (started_)
         {
             started_ = false;
-            //unsubscribeAllTopics();
-            //delete vehicle_;
+            unsubscribeAllTopics();
+            delete vehicle_;
         }
     }
 
@@ -91,11 +91,11 @@ namespace dal {
             return false;
         
         showCfg(cfg_);
-        // if (!init(cfg_))
-        //     return false;
+        if (!init(cfg_))
+            return false;
 
-        // if (!topicsAll())
-        //     return false;
+        if (!topicsAll())
+            return false;
 
         started_ = true;
 
@@ -227,19 +227,20 @@ namespace dal {
             std::cout << "\033[32mUsing minimal topics \033[m" << std::endl;
 
             // TODO: THIS TOPICS ARE MINIMAL ??
-            std::map<TopicName, int> topicsDefault;
-            topicsDefault.insert(std::make_pair(TOPIC_GPS_DETAILS, 1));
-            topicsDefault.insert(std::make_pair(TOPIC_HARD_SYNC, 200));
-            topicsDefault.insert(std::make_pair(TOPIC_VELOCITY, 200));
-            topicsDefault.insert(std::make_pair(TOPIC_GPS_FUSED, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_GPS_SIGNAL_LEVEL, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_ALTITUDE_FUSIONED, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_STATUS_FLIGHT, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_STATUS_DISPLAYMODE, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_BATTERY_INFO, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_RC, 50));
+            Topics topicsMinimal;
+            topicsMinimal.push_back(TOPIC_GPS_DETAILS);
+            topicsMinimal.push_back(TOPIC_HARD_SYNC);
+            topicsMinimal.push_back(TOPIC_VELOCITY);
+            topicsMinimal.push_back(TOPIC_GPS_FUSED);
+            topicsMinimal.push_back(TOPIC_GPS_SIGNAL_LEVEL);
+            topicsMinimal.push_back(TOPIC_ALTITUDE_FUSIONED);
+            topicsMinimal.push_back(TOPIC_STATUS_FLIGHT);
+            topicsMinimal.push_back(TOPIC_STATUS_DISPLAYMODE);
+            topicsMinimal.push_back(TOPIC_BATTERY_INFO);
+            topicsMinimal.push_back(TOPIC_RC);
 
-            if(extractTopics(topicsDefault))
+            topics_ = topicsMinimal;
+            if(extractTopics(topics_))
             {
                 sleep(3); // Wait for the data to start coming in
                 return setLocalPosition();
@@ -262,31 +263,32 @@ namespace dal {
         {
             std::cout << "\033[32mUsing all default topics \033[m" << std::endl;
 
-            std::map<TopicName, int> topicsDefault;
-            topicsDefault.insert(std::make_pair(TOPIC_GPS_DETAILS, 1));
-            topicsDefault.insert(std::make_pair(TOPIC_HARD_SYNC, 200));
-            topicsDefault.insert(std::make_pair(TOPIC_ANGULAR_RATE_FUSIONED, 200));
-            topicsDefault.insert(std::make_pair(TOPIC_QUATERNION, 200));
-            topicsDefault.insert(std::make_pair(TOPIC_VELOCITY, 200));
-            topicsDefault.insert(std::make_pair(TOPIC_GPS_FUSED, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_GPS_SIGNAL_LEVEL, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_ALTITUDE_FUSIONED, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_COMPASS, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_STATUS_FLIGHT, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_STATUS_DISPLAYMODE, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_BATTERY_INFO, 50));
-            topicsDefault.insert(std::make_pair(TOPIC_RC, 50));
+            Topics topicsDefault;
+            topicsDefault.push_back(TOPIC_GPS_DETAILS);
+            topicsDefault.push_back(TOPIC_HARD_SYNC);
+            topicsDefault.push_back(TOPIC_ANGULAR_RATE_FUSIONED);
+            topicsDefault.push_back(TOPIC_QUATERNION);
+            topicsDefault.push_back(TOPIC_VELOCITY);
+            topicsDefault.push_back(TOPIC_GPS_FUSED);
+            topicsDefault.push_back(TOPIC_GPS_SIGNAL_LEVEL);
+            topicsDefault.push_back(TOPIC_ALTITUDE_FUSIONED);
+            topicsDefault.push_back(TOPIC_COMPASS);
+            topicsDefault.push_back(TOPIC_STATUS_FLIGHT);
+            topicsDefault.push_back(TOPIC_STATUS_DISPLAYMODE);
+            topicsDefault.push_back(TOPIC_BATTERY_INFO);
+            topicsDefault.push_back(TOPIC_RC);
             if(!cfg_.isM600)
             {
-                topicsDefault.insert(std::make_pair(TOPIC_RC_WITH_FLAG_DATA, 50));    // NOT VALID FOR M600
-                topicsDefault.insert(std::make_pair(TOPIC_RC_FULL_RAW_DATA, 50));     // NOT VALID FOR M600
+                topicsDefault.push_back(TOPIC_RC_WITH_FLAG_DATA);    // NOT VALID FOR M600
+                topicsDefault.push_back(TOPIC_RC_FULL_RAW_DATA);     // NOT VALID FOR M600
             }
-            topicsDefault.insert(std::make_pair(TOPIC_ANGULAR_RATE_RAW, 200));
-            topicsDefault.insert(std::make_pair(TOPIC_ACCELERATION_RAW, 200));
+            topicsDefault.push_back(TOPIC_ANGULAR_RATE_RAW);
+            topicsDefault.push_back(TOPIC_ACCELERATION_RAW);
 
-            // topics.insert(std::make_pair(TOPIC_CONTROL_DEVICE, 50));
+            // topics.push_back(TOPIC_CONTROL_DEVICE);
 
-            if(extractTopics(topicsDefault))
+            topics_ = topicsDefault;
+            if(extractTopics(topics_))
             {
                 sleep(3); // Wait for the data to start coming in
                 return setLocalPosition();
@@ -310,10 +312,12 @@ namespace dal {
             if(_topics.size() > 0)
             {
                 std::cout << "\033[32mUsing Custom Topics \033[m" << std::endl;
-                if(extractTopics(_topics))
+                topics_ = _topics;
+                if(extractTopics(topics_))
                 {
                     sleep(3); // Wait for the data to start coming in
-                    return setLocalPosition();
+                    setLocalPosition();
+                    return true;
                 }
                 else
                 {
@@ -349,59 +353,61 @@ namespace dal {
     // ----------------------------------------------------------------------
     bool HAL::setLocalPosition()
     {
-        originAltitude_ = vehicle_->subscribe->getValue<TOPIC_ALTITUDE_FUSIONED>();
-        originGPS_ = vehicle_->subscribe->getValue<TOPIC_GPS_FUSED>();
-        return true;
+        if (std::find(topics_.begin(), topics_.end(), TOPIC_ALTITUDE_FUSIONED) != topics_.end() && 
+            std::find(topics_.begin(), topics_.end(), TOPIC_GPS_FUSED) != topics_.end())
+        {
+            originAltitude_ = vehicle_->subscribe->getValue<TOPIC_ALTITUDE_FUSIONED>();
+            originGPS_ = vehicle_->subscribe->getValue<TOPIC_GPS_FUSED>();
+            std::cout << "\033[32mSet local Position \033[m" << std::endl;
+            return true;
+        }
+        else
+        {
+            std::cout << "\033[32mNot set local Position \033[m" << std::endl;
+            return false;
+        }
     }
 
     // ----------------------------------------------------------------------
-    bool HAL::extractTopics(std::map<TopicName, int> _topics)
+    bool HAL::extractTopics(Topics _topics)
     {
-        bool result;
-        int searchFreq = 0, contMaxFreq = 0;
-        std::map<TopicName, int>::iterator it, itSameFreq;
-        std::map<TopicName, int> copyConfigTopics = _topics;
-        it = copyConfigTopics.begin();
-
-        while (copyConfigTopics.size() != 0) 
+        for (auto &e : _topics)
         {
-            searchFreq = it->second;
+            if (std::find(DefaultTopics400hz.begin(), DefaultTopics400hz.end(), e) != DefaultTopics400hz.end())
+                topicsExtract400hz_.push_back(e);
+            
+            if (std::find(DefaultTopics200hz.begin(), DefaultTopics200hz.end(), e) != DefaultTopics200hz.end())
+                topicsExtract200hz_.push_back(e);
 
-            contMaxFreq++;
-            if (contMaxFreq > 4) 
-            {
-                std::cout << "\033[31mUsing more packages with different frequencies than DJI allows, exiting \033[m" << std::endl;
-                return false;
-            }
+            if (std::find(DefaultTopics50hz.begin(), DefaultTopics50hz.end(), e) != DefaultTopics50hz.end())
+                topicsExtract50hz_.push_back(e);
 
-            itSameFreq = copyConfigTopics.begin();
-            std::vector<TopicName> topics;
-            while (itSameFreq != copyConfigTopics.end()) 
-            {
-                if (searchFreq == itSameFreq->second) 
-                {
-                    topics.push_back(itSameFreq->first);
-                    itSameFreq = copyConfigTopics.erase(itSameFreq);
-                }else 
-                {
-                    itSameFreq++;
-                }
-            }
-
-            if (topics.size() > 0) 
-            {
-                result = subscribeToTopic(topics, searchFreq);
-                if(!result)
-                    return false;
-            }
-
-            it = copyConfigTopics.begin();
+            if (std::find(DefaultTopics5hz.begin(), DefaultTopics5hz.end(), e) != DefaultTopics5hz.end())
+                topicsExtract5hz_.push_back(e);
         }
+
+        bool result;
+        result = subscribeToTopic(topicsExtract400hz_, 400);
+        if(!result)
+            return false;
+
+        result = subscribeToTopic(topicsExtract200hz_, 200);
+        if(!result)
+            return false;
+
+        result = subscribeToTopic(topicsExtract50hz_, 50);
+        if(!result)
+            return false;
+
+        result = subscribeToTopic(topicsExtract5hz_, 5);
+        if(!result)
+            return false;
+
         return true;
     }
     
     // ----------------------------------------------------------------------
-    bool HAL::subscribeToTopic(std::vector<TopicName> _topics, int _freq)
+    bool HAL::subscribeToTopic(Topics _topics, int _freq)
     {
         ACK::ErrorCode subscribeStatus = vehicle_->subscribe->verify(functionTimeout_);
         if (ACK::getError(subscribeStatus) != ACK::SUCCESS)
