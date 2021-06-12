@@ -1,7 +1,7 @@
 //---------------------------------------------------------------------------------------------------------------------
 //  DJI ABSTRACTION LAYER
 //---------------------------------------------------------------------------------------------------------------------
-//  Copyright 2021 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
+//  Copyright 2019 Manuel Pérez Jiménez (a.k.a. manuoso) manuperezj@gmail.com
 //---------------------------------------------------------------------------------------------------------------------
 //  Permission is hereby granted, free of charge, to any person obtaining a copy of this software 
 //  and associated documentation files (the "Software"), to deal in the Software without restriction, 
@@ -19,106 +19,81 @@
 //  CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //---------------------------------------------------------------------------------------------------------------------
 
-#include <dal/dal.hpp>
+#include <iostream> // TODO: DELETE THIS
 
-namespace dal {
+#include <dal/modules/IOFunctions.hpp>
+
+namespace dal     {
+namespace modules {
 
     // ----------------------------------------------------------------------
-    DAL::DAL() 
-        : started_(false)
-        , hal_(nullptr)
-        , control_(nullptr)
-        , telemetry_(nullptr)
-        , missions_(nullptr)
-        , io_(nullptr)
+    IOFunctions::IOFunctions(std::shared_ptr<HAL> & _hal) 
+        : functionTimeout_(1)
     {
-
+        hal_ = _hal;
+        if (hal_ != nullptr)
+            started_ = true;
+        else
+            started_ = false;
     }
 
     // ----------------------------------------------------------------------
-    DAL::~DAL()
+    IOFunctions::~IOFunctions()
     {
         this->stop();
     }
 
     // ----------------------------------------------------------------------
-    bool DAL::isInit()
-    {
-        return started_;
-    }
-
-    // ----------------------------------------------------------------------
-    void DAL::stop()
+    void IOFunctions::stop()
     {
         if (started_)
         {
             started_ = false;
-
-            if (control_)
-                control_->stop();
-
-            if (telemetry_)
-                telemetry_->stop();
-
-            if (missions_)
-                missions_->stop();
-
-            if (io_)
-                io_->stop();
-
-            hal_->stop();
         }
     }
 
     // ----------------------------------------------------------------------
-    void DAL::buildModulesAll()
+    bool IOFunctions::configureChannels(Channels _channels)
     {
-        if (started_)
-            return;
-        
-        hal_ = std::shared_ptr<HAL> (new HAL());
-        this->setBuilder(hal_.get());
+        if (!started_)
+            return false;
 
-        if (!this->buildAll())
-            return;
-        
-        control_ = std::unique_ptr<Control> (new Control(hal_));
-        telemetry_ = std::unique_ptr<Telemetry> (new Telemetry(hal_));
-        telemetry_->init();
-        missions_ = std::unique_ptr<Missions> (new Missions(hal_));
-        io_ = std::unique_ptr<IOFunctions> (new IOFunctions(hal_));
+        // PREDEFINED CONFIG. TODO 666: PLEASE CHANGE THIS IN FUTURE
+        // Parameters: initialValue - duty cycle
+        //             freq         - PWM freq
+        uint32_t initOnTimeUs = 1520;   // us
+        uint16_t pwmFreq      = 50;     // Hz
 
-        started_ = true;
+        std::cout << "\033[32mConfiguring channels \033[m" << std::endl;
+        for(const auto &ch: _channels)
+        {
+            ACK::ErrorCode errConfigCh = hal_->getVehicle()->mfio->config(ch.second, ch.first, initOnTimeUs, pwmFreq, functionTimeout_);
+            if (ACK::getError(errConfigCh) != ACK::SUCCESS)
+            {
+                ACK::getErrorCodeMessage(errConfigCh, __func__);
+                std::cout << "\033[31mError in Configure Channel: " << toString(ch.first) <<" \033[m" << std::endl;
+                return false;
+            }
+        }    
+        return true;
     }
 
     // ----------------------------------------------------------------------
-    void DAL::buildModulesCustom(std::function<void(std::shared_ptr<HAL>)> _fun)
+    bool IOFunctions::setPWM(MFIO::CHANNEL _channel, uint32_t _value)
     {
-        if (started_)
-            return;
-        
-        hal_ = std::shared_ptr<HAL> (new HAL());
-        this->setBuilder(hal_.get());
+        if (!started_)
+            return false;
 
-        if (!this->buildAll())
-            return;
-        
-        _fun(hal_);
-
-        started_ = true;
+        std::cout << "\033[32mSet Value PWM \033[m" << std::endl;
+        ACK::ErrorCode errSetValue = hal_->getVehicle()->mfio->setValue(_channel, _value, functionTimeout_);
+        if (ACK::getError(errSetValue) != ACK::SUCCESS)
+        {
+            ACK::getErrorCodeMessage(errSetValue, __func__);
+            std::cout << "\033[31mError in Set PWM Value \033[m" << std::endl;
+            return false;
+        }
+        return true;
     }
 
-    // ----------------------------------------------------------------------
-    void DAL::buildHalAndModules(std::shared_ptr<HAL> _hal, std::function<void(std::shared_ptr<HAL>)> _fun)
-    {
-        if (started_)
-            return;
-
-        hal_ = _hal;
-
-        _fun(hal_);
-
-        started_ = true;
-    }
-
+}
 }

@@ -2,5 +2,5 @@ get_filename_component(dal_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
 if(NOT TARGET dal::dal)
-    include("${dal_CMAKE_DIR}/dalTargets.cmake")
+    include("${dal_CMAKE_DIR}/cmake/dal-targets.cmake")
 endif()
