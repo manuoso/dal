@@ -125,32 +125,33 @@ if(NOT DEFINED CMAKE_INSTALL_PREFIX)
 endif() 
 
 install(TARGETS dal
-        EXPORT dal-targets
+        EXPORT cmake/dal-targets
         LIBRARY DESTINATION lib
         ARCHIVE DESTINATION lib
         INCLUDES DESTINATION ${CMAKE_INSTALL_PREFIX}
         )
 
 write_basic_package_version_file(
-		dal-config-version.cmake
+		cmake/dal-config-version.cmake
     VERSION ${PACKAGE_VERSION}
     COMPATIBILITY AnyNewerVersion
     )
 
 # This installs the include folder
 install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX} FILES_MATCHING PATTERN "*.h")
+install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX} FILES_MATCHING PATTERN "*.hpp")
 install(DIRECTORY include DESTINATION ${CMAKE_INSTALL_PREFIX} FILES_MATCHING PATTERN "*.inl")
 
-export(TARGETS dal NAMESPACE dal:: FILE dal-targets.cmake)
+export(TARGETS dal NAMESPACE dal:: FILE cmake/dal-targets.cmake)
 
 # This generates dal-targets.cmake
-install(EXPORT dal-targets
+install(EXPORT cmake/dal-targets
     FILE dal-targets.cmake
     NAMESPACE dal::
     DESTINATION lib/cmake/dal
     )
 
-configure_file(cmake/dal-config.cmake.in dal-config.cmake @ONLY)
+configure_file(cmake/dal-config.cmake.in cmake/dal-config.cmake @ONLY)
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/cmake/dal-config.cmake"
         DESTINATION lib/cmake/dal
         )

@@ -205,8 +205,6 @@ namespace modules {
         std::vector<float> localPoseGPS;
         localPoseFromGps(localPoseGPS, static_cast<void*>(&currentSubscriptionGPS), static_cast<void*>(&originGPS));
         
-        // 666 TODO: CHANGE GPS FUSED ALTITUDE
-
         // Get initial offset. We will update this in a loop later.
         double xOffset = _x - localPoseGPS[0];
         double yOffset = _y - localPoseGPS[1];
