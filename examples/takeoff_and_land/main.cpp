@@ -46,10 +46,14 @@ int main(int _argc, char ** _argv){
         cout << "Trying to connect...." << endl;
         
         auto autopilot = dal::DAL::create(config);
+        if(autopilot){
+            cout << "Connected! Sleeping 5 seconds and exiting" << endl;
+            sleep_for(seconds(5));
+            break;
+        }
         sleep_for(seconds(1));
     }
 
-    cout << "Could not connect to autopilot" << endl;
     return -1;
 
 }
