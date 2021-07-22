@@ -40,13 +40,17 @@ namespace dal{
         }else{
             std::cout << "\033[31mSomeone tried to reinitialize the DAL system \033[m" << std::endl;
         }
-        return dal_;
+        if(dal_->isInit()){
+            return dal_;
+        }else{
+            close();
+            return nullptr;
+        }
 	}
 
 	//---------------------------------------------------------------------------------------------------------------------
 	void DAL::close(){
-        if (dal_ != nullptr)
-        {
+        if (dal_ != nullptr){
 		    delete dal_;
             dal_ = nullptr;
         }

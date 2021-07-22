@@ -31,10 +31,20 @@ using namespace std;
 
 int main(int _argc, char ** _argv){
 
-    dal::HAL::Config config;
+    if(_argc != 5){
+        cout    <<  "Bad input arguments. Usage: " <<
+                    "\t ./takeoff_and_land [app_id] [app_key] [baudrate] [/dev/ttyXXXX]" << endl;
+    }
 
+    dal::HAL::Config config;
+    config.app_id   = atoi(_argv[1]);
+    config.app_key  = _argv[2];
+    config.baudrate = atoi(_argv[3]);
+    config.device   = _argv[4];
+    
     for(unsigned i = 0; i < 5 ; i++){
         cout << "Trying to connect...." << endl;
+        
         auto autopilot = dal::DAL::create(config);
         sleep_for(seconds(1));
     }
