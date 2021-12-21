@@ -49,7 +49,7 @@ namespace dal{
             typedef Eigen::Matrix<float, 10, 1> VectorHardSync;
             typedef Eigen::Matrix<float, 6, 1> VectorBasicRC;
             typedef Eigen::Matrix<float, 8, 1> VectorRC;
-            typedef Eigen::Matrix<float, 21, 1> VectorRCRaw;
+            typedef Eigen::Matrix<float, 22, 1> VectorRCRaw;
             typedef Eigen::Matrix<float, 3, 1> VectorCompass;
             typedef Eigen::Matrix<float, 4, 1> VectorQuaternion;
             typedef Eigen::Matrix<float, 3, 1> VectorVelocity;
