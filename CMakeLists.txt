@@ -49,11 +49,8 @@ set(DAL_COMPILE_OPTIONS "-Wall")
 
 #########################################
 ## Load Eigen
-find_package(Eigen3 REQUIRED)
-if(${Eigen3_FOUND})
-	MESSAGE( STATUS "Eigen FOUND")
-	list(APPEND DAL_DEFINITIONS "DAL_USE_EIGEN3")
-endif()
+find_package(Eigen3 CONFIG REQUIRED)
+target_link_libraries(main PRIVATE Eigen3::Eigen)
 
 #########################################
 ## Load DJIOSDK
