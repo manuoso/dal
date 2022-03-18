@@ -50,7 +50,6 @@ set(DAL_COMPILE_OPTIONS "-Wall")
 #########################################
 ## Load Eigen
 find_package(Eigen3 CONFIG REQUIRED)
-target_link_libraries(main PRIVATE Eigen3::Eigen)
 
 #########################################
 ## Load DJIOSDK
@@ -77,6 +76,8 @@ string(REPLACE " " ";" DAL_COMPILE_OPTIONS_REPLACED_FLAGS ${DAL_COMPILE_OPTIONS}
 
 target_compile_options(${PROJECT_NAME} PUBLIC ${DAL_COMPILE_OPTIONS_REPLACED_FLAGS})
 target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_11)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE Eigen3::Eigen)
 
 #########################################
 
